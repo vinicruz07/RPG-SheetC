@@ -12,7 +12,8 @@ TEST_DIR  = tests
 WEB_DIST  = web/dist
 
 # Fontes C do Core
-CORE_SRCS = $(SRC_DIR)/sheet_t20.c $(SRC_DIR)/rpg_base.c $(SRC_DIR)/dice.c
+CORE_SRCS = $(SRC_DIR)/sheet_t20.c $(SRC_DIR)/rpg_base.c $(SRC_DIR)/dice.c $(SRC_DIR)/sheet_json.c
+
 
 
 # Flags para compilação WebAssembly standalone (Clang + wasm-ld)

@@ -4,6 +4,7 @@
 #include "../src/core/sheet_types.h"
 #include "../src/core/sheet_t20.h"
 #include "../src/core/dice.h"
+#include "../src/core/sheet_json.h"
 
 static void test_t20_modifiers(void) {
     assert(t20_calc_modifier(10) == 0);
@@ -105,6 +106,55 @@ static void test_dice_detailed_roll(void) {
     printf("  [OK] Rolagem detalhada de multiplos dados e flags de critico/falha\n");
 }
 
+static void test_json_roundtrip(void) {
+    T20Sheet original;
+    t20_init_default(&original, "Kaelen", T20_RACE_ELFO, "Arcanista");
+
+    original.nivel = 5;
+    original.experiencia = 12000;
+    original.forca = 8;
+    original.destreza = 18;
+    original.constituicao = 12;
+    original.inteligencia = 20;
+    original.sabedoria = 14;
+    original.carisma = 10;
+    original.pv_max = 35;
+    original.pv_atual = 28;
+    original.pm_max = 40;
+    original.pm_atual = 32;
+    t20_recalculate(&original);
+
+    char json_buf[SHEET_JSON_BUFFER_SIZE];
+    int bytes = t20_to_json(&original, json_buf, sizeof(json_buf));
+    assert(bytes > 0);
+
+    T20Sheet restored;
+    int status = t20_from_json(&restored, json_buf);
+    assert(status == 0);
+
+    /* Valida preservacao exata de 100% dos campos */
+    assert(restored.sistema == original.sistema);
+    assert(strcmp(restored.nome, original.nome) == 0);
+    assert(restored.raca_id == original.raca_id);
+    assert(strcmp(restored.raca, original.raca) == 0);
+    assert(strcmp(restored.classe, original.classe) == 0);
+    assert(restored.nivel == original.nivel);
+    assert(restored.experiencia == original.experiencia);
+    assert(restored.pv_max == original.pv_max);
+    assert(restored.pv_atual == original.pv_atual);
+    assert(restored.pm_max == original.pm_max);
+    assert(restored.pm_atual == original.pm_atual);
+    assert(restored.forca == original.forca);
+    assert(restored.destreza == original.destreza);
+    assert(restored.constituicao == original.constituicao);
+    assert(restored.inteligencia == original.inteligencia);
+    assert(restored.sabedoria == original.sabedoria);
+    assert(restored.carisma == original.carisma);
+    assert(restored.defesa == original.defesa);
+
+    printf("  [OK] Serializacao e desserializacao JSON (Round-trip com 100%% de integridade)\n");
+}
+
 int main(void) {
     printf("=== Executando Testes Unitarios do Core C (RPG-SheetC) ===\n");
     test_t20_modifiers();
@@ -112,6 +162,7 @@ int main(void) {
     test_t20_recalculate();
     test_dice_distribution();
     test_dice_detailed_roll();
+    test_json_roundtrip();
     printf("=== Todos os testes passaram com sucesso! ===\n");
     return 0;
 }
