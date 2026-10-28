@@ -86,6 +86,7 @@ int t20_to_json(const T20Sheet *sheet, char *buffer, size_t buffer_size) {
     append_key_str(buffer, buffer_size, &pos, "nome", sheet->nome, 1);
     append_key_int(buffer, buffer_size, &pos, "raca_id", sheet->raca_id, 1);
     append_key_str(buffer, buffer_size, &pos, "raca", sheet->raca, 1);
+    append_key_int(buffer, buffer_size, &pos, "classe_id", sheet->classe_id, 1);
     append_key_str(buffer, buffer_size, &pos, "classe", sheet->classe, 1);
     append_key_int(buffer, buffer_size, &pos, "nivel", sheet->nivel, 1);
     append_key_int(buffer, buffer_size, &pos, "experiencia", sheet->experiencia, 1);
@@ -101,9 +102,15 @@ int t20_to_json(const T20Sheet *sheet, char *buffer, size_t buffer_size) {
     append_key_int(buffer, buffer_size, &pos, "inteligencia", sheet->inteligencia, 1);
     append_key_int(buffer, buffer_size, &pos, "sabedoria", sheet->sabedoria, 1);
     append_key_int(buffer, buffer_size, &pos, "carisma", sheet->carisma, 1);
-    append_key_int(buffer, buffer_size, &pos, "defesa", sheet->defesa, 0);
+
+    append_key_int(buffer, buffer_size, &pos, "bonus_armadura", sheet->bonus_armadura, 1);
+    append_key_int(buffer, buffer_size, &pos, "bonus_escudo", sheet->bonus_escudo, 1);
+    append_key_int(buffer, buffer_size, &pos, "bonus_outros_defesa", sheet->bonus_outros_defesa, 1);
+    append_key_int(buffer, buffer_size, &pos, "defesa", sheet->defesa, 1);
+    append_key_int(buffer, buffer_size, &pos, "pericias_treinadas", (int)sheet->pericias_treinadas, 0);
 
     append_str(buffer, buffer_size, &pos, "}");
+
 
     if (pos >= buffer_size - 1) {
         return -1; /* Buffer truncado */
@@ -212,6 +219,7 @@ int t20_from_json(T20Sheet *sheet, const char *json) {
     json_get_str(json, "nome", sheet->nome, sizeof(sheet->nome));
     json_get_int(json, "raca_id", &sheet->raca_id);
     json_get_str(json, "raca", sheet->raca, sizeof(sheet->raca));
+    json_get_int(json, "classe_id", &sheet->classe_id);
     json_get_str(json, "classe", sheet->classe, sizeof(sheet->classe));
     json_get_int(json, "nivel", &sheet->nivel);
     json_get_int(json, "experiencia", &sheet->experiencia);
@@ -227,10 +235,20 @@ int t20_from_json(T20Sheet *sheet, const char *json) {
     json_get_int(json, "inteligencia", &sheet->inteligencia);
     json_get_int(json, "sabedoria", &sheet->sabedoria);
     json_get_int(json, "carisma", &sheet->carisma);
+
+    json_get_int(json, "bonus_armadura", &sheet->bonus_armadura);
+    json_get_int(json, "bonus_escudo", &sheet->bonus_escudo);
+    json_get_int(json, "bonus_outros_defesa", &sheet->bonus_outros_defesa);
     json_get_int(json, "defesa", &sheet->defesa);
+
+    int pericias_raw = 0;
+    if (json_get_int(json, "pericias_treinadas", &pericias_raw)) {
+        sheet->pericias_treinadas = (unsigned int)pericias_raw;
+    }
 
     /* Recalcula valores para garantir coerência */
     t20_recalculate(sheet);
 
     return 0;
+
 }
