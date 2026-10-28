@@ -12,7 +12,8 @@ TEST_DIR  = tests
 WEB_DIST  = web/dist
 
 # Fontes C do Core
-CORE_SRCS = $(SRC_DIR)/sheet_t20.c $(SRC_DIR)/rpg_base.c
+CORE_SRCS = $(SRC_DIR)/sheet_t20.c $(SRC_DIR)/rpg_base.c $(SRC_DIR)/dice.c
+
 
 # Flags para compilação WebAssembly standalone (Clang + wasm-ld)
 WASM_FLAGS = --target=wasm32 -O2 -nostdlib -Wl,--no-entry -Wl,--export-all
