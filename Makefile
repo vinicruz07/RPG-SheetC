@@ -8,6 +8,7 @@ CC_WASM   = clang
 
 # Diretórios
 SRC_DIR   = src/core
+WASM_DIR  = src/wasm
 TEST_DIR  = tests
 WEB_DIST  = web/dist
 
@@ -15,8 +16,8 @@ WEB_DIST  = web/dist
 CORE_SRCS = $(SRC_DIR)/sheet_t20.c $(SRC_DIR)/rpg_base.c $(SRC_DIR)/dice.c $(SRC_DIR)/sheet_json.c \
             $(SRC_DIR)/sheet_dnd5e.c $(SRC_DIR)/sheet_fabula.c $(SRC_DIR)/sheet_3det.c $(SRC_DIR)/sheet_types.c
 
-
-
+# Fontes específicas do WebAssembly (Core + API bindings)
+WASM_SRCS = $(CORE_SRCS) $(WASM_DIR)/wasm_api.c
 
 # Flags para compilação WebAssembly standalone (Clang + wasm-ld)
 WASM_FLAGS = --target=wasm32 -O2 -nostdlib -Wl,--no-entry -Wl,--export-all
@@ -36,10 +37,11 @@ all: wasm
 $(WEB_DIST):
 	@powershell -NoProfile -Command "if (!(Test-Path '$(WEB_DIST)')) { New-Item -ItemType Directory -Path '$(WEB_DIST)' -Force | Out-Null }"
 
-# Alvo principal: compila o Core C para .wasm
+# Alvo principal: compila o Core C + API para .wasm
 wasm: $(WEB_DIST)
-	$(CC_WASM) $(WASM_FLAGS) $(CORE_SRCS) -o $(WASM_TARGET)
+	$(CC_WASM) $(WASM_FLAGS) $(WASM_SRCS) -o $(WASM_TARGET)
 	@echo [OK] WebAssembly compilado com sucesso em $(WASM_TARGET)
+
 
 # Alvo de testes: compila e executa a suite de testes unitarios com GCC nativo
 test: $(CORE_SRCS) $(TEST_DIR)/test_core.c
