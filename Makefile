@@ -12,7 +12,9 @@ TEST_DIR  = tests
 WEB_DIST  = web/dist
 
 # Fontes C do Core
-CORE_SRCS = $(SRC_DIR)/sheet_t20.c $(SRC_DIR)/rpg_base.c $(SRC_DIR)/dice.c $(SRC_DIR)/sheet_json.c
+CORE_SRCS = $(SRC_DIR)/sheet_t20.c $(SRC_DIR)/rpg_base.c $(SRC_DIR)/dice.c $(SRC_DIR)/sheet_json.c \
+            $(SRC_DIR)/sheet_dnd5e.c $(SRC_DIR)/sheet_fabula.c $(SRC_DIR)/sheet_3det.c $(SRC_DIR)/sheet_types.c
+
 
 
 

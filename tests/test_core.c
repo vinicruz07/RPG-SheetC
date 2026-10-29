@@ -3,8 +3,10 @@
 #include <string.h>
 #include "../src/core/sheet_types.h"
 #include "../src/core/sheet_t20.h"
+#include "../src/core/sheet_all.h"
 #include "../src/core/dice.h"
 #include "../src/core/sheet_json.h"
+
 
 static void test_t20_modifiers(void) {
     assert(t20_calc_modifier(10) == 0);
@@ -227,6 +229,62 @@ static void test_json_roundtrip(void) {
     printf("  [OK] Serializacao e desserializacao JSON (Round-trip com 100%% de integridade)\n");
 }
 
+static void test_multisystem_scaffolding(void) {
+    /* 1. D&D 5e */
+    DnD5eSheet dnd;
+    dnd5e_init_default(&dnd, "Tordek", "Anão", "Fighter");
+    assert(dnd.sistema == SYSTEM_DND5E);
+    assert(strcmp(dnd.nome, "Tordek") == 0);
+    assert(dnd.hp_max == 10);
+    assert(dnd.bonus_proficiencia == 2);
+    assert(dnd.classe_armadura == 10);
+
+    /* 2. Fabula Ultima */
+    FabulaSheet fabula;
+    fabula_init_default(&fabula, "Reisen", "Elementalista");
+    assert(fabula.sistema == SYSTEM_FABULA_ULTIMA);
+    assert(strcmp(fabula.nome, "Reisen") == 0);
+    assert(fabula.nivel == 5);
+    assert(fabula.hp_max == 45); /* 5 + 8*5 */
+    assert(fabula.mp_max == 45);
+    assert(fabula.ip_max == 6);
+    assert(fabula.pontos_fabula == 3);
+
+    /* 3. 3D&T Victory */
+    ThreeDetSheet td;
+    threedet_init_default(&td, "Defensor", "Lutador");
+    assert(td.sistema == SYSTEM_3DET_VICTORY);
+    assert(strcmp(td.nome, "Defensor") == 0);
+    assert(td.pv_max == 10); /* R=2 -> 10 */
+    assert(td.pm_max == 10);
+    assert(td.pa_max == 1);
+    assert(td.defesa == 4);  /* H=2 + R=2 */
+
+    /* 4. União Polimórfica Universal RPGSheet */
+    RPGSheet r1, r2, r3, r4;
+    r1.sistema = SYSTEM_TORMENTA20;
+    t20_init_default(&r1.data.t20, "Valeros", T20_RACE_HUMANO, "Guerreiro");
+    assert(strcmp(rpg_sheet_get_name(&r1), "Valeros") == 0);
+    assert(rpg_sheet_get_pv_atual(&r1) == 20);
+
+    r2.sistema = SYSTEM_DND5E;
+    dnd5e_init_default(&r2.data.dnd5e, "Lidda", "Halfling", "Rogue");
+    assert(strcmp(rpg_sheet_get_name(&r2), "Lidda") == 0);
+    assert(rpg_sheet_get_defesa(&r2) == 10);
+
+    r3.sistema = SYSTEM_FABULA_ULTIMA;
+    fabula_init_default(&r3.data.fabula, "Noctis", "Príncipe");
+    assert(strcmp(rpg_sheet_get_name(&r3), "Noctis") == 0);
+    assert(rpg_sheet_get_pv_max(&r3) == 45);
+
+    r4.sistema = SYSTEM_3DET_VICTORY;
+    threedet_init_default(&r4.data.threedet, "Megaman", "Androide");
+    assert(strcmp(rpg_sheet_get_name(&r4), "Megaman") == 0);
+    assert(rpg_sheet_get_pv_atual(&r4) == 10);
+
+    printf("  [OK] Suporte multissistemas (D&D 5e, Fabula Ultima, 3D&T Victory e uniao RPGSheet)\n");
+}
+
 int main(void) {
     printf("=== Executando Testes Unitarios do Core C (RPG-SheetC) ===\n");
     test_t20_modifiers();
@@ -237,6 +295,8 @@ int main(void) {
     test_dice_distribution();
     test_dice_detailed_roll();
     test_json_roundtrip();
+    test_multisystem_scaffolding();
     printf("=== Todos os testes passaram com sucesso! ===\n");
     return 0;
 }
+
