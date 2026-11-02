@@ -1,10 +1,11 @@
 # ⚔️ RPG-SheetC
 
 > **Gerenciador de Fichas de RPG de Alta Performance**  
-> Lógica de regras, cálculos e dados 100% em **C puro (C99)** &bull; Interface Web moderna conectada via **WebAssembly standalone**.
+> **Arquitetura Híbrida**: Motor de regras, cálculos e dados 100% em **C puro (C99 Freestanding)** &bull; Interface Web moderna em **HTML5, CSS3 e Vanilla JS** conectada via **WebAssembly standalone**.
 
-![Badge C99](https://img.shields.io/badge/Language-C99%20Pure-blue.svg)
-![Badge WASM](https://img.shields.io/badge/Target-WebAssembly%20(wasm32)-orange.svg)
+![Badge C99](https://img.shields.io/badge/Core-C99%20Freestanding-blue.svg)
+![Badge WASM](https://img.shields.io/badge/Engine-WebAssembly%20(wasm32)-orange.svg)
+![Badge Frontend](https://img.shields.io/badge/Frontend-HTML5%20%7C%20CSS3%20%7C%20Vanilla%20JS-yellow.svg)
 ![Badge Tormenta20](https://img.shields.io/badge/System-Tormenta%2020%20Oficial-red.svg)
 ![Badge Tests](https://img.shields.io/badge/Tests-100%25%20Passing-brightgreen.svg)
 ![Badge License](https://img.shields.io/badge/License-MIT-lightgrey.svg)
@@ -13,11 +14,38 @@
 
 ## 📖 Visão Geral
 
-O **RPG-SheetC** é uma aplicação que combina a robustez, velocidade e determinismo da programação em C com a riqueza visual e interativa da Web moderna. 
+O **RPG-SheetC** é uma aplicação construída sob uma **arquitetura híbrida intencional**: une a robustez, velocidade determinística e segurança de tipos do **C puro (C99)** à facilidade de distribuição, portabilidade e riqueza visual da **Web moderna**.
 
-Todo o motor de regras — cálculo de atributos, progressão multinível de PV e PM, modificadores de defesa com armaduras e escudos, tabela completa de perícias treinadas, gerador pseudoaleatório de dados poliédricos (PRNG Xorshift32) e serialização JSON — é implementado em **C puro freestanding**, sem dependência de runtimes pesados ou libc externa (`-nostdlib`).
+- Todo o motor de regras — cálculo de modificadores de atributos, progressão multinível de PV e PM, regras de combate e defesa, catálogo oficial de 29 perícias treinadas, gerador pseudoaleatório de dados poliédricos (PRNG Xorshift32) e serialização/desserialização JSON — é escrito em **C99 puro freestanding**, sem dependência de runtimes pesados ou libc externa (`-nostdlib`), compilado diretamente para bytecode WebAssembly (`clang --target=wasm32` + `wasm-ld`).
+- A interface com o usuário (UI) é uma aplicação web (SPA) construída em **HTML5 semântico, CSS3 temático de RPG e Vanilla JavaScript (sem frameworks pesados)**. O JavaScript atua estritamente como camada de apresentação visual e ponte de I/O (*glue code*), sincronizando o DOM e os eventos do navegador com a memória linear do C.
 
-O frontend atua como uma camada de apresentação elegante e responsiva (HTML5 semântico, CSS3 temático de mesa de RPG e Vanilla JavaScript), comunicando-se diretamente com a memória linear do WebAssembly (`clang --target=wasm32` + `wasm-ld`).
+---
+
+## 🧩 Por que uma Arquitetura Híbrida (C + WebAssembly + JavaScript)?
+
+Uma pergunta frequente em projetos WebAssembly é: *“Se o core é em C, por que o repositório também possui código JavaScript?”*
+
+A resposta reside nas especificações fundamentais do padrão WebAssembly definido pela W3C:
+
+1. **WebAssembly não manipula o DOM diretamente**: Um binário `.wasm` executa código de baixo nível em uma máquina virtual isolada. Ele não pode, por si só, criar elementos HTML (`<div>`, `<button>`, `<input>`), renderizar janelas ou ouvir eventos de clique de mouse, toque ou digitação no navegador.
+2. **WebAssembly não acessa Web APIs nativas**: O C compilado para WebAssembly não tem acesso direto a recursos do navegador como `localStorage` (armazenamento persistente de fichas), download de arquivos (`Blob` / `URL.createObjectURL`) ou diálogos de impressão (`window.print()`).
+3. **Divisão de Responsabilidades Rigorosa**: Para manter o código desacoplado e manutenível, o projeto adota uma fronteira estrita:
+
+| Responsabilidade do Sistema | Camada de Execução | Tecnologia |
+| :--- | :---: | :---: |
+| **Cálculo de Modificadores de Atributos** | 🧠 Core C | **C99 Puro** |
+| **Bases e Progressão de PV e PM por Nível** | 🧠 Core C | **C99 Puro** |
+| **Cálculo da Defesa Total (DES + Armadura + Escudo)** | 🧠 Core C | **C99 Puro** |
+| **Catálogo e Bônus de 29 Perícias Oficiais** | 🧠 Core C | **C99 Puro** |
+| **Sorteio de Dados Poliédricos (PRNG Xorshift32)** | 🧠 Core C | **C99 Puro** |
+| **Parser e Serializador JSON** | 🧠 Core C | **C99 Puro** |
+| **Rotinas de Segurança de Buffer e Strings** | 🧠 Core C | **C99 Freestanding** |
+| *Instanciar o binário `.wasm` no navegador* | 🔌 Ponte (*Glue code*) | Vanilla JavaScript |
+| *Passar ponteiros e ler strings na memória do C* | 🔌 Ponte (*Glue code*) | Vanilla JavaScript |
+| *Renderização de Telas, Wizard, Drawer e Modais* | 🎨 Apresentação Visual | HTML5 + CSS3 + JS |
+| *Persistência em `localStorage` e I/O de arquivos* | 🌐 I/O do Navegador | Vanilla JavaScript |
+
+> **Portabilidade Futura**: O código C em `src/core/` não possui **nenhum acoplamento** com a Web ou com JavaScript. Caso você decida no futuro criar um aplicativo nativo para desktop ou mobile (usando Raylib, Dear ImGui, Qt ou GTK), todo o núcleo em `src/core/` pode ser reaproveitado diretamente sem modificar uma única linha de código.
 
 ---
 
@@ -70,7 +98,7 @@ RPG-SheetC/
 │   │   └── rpg_base.h / .c    # Funções seguras freestanding (memset, memcpy, strncpy, etc.)
 │   └── wasm/
 │       └── wasm_api.c         # Camada de ponte C <-> WebAssembly (símbolos exportados)
-├── web/                       # Frontend Web Moderno
+├── web/                       # Frontend Web Moderno (Vanilla JS + HTML5 + CSS3)
 │   ├── index.html             # Casca semântica da aplicação SPA
 │   ├── css/
 │   │   ├── tokens.css         # Variáveis e design tokens (cores de RPG, tipografia, espaçamento)
@@ -119,7 +147,7 @@ Para compilar o código C nativo e gerar o módulo WebAssembly, certifique-se de
 
 ### 1. Compilar o Módulo WebAssembly
 
-Gera o arquivo `web/dist/sheetc_core.wasm` otimizado em modo freestanding:
+Gera o arquivo `web/dist/sheetc_core.wasm` otimizado em modo freestanding a partir dos fontes C:
 
 ```bash
 mingw32-make wasm
