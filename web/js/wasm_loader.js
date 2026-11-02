@@ -14,7 +14,7 @@ class SheetCWasm {
 
     /**
      * Carrega e instancia o binário WebAssembly
-     * @param {string} wasmUrl Caminho para o arquivo .wasm
+     * @param {string|Buffer|ArrayBuffer|Uint8Array} wasmUrl Caminho para o arquivo .wasm ou bytes do módulo
      */
     async load(wasmUrl = './dist/sheetc_core.wasm') {
         const importObject = {
@@ -22,6 +22,20 @@ class SheetCWasm {
                 // Símbolos de ambiente opcionais caso necessário no futuro
             }
         };
+
+        // Suporte direto a buffers em memória (testes automatizados e workers offline)
+        if (typeof ArrayBuffer !== 'undefined' && (wasmUrl instanceof ArrayBuffer || wasmUrl instanceof Uint8Array || (typeof Buffer !== 'undefined' && Buffer.isBuffer(wasmUrl)))) {
+            const result = await WebAssembly.instantiate(wasmUrl, importObject);
+            this.instance = result.instance || result;
+            this.exports = this.instance.exports;
+            this.memory = this.exports.memory;
+            this.isLoaded = true;
+            if (typeof this.exports.wasm_init === 'function') {
+                this.exports.wasm_init();
+            }
+            console.log('[WASM] Motor RPG-SheetC C99 instanciado via buffer binário. Símbolos exportados:', Object.keys(this.exports).length);
+            return;
+        }
 
         try {
             // Tenta instantiateStreaming primeiro (método mais eficiente)

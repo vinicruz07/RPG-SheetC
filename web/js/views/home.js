@@ -76,6 +76,7 @@ class HomeView {
         this.selectedBannerTitle = document.getElementById('selected-system-title');
         this.btnStartNew = document.getElementById('btn-home-new-sheet');
         this.btnLoadSheet = document.getElementById('btn-home-load-sheet');
+        this.btnManageSheets = document.getElementById('btn-home-manage-sheets');
         this.btnViewActive = document.getElementById('btn-home-view-active');
 
         this.renderSystemsGrid();
@@ -166,6 +167,15 @@ class HomeView {
                 }
                 if (this.router && typeof this.router.navigate === 'function') {
                     this.router.navigate('sheet');
+                }
+            });
+        }
+
+        // Gerenciar Fichas Salvas (abre modal do localStorage)
+        if (this.btnManageSheets) {
+            this.btnManageSheets.addEventListener('click', () => {
+                if (window.characterManagerModal) {
+                    window.characterManagerModal.open();
                 }
             });
         }

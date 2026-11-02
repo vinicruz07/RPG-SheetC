@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/views.css">
     <link rel="stylesheet" href="css/dice_roller.css">
+    <link rel="stylesheet" href="css/storage.css">
 </head>
 <body>
     <div class="container">
@@ -20,9 +21,14 @@
                 </h1>
                 <p class="brand-subtitle">Lógica de regras 100% em C puro (C99) &bull; Interface Web via WebAssembly</p>
             </div>
-            <div id="engine-status-badge" class="status-badge status-loading">
-                <span class="status-dot"></span>
-                <span id="engine-status-text">Conectando ao Motor C...</span>
+            <div class="header-right-group" style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
+                <button type="button" id="btn-header-manage-sheets" class="header-storage-btn" title="Gerenciar Fichas Salvas no Navegador">
+                    📜 Minhas Fichas <span id="header-sheets-count" class="header-storage-badge">0</span>
+                </button>
+                <div id="engine-status-badge" class="status-badge status-loading">
+                    <span class="status-dot"></span>
+                    <span id="engine-status-text">Conectando ao Motor C...</span>
+                </div>
             </div>
         </header>
 
@@ -53,6 +59,7 @@
                         </p>
                         <div class="home-actions-bar">
                             <button id="btn-home-new-sheet" class="btn btn-primary">⚔️ Nova Ficha com Sistema Selecionado</button>
+                            <button id="btn-home-manage-sheets" class="btn">📜 Minhas Fichas Salvas</button>
                             <button id="btn-home-load-sheet" class="btn">📂 Carregar Ficha (JSON)</button>
                             <button id="btn-home-view-active" class="btn">📜 Acessar Ficha Ativa</button>
                         </div>
@@ -104,6 +111,7 @@
 
     <!-- Scripts da Aplicação -->
     <script src="js/wasm_loader.js"></script>
+    <script src="js/services/storage.js"></script>
     <script src="js/components/dice_roller.js"></script>
     <script src="js/views/home.js"></script>
     <script src="js/views/wizard.js"></script>

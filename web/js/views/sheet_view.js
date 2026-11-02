@@ -97,8 +97,14 @@ class SheetView {
                         </div>
 
                         <div class="sheet-header-actions">
-                            <button id="btn-sheet-open-wizard" class="btn" title="Abre o assistente para recriar ou configurar este personagem">
-                                🪄 Assistente de Criação
+                            <button type="button" id="btn-sheet-save" class="btn btn-primary" title="Salvar Ficha Atual no Navegador">
+                                💾 Salvar Ficha
+                            </button>
+                            <button type="button" id="btn-sheet-manage-saved" class="btn" title="Abrir Gerenciador de Fichas Salvas">
+                                📜 Minhas Fichas
+                            </button>
+                            <button type="button" id="btn-sheet-open-wizard" class="btn" title="Abre o assistente para recriar ou configurar este personagem">
+                                🪄 Assistente
                             </button>
                         </div>
                     </div>
@@ -432,7 +438,35 @@ class SheetView {
             });
         }
 
-        // 4. Abrir Wizard a partir da ficha
+        // 4. Salvar Ficha no localStorage & Gerenciador de Fichas
+        const btnSaveSheet = document.getElementById('btn-sheet-save');
+        if (btnSaveSheet) {
+            btnSaveSheet.addEventListener('click', () => {
+                if (window.characterStorage) {
+                    try {
+                        const saved = window.characterStorage.saveCurrent(this.engine);
+                        this.logger(`[Storage] Ficha "${saved.name}" salva com sucesso no navegador!`, 'success');
+                        btnSaveSheet.textContent = '✅ Salvo!';
+                        setTimeout(() => {
+                            btnSaveSheet.textContent = '💾 Salvar Ficha';
+                        }, 2000);
+                    } catch (err) {
+                        this.logger(`[Storage Error] Erro ao salvar ficha: ${err.message}`, 'error');
+                    }
+                }
+            });
+        }
+
+        const btnManageSaved = document.getElementById('btn-sheet-manage-saved');
+        if (btnManageSaved) {
+            btnManageSaved.addEventListener('click', () => {
+                if (window.characterManagerModal) {
+                    window.characterManagerModal.open();
+                }
+            });
+        }
+
+        // 5. Abrir Wizard a partir da ficha
         const btnOpenWizard = document.getElementById('btn-sheet-open-wizard');
         if (btnOpenWizard) {
             btnOpenWizard.addEventListener('click', () => {

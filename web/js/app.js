@@ -75,6 +75,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
+    // Inicializa o Gerenciador de Armazenamento Local (localStorage)
+    const storage = new window.CharacterStorage();
+    window.characterStorage = storage;
+
+    // Atualiza contagem de fichas no header
+    const headerSheetsCount = document.getElementById('header-sheets-count');
+    const updateStorageBadge = () => {
+        if (headerSheetsCount) {
+            const count = storage.getAllSheets().length;
+            headerSheetsCount.textContent = count;
+        }
+    };
+    updateStorageBadge();
+    storage.onChange(updateStorageBadge);
+
+    // Inicializa o Modal de Gerenciamento de Fichas
+    const storageModal = new window.CharacterManagerModal(storage, engine, router, logToConsole);
+    window.characterManagerModal = storageModal;
+
+    const btnHeaderManageSheets = document.getElementById('btn-header-manage-sheets');
+    if (btnHeaderManageSheets) {
+        btnHeaderManageSheets.addEventListener('click', () => {
+            storageModal.open();
+        });
+    }
+
     // Inicializa a View de Home (Seleção de Sistemas)
     let homeView = null;
     if (typeof window.HomeView === 'function') {
@@ -88,6 +114,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof window.WizardView === 'function') {
         wizardView = new window.WizardView(engine, router, (hero) => {
             logToConsole(`[C Wizard] Herói "${hero.name}" criado com sucesso! PV: ${hero.pv}/${hero.pvMax}, PM: ${hero.pm}/${hero.pmMax}, Defesa: ${hero.defense}.`, 'success');
+            // Salva a nova ficha no storage local
+            try {
+                storage.saveCurrent(engine, hero.name, true);
+                updateStorageBadge();
+                logToConsole(`[Storage] Nova ficha "${hero.name}" persistida no armazenamento local.`, 'info');
+            } catch (e) {
+                console.warn('Erro ao salvar nova ficha no storage:', e);
+            }
             updateUiState();
         });
         wizardView.init('wizard-container');
@@ -123,6 +157,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         logToConsole('Motor C (Clang 16 wasm32) conectado com sucesso! Sistema padrão: Tormenta 20.', 'success');
+
+        // Tenta restaurar automaticamente a última ficha ativa salva no localStorage
+        if (storage.autoRestore(engine)) {
+            const restoredName = engine.getCharacterName();
+            logToConsole(`[Storage] Ficha ativa "${restoredName}" restaurada automaticamente do navegador.`, 'info');
+        } else {
+            // Se não houver fichas salvas, salva a ficha inicial para que o usuário já tenha um slot
+            if (storage.getAllSheets().length === 0) {
+                storage.saveCurrent(engine, engine.getCharacterName());
+            }
+        }
+        updateStorageBadge();
 
         // Atualiza a visualização inicial dos dados
         updateUiState();
