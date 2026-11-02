@@ -1,0 +1,259 @@
+/**
+ * views.css — Estilos específicos das Views da SPA do RPG-SheetC
+ */
+
+/* =========================================================================
+   Controle de Exibição das Views (SPA Routing)
+   ========================================================================= */
+
+.view-section {
+    display: none;
+    animation: fadeInView 0.25s ease-out forwards;
+}
+
+.view-section.active {
+    display: block;
+}
+
+@keyframes fadeInView {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =========================================================================
+   View Home / Boas-Vindas
+   ========================================================================= */
+
+.home-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+}
+
+.home-banner {
+    background: linear-gradient(135deg, rgba(26, 30, 39, 0.95) 0%, rgba(20, 23, 30, 0.9) 100%);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
+}
+
+.home-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--color-gold-primary), transparent);
+}
+
+.home-banner-content {
+    max-width: 760px;
+}
+
+.home-tagline {
+    font-family: var(--font-heading);
+    color: var(--color-gold-primary);
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: var(--space-xs);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.home-heading {
+    font-family: var(--font-heading);
+    font-size: 2.1rem;
+    font-weight: 900;
+    color: var(--color-parchment-light);
+    line-height: 1.25;
+    margin-bottom: var(--space-sm);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.home-desc {
+    color: var(--color-text-muted);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: var(--space-lg);
+}
+
+.home-actions-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    align-items: center;
+}
+
+/* =========================================================================
+   Seleção de Sistemas de RPG (Cards)
+   ========================================================================= */
+
+.systems-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: var(--space-md);
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+}
+
+.systems-section-title {
+    font-family: var(--font-heading);
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--color-gold-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.systems-section-subtitle {
+    color: var(--color-text-dim);
+    font-size: 0.88rem;
+}
+
+.systems-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--space-md);
+}
+
+.system-card {
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg) var(--space-md);
+    cursor: pointer;
+    position: relative;
+    transition: all var(--transition-normal);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.system-card:hover {
+    border-color: var(--color-gold-dark);
+    background: var(--color-surface-card-hover);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.system-card.selected {
+    border-color: var(--color-gold-primary);
+    background: linear-gradient(180deg, rgba(212, 163, 115, 0.12) 0%, rgba(26, 30, 39, 0.98) 100%);
+    box-shadow: 0 0 18px rgba(212, 163, 115, 0.25);
+}
+
+.system-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-sm);
+}
+
+.system-sigil {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.system-status-pill {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 3px 8px;
+    border-radius: var(--radius-pill);
+    border: 1px solid transparent;
+}
+
+.status-pill-ready {
+    background: rgba(34, 197, 94, 0.12);
+    color: #4ade80;
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.status-pill-scaffolding {
+    background: rgba(59, 130, 246, 0.12);
+    color: #60a5fa;
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.system-name {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--color-parchment-light);
+    margin-bottom: var(--space-2xs);
+}
+
+.system-description {
+    font-size: 0.86rem;
+    color: var(--color-text-muted);
+    line-height: 1.5;
+    margin-bottom: var(--space-md);
+}
+
+.system-features {
+    list-style: none;
+    font-size: 0.8rem;
+    color: var(--color-text-dim);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-top: 1px solid var(--color-border-subtle);
+    padding-top: var(--space-sm);
+}
+
+.system-features li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.system-features li::before {
+    content: '◆';
+    color: var(--color-gold-primary);
+    font-size: 0.65rem;
+}
+
+/* =========================================================================
+   Rodapé de Ações do Sistema Selecionado
+   ========================================================================= */
+
+.system-selected-banner {
+    background: var(--color-surface-inset);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-md) var(--space-lg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.system-selected-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.system-selected-name {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-gold-primary);
+}

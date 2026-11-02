@@ -26,6 +26,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     const engine = new window.SheetCWasm();
     window.rpgEngine = engine; // Disponível no DevTools para inspeção interativa
 
+    // Roteador simples da SPA
+    const router = {
+        currentView: 'home',
+        navigate(viewName) {
+            this.currentView = viewName;
+            
+            // Alterna abas
+            const tabs = document.querySelectorAll('.tab-button');
+            tabs.forEach(tab => {
+                if (tab.dataset.view === viewName) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+
+            // Alterna seções
+            const views = document.querySelectorAll('.view-section');
+            views.forEach(v => {
+                if (v.id === `view-${viewName}`) {
+                    v.classList.add('active');
+                } else {
+                    v.classList.remove('active');
+                }
+            });
+
+            if (viewName === 'sheet') {
+                updateUiState();
+            }
+
+            logToConsole(`Navegação: visualizando tela "${viewName}".`);
+        }
+    };
+    window.appRouter = router;
+
+    // Configura cliques nas abas de navegação
+    const navTabs = document.querySelectorAll('.tab-button[data-view]');
+    navTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            if (!tab.disabled && tab.dataset.view) {
+                router.navigate(tab.dataset.view);
+            }
+        });
+    });
+
+    // Inicializa a View de Home (Seleção de Sistemas)
+    let homeView = null;
+    if (typeof window.HomeView === 'function') {
+        homeView = new window.HomeView(engine, router);
+        homeView.init();
+    }
+
     try {
         logToConsole('Iniciando carregamento do binário WebAssembly (sheetc_core.wasm)...');
         await engine.load('./dist/sheetc_core.wasm');
@@ -148,4 +200,3 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 });
-
