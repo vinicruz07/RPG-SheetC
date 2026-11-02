@@ -98,7 +98,16 @@ class SheetView {
 
                         <div class="sheet-header-actions">
                             <button type="button" id="btn-sheet-save" class="btn btn-primary" title="Salvar Ficha Atual no Navegador">
-                                💾 Salvar Ficha
+                                💾 Salvar
+                            </button>
+                            <button type="button" id="btn-sheet-export-file" class="btn" title="Baixar arquivo da ficha (.sheetc JSON)">
+                                📥 Exportar
+                            </button>
+                            <button type="button" id="btn-sheet-import-file" class="btn" title="Carregar arquivo do computador (.sheetc ou .json)">
+                                📤 Importar
+                            </button>
+                            <button type="button" id="btn-sheet-print-pdf" class="btn" title="Imprimir ou Salvar como PDF">
+                                🖨️ PDF / Imprimir
                             </button>
                             <button type="button" id="btn-sheet-manage-saved" class="btn" title="Abrir Gerenciador de Fichas Salvas">
                                 📜 Minhas Fichas
@@ -462,6 +471,50 @@ class SheetView {
             btnManageSaved.addEventListener('click', () => {
                 if (window.characterManagerModal) {
                     window.characterManagerModal.open();
+                }
+            });
+        }
+
+        // Exportar Ficha para arquivo (.sheetc JSON)
+        const btnExportFile = document.getElementById('btn-sheet-export-file');
+        if (btnExportFile) {
+            btnExportFile.addEventListener('click', () => {
+                if (window.CharacterExportService) {
+                    try {
+                        const { filename } = window.CharacterExportService.exportToFile(this.engine);
+                        this.logger(`[Export] Arquivo "${filename}" gerado e baixado com sucesso.`, 'success');
+                    } catch (err) {
+                        this.logger(`[Export Error] Falha ao exportar: ${err.message}`, 'error');
+                    }
+                }
+            });
+        }
+
+        // Importar Ficha do computador
+        const btnImportFile = document.getElementById('btn-sheet-import-file');
+        if (btnImportFile) {
+            btnImportFile.addEventListener('click', () => {
+                if (window.CharacterExportService) {
+                    window.CharacterExportService.promptImportFile(this.engine, window.characterStorage, (res) => {
+                        if (res.success) {
+                            this.logger(`[Import] Ficha de "${res.characterName}" importada com sucesso no motor C!`, 'success');
+                            this.refreshState();
+                        } else {
+                            this.logger(`[Import Error] Erro ao importar: ${res.error}`, 'error');
+                            alert(`Erro na importação: ${res.error}`);
+                        }
+                    });
+                }
+            });
+        }
+
+        // Imprimir / Salvar como PDF
+        const btnPrintPdf = document.getElementById('btn-sheet-print-pdf');
+        if (btnPrintPdf) {
+            btnPrintPdf.addEventListener('click', () => {
+                if (window.CharacterExportService) {
+                    this.logger('[Print] Preparando layout de impressão / exportação para PDF...', 'info');
+                    window.CharacterExportService.printSheet(this.router);
                 }
             });
         }

@@ -353,6 +353,9 @@ class CharacterManagerModal {
                         <button type="button" id="btn-modal-save-current" class="btn btn-primary" title="Salva o estado atual da ficha ativa">
                             💾 Salvar Ficha Atual
                         </button>
+                        <button type="button" id="btn-modal-import-file" class="btn" title="Importar arquivo .sheetc ou .json do computador">
+                            📥 Importar Arquivo
+                        </button>
                         <button type="button" id="btn-modal-new-character" class="btn" title="Iniciar assistente para novo personagem">
                             ➕ Novo Personagem
                         </button>
@@ -404,6 +407,25 @@ class CharacterManagerModal {
                 this.showFeedback(`Erro ao salvar: ${err.message}`, 'error');
             }
         });
+
+        const btnModalImport = document.getElementById('btn-modal-import-file');
+        if (btnModalImport) {
+            btnModalImport.addEventListener('click', () => {
+                if (window.CharacterExportService) {
+                    window.CharacterExportService.promptImportFile(this.engine, this.storage, (res) => {
+                        if (res.success) {
+                            this.showFeedback(`Ficha "${res.characterName}" importada com sucesso!`, 'success');
+                            this.renderList();
+                            if (window.sheetView) {
+                                window.sheetView.render();
+                            }
+                        } else {
+                            this.showFeedback(`Erro ao importar: ${res.error}`, 'error');
+                        }
+                    });
+                }
+            });
+        }
 
         document.getElementById('btn-modal-new-character').addEventListener('click', () => {
             this.close();
@@ -578,6 +600,9 @@ class CharacterManagerModal {
                     <button type="button" class="btn btn-action-load ${isActive ? 'btn-primary' : ''}" data-action="load" title="Carregar no Motor C">
                         ${isActive ? '✅ Ativa' : '📂 Carregar'}
                     </button>
+                    <button type="button" class="btn btn-action-icon" data-action="export" title="Exportar para arquivo .sheetc">
+                        📥
+                    </button>
                     <button type="button" class="btn btn-action-icon" data-action="rename" title="Renomear Ficha">
                         ✏️
                     </button>
@@ -610,6 +635,39 @@ class CharacterManagerModal {
                     }, 400);
                 } else {
                     this.showFeedback('Falha ao importar dados para a memória linear do C.', 'error');
+                }
+            });
+
+            const btnExport = card.querySelector('[data-action="export"]');
+            btnExport.addEventListener('click', () => {
+                try {
+                    const charName = sheet.name || 'heroi';
+                    const sanitized = charName.toLowerCase().replace(/[^a-z0-9_-]/gi, '_');
+                    const filename = `${sanitized}_tormenta20.sheetc`;
+
+                    const payload = {
+                        format: 'RPG-SheetC',
+                        version: '1.0.0',
+                        exportedAt: new Date().toISOString(),
+                        engine: 'C99 Freestanding WebAssembly',
+                        system: sheet.system || 'Tormenta 20',
+                        systemId: sheet.systemId || 1,
+                        sheet: sheet.data
+                    };
+
+                    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+                    this.showFeedback(`Ficha "${charName}" exportada como ${filename}!`, 'success');
+                } catch (e) {
+                    this.showFeedback(`Erro ao exportar: ${e.message}`, 'error');
                 }
             });
 
@@ -654,3 +712,4 @@ class CharacterManagerModal {
 // Exportações globais
 window.CharacterStorage = CharacterStorage;
 window.CharacterManagerModal = CharacterManagerModal;
+

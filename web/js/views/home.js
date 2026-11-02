@@ -180,35 +180,24 @@ class HomeView {
             });
         }
 
-        // Carregar Ficha (prepara file input para JSON)
+        // Carregar Ficha do computador
         if (this.btnLoadSheet) {
             this.btnLoadSheet.addEventListener('click', () => {
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = '.json,.sheetc';
-                input.onchange = (e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        try {
-                            const json = JSON.parse(event.target.result);
-                            const ok = this.engine.importJson(json);
-                            if (ok) {
-                                alert(`Ficha "${json.nome || 'Herói'}" carregada com sucesso no motor C!`);
-                                if (this.router && typeof this.router.navigate === 'function') {
-                                    this.router.navigate('sheet');
-                                }
-                            } else {
-                                alert('Erro: O motor C não conseguiu processar este arquivo.');
+                if (window.CharacterExportService) {
+                    window.CharacterExportService.promptImportFile(this.engine, window.characterStorage, (res) => {
+                        if (res.success) {
+                            alert(`Ficha "${res.characterName}" carregada com sucesso no motor C!`);
+                            if (window.sheetView) {
+                                window.sheetView.render();
                             }
-                        } catch (err) {
-                            alert('Arquivo inválido: Não foi possível ler o JSON.');
+                            if (this.router && typeof this.router.navigate === 'function') {
+                                this.router.navigate('sheet');
+                            }
+                        } else {
+                            alert(`Falha na importação: ${res.error}`);
                         }
-                    };
-                    reader.readAsText(file);
-                };
-                input.click();
+                    });
+                }
             });
         }
 
