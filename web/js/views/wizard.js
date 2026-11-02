@@ -732,3 +732,4 @@ class WizardView {
 if (typeof window !== 'undefined') {
     window.WizardView = WizardView;
 }
+

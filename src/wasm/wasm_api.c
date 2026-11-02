@@ -67,6 +67,15 @@ WASM_EXPORT int wasm_t20_get_level(void) {
     return g_active_t20.nivel;
 }
 
+WASM_EXPORT int wasm_t20_get_xp(void) {
+    return g_active_t20.experiencia;
+}
+
+WASM_EXPORT void wasm_t20_set_xp(int xp) {
+    if (xp < 0) xp = 0;
+    g_active_t20.experiencia = xp;
+}
+
 WASM_EXPORT int wasm_t20_get_raca_id(void) {
     return g_active_t20.raca_id;
 }
@@ -154,6 +163,14 @@ WASM_EXPORT int wasm_t20_get_defesa(void) {
     return g_active_t20.defesa;
 }
 
+WASM_EXPORT int wasm_t20_get_bonus_armadura(void) {
+    return g_active_t20.bonus_armadura;
+}
+
+WASM_EXPORT int wasm_t20_get_bonus_escudo(void) {
+    return g_active_t20.bonus_escudo;
+}
+
 WASM_EXPORT void wasm_t20_set_bonus_armadura(int bonus) {
     g_active_t20.bonus_armadura = bonus;
     t20_recalculate(&g_active_t20);
@@ -167,6 +184,18 @@ WASM_EXPORT void wasm_t20_set_bonus_escudo(int bonus) {
 /* =========================================================================
  * 5. Perícias
  * ========================================================================= */
+
+WASM_EXPORT int wasm_t20_skill_count(void) {
+    return T20_SKILL_COUNT;
+}
+
+WASM_EXPORT const char* wasm_t20_skill_name(int skill_id) {
+    return t20_skill_to_string((T20Skill)skill_id);
+}
+
+WASM_EXPORT int wasm_t20_skill_attr(int skill_id) {
+    return (int)t20_skill_get_attribute((T20Skill)skill_id);
+}
 
 WASM_EXPORT int wasm_t20_is_skill_trained(int skill_id) {
     return t20_is_skill_trained(&g_active_t20, (T20Skill)skill_id);

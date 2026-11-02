@@ -92,6 +92,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.wizardView = wizardView;
     }
 
+    // Inicializa a View Principal da Ficha (Edição In-Place)
+    let sheetView = null;
+    if (typeof window.SheetView === 'function') {
+        sheetView = new window.SheetView(engine, router, logToConsole);
+        window.sheetView = sheetView;
+    }
+
     try {
         logToConsole('Iniciando carregamento do binário WebAssembly (sheetc_core.wasm)...');
         await engine.load('./dist/sheetc_core.wasm');
@@ -127,27 +134,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function updateUiState() {
         if (!engine.isLoaded) return;
-        const sheet = engine.exportJson();
-        if (!sheet) return;
-
-        if (heroNameEl) heroNameEl.textContent = sheet.nome || 'Herói';
-        if (heroClassEl) heroClassEl.textContent = `${sheet.raca || ''} ${sheet.classe || ''}`.trim();
-        if (heroLevelEl) heroLevelEl.textContent = `Nível ${sheet.nivel || 1}`;
-        if (heroHpEl) heroHpEl.textContent = `${sheet.pv_atual} / ${sheet.pv_max}`;
-        if (heroMpEl) heroMpEl.textContent = `${sheet.pm_atual} / ${sheet.pm_max}`;
-        if (heroDefenseEl) heroDefenseEl.textContent = `${sheet.defesa}`;
-
-        // Atualiza valores dos atributos se existirem no DOM
-        const attrNames = ['forca', 'destreza', 'constituicao', 'inteligencia', 'sabedoria', 'carisma'];
-        attrNames.forEach((attr, idx) => {
-            const valEl = document.getElementById(`attr-val-${attr}`);
-            const modEl = document.getElementById(`attr-mod-${attr}`);
-            if (valEl) valEl.textContent = sheet[attr];
-            if (modEl) {
-                const mod = engine.getModifier(idx);
-                modEl.textContent = (mod >= 0 ? `+${mod}` : `${mod}`);
-            }
-        });
+        if (sheetView) {
+            sheetView.init('sheet-container');
+        }
     }
 
     function setupEventListeners(engine, log, refresh) {

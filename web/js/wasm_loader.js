@@ -128,6 +128,15 @@ class SheetCWasm {
         this.exports.wasm_t20_set_level(lvl);
     }
 
+    getXp() {
+        return this.isLoaded ? this.exports.wasm_t20_get_xp() : 0;
+    }
+
+    setXp(xp) {
+        if (!this.isLoaded) return;
+        this.exports.wasm_t20_set_xp(xp);
+    }
+
     getRaceId() {
         return this.isLoaded ? this.exports.wasm_t20_get_raca_id() : 0;
     }
@@ -181,6 +190,11 @@ class SheetCWasm {
         return this.isLoaded ? this.exports.wasm_t20_get_pv_max() : 0;
     }
 
+    setPvAtual(val) {
+        if (!this.isLoaded) return;
+        this.exports.wasm_t20_set_pv_atual(val);
+    }
+
     modifyPv(delta) {
         if (!this.isLoaded) return;
         this.exports.wasm_t20_modify_pv(delta);
@@ -194,6 +208,11 @@ class SheetCWasm {
         return this.isLoaded ? this.exports.wasm_t20_get_pm_max() : 0;
     }
 
+    setPmAtual(val) {
+        if (!this.isLoaded) return;
+        this.exports.wasm_t20_set_pm_atual(val);
+    }
+
     modifyPm(delta) {
         if (!this.isLoaded) return;
         this.exports.wasm_t20_modify_pm(delta);
@@ -201,6 +220,55 @@ class SheetCWasm {
 
     getDefesa() {
         return this.isLoaded ? this.exports.wasm_t20_get_defesa() : 10;
+    }
+
+    getBonusArmadura() {
+        return this.isLoaded ? this.exports.wasm_t20_get_bonus_armadura() : 0;
+    }
+
+    setBonusArmadura(bonus) {
+        if (!this.isLoaded) return;
+        this.exports.wasm_t20_set_bonus_armadura(bonus);
+    }
+
+    getBonusEscudo() {
+        return this.isLoaded ? this.exports.wasm_t20_get_bonus_escudo() : 0;
+    }
+
+    setBonusEscudo(bonus) {
+        if (!this.isLoaded) return;
+        this.exports.wasm_t20_set_bonus_escudo(bonus);
+    }
+
+    /* =========================================================================
+     * Métodos de Perícias (Tormenta 20)
+     * ========================================================================= */
+
+    getSkillCount() {
+        return this.isLoaded ? this.exports.wasm_t20_skill_count() : 29;
+    }
+
+    getSkillName(skillId) {
+        if (!this.isLoaded) return '';
+        const ptr = this.exports.wasm_t20_skill_name(skillId);
+        return this.readString(ptr, 32);
+    }
+
+    getSkillAttr(skillId) {
+        return this.isLoaded ? this.exports.wasm_t20_skill_attr(skillId) : 0;
+    }
+
+    isSkillTrained(skillId) {
+        return this.isLoaded ? Boolean(this.exports.wasm_t20_is_skill_trained(skillId)) : false;
+    }
+
+    setSkillTrained(skillId, trained) {
+        if (!this.isLoaded) return;
+        this.exports.wasm_t20_set_skill_trained(skillId, trained ? 1 : 0);
+    }
+
+    calcSkill(skillId, outrosBonus = 0) {
+        return this.isLoaded ? this.exports.wasm_t20_calc_skill(skillId, outrosBonus) : 0;
     }
 
     /* =========================================================================

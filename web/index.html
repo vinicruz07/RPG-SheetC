@@ -92,108 +92,7 @@
              VIEW: Ficha do Personagem (Painel Ativo)
              =================================================================== -->
         <div id="view-sheet" class="view-section">
-            <div class="dashboard-grid">
-                <!-- Painel Esquerdo: Ficha Ativa no Motor C -->
-                <main>
-                    <section class="card">
-                        <div class="card-header">
-                            <span class="card-title">Ficha Ativa no Motor C (Tormenta 20)</span>
-                            <button id="btn-change-name" class="btn" title="Altera o nome do personagem diretamente na memória linear do C">Renomear</button>
-                        </div>
-
-                        <div class="hero-overview">
-                            <div class="hero-info">
-                                <h2 id="hero-name">Carregando...</h2>
-                                <p class="hero-meta">
-                                    <span id="hero-class">Guerreiro Humano</span> &bull; 
-                                    <span id="hero-level">Nível 1</span>
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Medidores de Vida, Mana e Defesa -->
-                        <div class="resources-row">
-                            <div class="meter-box">
-                                <div class="meter-label">Pontos de Vida</div>
-                                <div id="hero-hp" class="meter-value pv-meter">-- / --</div>
-                            </div>
-                            <div class="meter-box">
-                                <div class="meter-label">Pontos de Mana</div>
-                                <div id="hero-mp" class="meter-value pm-meter">-- / --</div>
-                            </div>
-                            <div class="meter-box">
-                                <div class="meter-label">Defesa Passiva</div>
-                                <div id="hero-defense" class="meter-value defesa-meter">--</div>
-                            </div>
-                        </div>
-
-                        <!-- Grade de Atributos -->
-                        <h3 class="section-label">Atributos Básicos</h3>
-                        <div class="attributes-grid">
-                            <div class="attr-card">
-                                <div class="attr-label">Força</div>
-                                <div id="attr-val-forca" class="attr-val">10</div>
-                                <div id="attr-mod-forca" class="attr-mod">+0</div>
-                            </div>
-                            <div class="attr-card">
-                                <div class="attr-label">Destreza</div>
-                                <div id="attr-val-destreza" class="attr-val">10</div>
-                                <div id="attr-mod-destreza" class="attr-mod">+0</div>
-                            </div>
-                            <div class="attr-card">
-                                <div class="attr-label">Constituição</div>
-                                <div id="attr-val-constituicao" class="attr-val">10</div>
-                                <div id="attr-mod-constituicao" class="attr-mod">+0</div>
-                            </div>
-                            <div class="attr-card">
-                                <div class="attr-label">Inteligência</div>
-                                <div id="attr-val-inteligencia" class="attr-val">10</div>
-                                <div id="attr-mod-inteligencia" class="attr-mod">+0</div>
-                            </div>
-                            <div class="attr-card">
-                                <div class="attr-label">Sabedoria</div>
-                                <div id="attr-val-sabedoria" class="attr-val">10</div>
-                                <div id="attr-mod-sabedoria" class="attr-mod">+0</div>
-                            </div>
-                            <div class="attr-card">
-                                <div class="attr-label">Carisma</div>
-                                <div id="attr-val-carisma" class="attr-val">10</div>
-                                <div id="attr-mod-carisma" class="attr-mod">+0</div>
-                            </div>
-                        </div>
-                    </section>
-                </main>
-
-                <!-- Painel Direito: Testes de Interoperabilidade e Logs -->
-                <aside>
-                    <section class="card">
-                        <div class="card-header">
-                            <span class="card-title">Interoperabilidade C & Web</span>
-                        </div>
-
-                        <p style="font-size: 0.88rem; color: var(--color-text-muted); margin-bottom: 14px;">
-                            Comandos executados instantaneamente pelo motor compilado em C puro:
-                        </p>
-
-                        <div class="action-group">
-                            <button id="btn-test-d20" class="btn btn-primary">🎲 Rolar 1d20</button>
-                            <button id="btn-test-complex" class="btn">🎲 Rolar 3d6+5</button>
-                            <button id="btn-heal" class="btn btn-heal">❤️ Curar +5 PV</button>
-                            <button id="btn-damage" class="btn btn-damage">⚔️ Dano -5 PV</button>
-                            <button id="btn-dump-json" class="btn">📄 Dump JSON do C</button>
-                        </div>
-                    </section>
-
-                    <section class="card">
-                        <div class="card-header">
-                            <span class="card-title">Console de Execução WASM</span>
-                        </div>
-                        <div id="console-output" class="console-container">
-                            <div class="log-entry log-info">[Sistema] Aguardando instanciação do módulo C...</div>
-                        </div>
-                    </section>
-                </aside>
-            </div>
+            <div id="sheet-container"></div>
         </div>
     </div>
 
@@ -201,6 +100,7 @@
     <script src="js/wasm_loader.js"></script>
     <script src="js/views/home.js"></script>
     <script src="js/views/wizard.js"></script>
+    <script src="js/views/sheet_view.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
