@@ -56,6 +56,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 updateUiState();
             } else if (viewName === 'creator' && window.wizardView) {
                 window.wizardView.render();
+            } else if (viewName === 'roller' && window.diceRoller) {
+                window.diceRoller.renderDedicatedView();
             }
 
             logToConsole(`Navegação: visualizando tela "${viewName}".`);
@@ -97,6 +99,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof window.SheetView === 'function') {
         sheetView = new window.SheetView(engine, router, logToConsole);
         window.sheetView = sheetView;
+    }
+
+    // Inicializa o Componente de Rolagem de Dados Poliédricos
+    let diceRoller = null;
+    if (typeof window.DiceRollerComponent === 'function') {
+        diceRoller = new window.DiceRollerComponent(engine, logToConsole);
+        diceRoller.init('view-roller');
+        window.diceRoller = diceRoller;
     }
 
     try {

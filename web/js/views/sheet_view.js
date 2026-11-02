@@ -364,11 +364,16 @@ class SheetView {
             btn.addEventListener('click', () => {
                 const skillName = btn.dataset.skillName;
                 const bonus = parseInt(btn.dataset.skillBonus, 10);
-                const roll = this.engine.rollDice(1, 20, bonus);
-                let tag = '';
-                if (roll.isCritical) tag = ' ⭐ CRÍTICO!';
-                if (roll.isFumble) tag = ' 💀 FALHA CRÍTICA!';
-                this.logger(`[C Roll] Teste de ${skillName}: 1d20 (${roll.rolls[0]}) ${this.formatMod(bonus)} = ${roll.total}${tag}`, roll.isCritical ? 'success' : (roll.isFumble ? 'warn' : 'info'));
+                if (window.diceRoller) {
+                    window.diceRoller.roll(1, 20, bonus, `Teste de Perícia: ${skillName}`);
+                    window.diceRoller.openDrawer();
+                } else {
+                    const roll = this.engine.rollDice(1, 20, bonus);
+                    let tag = '';
+                    if (roll.isCritical) tag = ' ⭐ CRÍTICO!';
+                    if (roll.isFumble) tag = ' 💀 FALHA CRÍTICA!';
+                    this.logger(`[C Roll] Teste de ${skillName}: 1d20 (${roll.rolls[0]}) ${this.formatMod(bonus)} = ${roll.total}${tag}`, roll.isCritical ? 'success' : (roll.isFumble ? 'warn' : 'info'));
+                }
             });
         });
     }
@@ -557,6 +562,24 @@ class SheetView {
             });
         });
 
+        // Clique no modificador para rolar teste de atributo
+        this.container.querySelectorAll('.sheet-attr-card').forEach(card => {
+            const attrId = parseInt(card.dataset.attrId, 10);
+            const modEl = card.querySelector('.sheet-attr-mod');
+            if (modEl) {
+                modEl.style.cursor = 'pointer';
+                modEl.title = 'Clique para rolar teste de atributo (1d20 + Modificador)';
+                modEl.addEventListener('click', () => {
+                    const mod = this.engine.getModifier(attrId);
+                    const attrName = this.attrMeta[attrId]?.name || 'Atributo';
+                    if (window.diceRoller) {
+                        window.diceRoller.roll(1, 20, mod, `Teste de Atributo: ${attrName}`);
+                        window.diceRoller.openDrawer();
+                    }
+                });
+            }
+        });
+
         // 10. Filtro de Perícias
         const searchInput = document.getElementById('skills-search-input');
         if (searchInput) {
@@ -615,3 +638,4 @@ class SheetView {
 if (typeof window !== 'undefined') {
     window.SheetView = SheetView;
 }
+

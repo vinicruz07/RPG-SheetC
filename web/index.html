@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="css/tokens.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/views.css">
+    <link rel="stylesheet" href="css/dice_roller.css">
 </head>
 <body>
     <div class="container">
@@ -30,7 +31,7 @@
             <button class="tab-button active" data-view="home">Início & Sistemas</button>
             <button class="tab-button" data-view="creator">Criador de Personagem</button>
             <button class="tab-button" data-view="sheet">Ficha do Personagem</button>
-            <button class="tab-button" data-view="roller" disabled title="Passo 4.4: Rolador Completo">Rolador de Dados</button>
+            <button class="tab-button" data-view="roller">Rolador de Dados</button>
         </nav>
 
         <!-- ===================================================================
@@ -94,10 +95,16 @@
         <div id="view-sheet" class="view-section">
             <div id="sheet-container"></div>
         </div>
+
+        <!-- ===================================================================
+             VIEW: Rolador de Dados Poliédricos
+             =================================================================== -->
+        <div id="view-roller" class="view-section"></div>
     </div>
 
     <!-- Scripts da Aplicação -->
     <script src="js/wasm_loader.js"></script>
+    <script src="js/components/dice_roller.js"></script>
     <script src="js/views/home.js"></script>
     <script src="js/views/wizard.js"></script>
     <script src="js/views/sheet_view.js"></script>
