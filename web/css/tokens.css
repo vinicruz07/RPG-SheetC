@@ -1,0 +1,79 @@
+/**
+ * tokens.css — Design Tokens do RPG-SheetC
+ * Paleta temática inspirada em mesas de RPG (Grafite Escuro, Dourado e Pergaminho)
+ */
+
+:root {
+    /* Cores de Fundo e Superfície */
+    --color-bg-base: #0f1115;
+    --color-bg-subtle: #14171e;
+    --color-surface-card: #1a1e27;
+    --color-surface-card-hover: #212632;
+    --color-surface-inset: #111318;
+    
+    /* Bordas e Divisórias */
+    --color-border-subtle: #2a303d;
+    --color-border-accent: #8c6f45;
+    --color-border-gold-glow: rgba(212, 163, 115, 0.4);
+
+    /* Cores Temáticas de RPG (Dourado & Pergaminho) */
+    --color-gold-primary: #d4a373;
+    --color-gold-hover: #faedcd;
+    --color-gold-dark: #b07d4b;
+    --color-parchment-light: #fefae0;
+    --color-parchment-muted: #e9edc9;
+
+    /* Tipografia e Textos */
+    --color-text-main: #f8f9fa;
+    --color-text-muted: #94a3b8;
+    --color-text-dim: #64748b;
+    --color-text-inverse: #0f1115;
+
+    /* Cores Semânticas de Recursos de RPG */
+    --color-hp: #ef4444;
+    --color-hp-bg: rgba(239, 68, 68, 0.12);
+    --color-hp-border: rgba(239, 68, 68, 0.3);
+
+    --color-mp: #3b82f6;
+    --color-mp-bg: rgba(59, 130, 246, 0.12);
+    --color-mp-border: rgba(59, 130, 246, 0.3);
+
+    --color-defense: #eab308;
+    --color-defense-bg: rgba(234, 179, 8, 0.12);
+    --color-defense-border: rgba(234, 179, 8, 0.3);
+
+    /* Estados de Sistema */
+    --color-success: #22c55e;
+    --color-warning: #f59e0b;
+    --color-danger: #ef4444;
+    --color-info: #06b6d4;
+
+    /* Fontes e Tipografia */
+    --font-heading: 'Cinzel', 'Trajan Pro', 'Georgia', serif;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+    /* Espaçamentos */
+    --space-2xs: 4px;
+    --space-xs: 8px;
+    --space-sm: 12px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+    --space-2xl: 48px;
+
+    /* Raios de Borda */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-pill: 9999px;
+
+    /* Sombras e Iluminação */
+    --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
+    --shadow-gold: 0 0 15px rgba(212, 163, 115, 0.25);
+    --shadow-inset: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+
+    /* Transições */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.25s ease;
+}
