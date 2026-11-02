@@ -128,6 +128,38 @@ class SheetCWasm {
         this.exports.wasm_t20_set_level(lvl);
     }
 
+    getRaceId() {
+        return this.isLoaded ? this.exports.wasm_t20_get_raca_id() : 0;
+    }
+
+    getClassId() {
+        return this.isLoaded ? this.exports.wasm_t20_get_classe_id() : 8;
+    }
+
+    getActiveRace() {
+        if (!this.isLoaded) return 'Humano';
+        const ptr = this.exports.wasm_t20_get_race_ptr();
+        return this.readString(ptr, 32) || 'Humano';
+    }
+
+    getActiveClass() {
+        if (!this.isLoaded) return 'Guerreiro';
+        const ptr = this.exports.wasm_t20_get_class_ptr();
+        return this.readString(ptr, 32) || 'Guerreiro';
+    }
+
+    getRaceName(raceId) {
+        if (!this.isLoaded) return '';
+        const ptr = this.exports.wasm_t20_race_name(raceId);
+        return this.readString(ptr, 32);
+    }
+
+    getClassName(classId) {
+        if (!this.isLoaded) return '';
+        const ptr = this.exports.wasm_t20_class_name(classId);
+        return this.readString(ptr, 32);
+    }
+
     getAttribute(attrId) {
         return this.isLoaded ? this.exports.wasm_t20_get_attribute(attrId) : 10;
     }

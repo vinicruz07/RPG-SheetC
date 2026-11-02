@@ -71,8 +71,24 @@ WASM_EXPORT int wasm_t20_get_raca_id(void) {
     return g_active_t20.raca_id;
 }
 
+WASM_EXPORT const char* wasm_t20_get_race_ptr(void) {
+    return g_active_t20.raca;
+}
+
 WASM_EXPORT int wasm_t20_get_classe_id(void) {
     return g_active_t20.classe_id;
+}
+
+WASM_EXPORT const char* wasm_t20_get_class_ptr(void) {
+    return g_active_t20.classe;
+}
+
+WASM_EXPORT const char* wasm_t20_race_name(int raca_id) {
+    return t20_race_to_string((T20Race)raca_id);
+}
+
+WASM_EXPORT const char* wasm_t20_class_name(int classe_id) {
+    return t20_class_to_string((T20Class)classe_id);
 }
 
 /* =========================================================================

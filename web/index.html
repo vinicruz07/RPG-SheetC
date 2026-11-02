@@ -28,8 +28,8 @@
         <!-- Navegação da Aplicação (SPA Tabs) -->
         <nav class="nav-tabs">
             <button class="tab-button active" data-view="home">Início & Sistemas</button>
+            <button class="tab-button" data-view="creator">Criador de Personagem</button>
             <button class="tab-button" data-view="sheet">Ficha do Personagem</button>
-            <button class="tab-button" data-view="creator" disabled title="Passo 4.2: Assistente de Criação">Criador de Personagem</button>
             <button class="tab-button" data-view="roller" disabled title="Passo 4.4: Rolador Completo">Rolador de Dados</button>
         </nav>
 
@@ -79,6 +79,13 @@
                     </div>
                 </section>
             </div>
+        </div>
+
+        <!-- ===================================================================
+             VIEW: Assistente de Criação de Personagem (Wizard)
+             =================================================================== -->
+        <div id="view-creator" class="view-section">
+            <div id="wizard-container"></div>
         </div>
 
         <!-- ===================================================================
@@ -193,6 +200,7 @@
     <!-- Scripts da Aplicação -->
     <script src="js/wasm_loader.js"></script>
     <script src="js/views/home.js"></script>
+    <script src="js/views/wizard.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

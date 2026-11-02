@@ -257,3 +257,656 @@
     font-weight: 700;
     color: var(--color-gold-primary);
 }
+
+/* =========================================================================
+   View Creator / Wizard de Criação de Personagem
+   ========================================================================= */
+
+.wizard-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+/* Stepper de Progresso */
+.wizard-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md) var(--space-xl);
+    position: relative;
+    box-shadow: var(--shadow-card);
+}
+
+.wizard-step {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    z-index: 2;
+}
+
+.step-num {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--color-surface-inset);
+    border: 2px solid var(--color-border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--color-text-dim);
+    transition: all var(--transition-normal);
+}
+
+.step-label {
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    transition: color var(--transition-normal);
+}
+
+.wizard-step.active .step-num {
+    border-color: var(--color-gold-primary);
+    background: var(--color-gold-dark);
+    color: var(--color-text-main);
+    box-shadow: 0 0 12px var(--color-border-gold-glow);
+}
+
+.wizard-step.active .step-label {
+    color: var(--color-gold-primary);
+}
+
+.wizard-step.completed .step-num {
+    border-color: var(--color-success);
+    background: rgba(34, 197, 94, 0.2);
+    color: var(--color-success);
+}
+
+.wizard-step.completed .step-label {
+    color: var(--color-text-main);
+}
+
+.wizard-step-line {
+    flex: 1;
+    height: 2px;
+    background: var(--color-border-subtle);
+    margin: 0 var(--space-md);
+    transition: background var(--transition-normal);
+}
+
+.wizard-step-line.completed {
+    background: var(--color-gold-dark);
+}
+
+/* Cabeçalho de Seção do Wizard */
+.wizard-section-header {
+    margin-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--color-border-subtle);
+    padding-bottom: var(--space-md);
+}
+
+.wizard-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.wizard-title {
+    font-family: var(--font-heading);
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--color-gold-primary);
+}
+
+.wizard-subtitle {
+    font-size: 0.88rem;
+    color: var(--color-text-muted);
+    margin-top: 4px;
+}
+
+.wizard-quick-actions {
+    display: flex;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
+}
+
+/* Formulário de Nome */
+.wizard-name-group {
+    max-width: 580px;
+    margin-bottom: var(--space-lg);
+}
+
+.input-with-button {
+    display: flex;
+    gap: var(--space-xs);
+}
+
+.input-with-button input {
+    flex: 1;
+}
+
+/* Grids de Escolha (Raças e Classes) */
+.wizard-choice-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.choice-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.choice-counter {
+    font-size: 0.8rem;
+    color: var(--color-text-dim);
+}
+
+.races-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--space-md);
+}
+
+.choice-card {
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    display: flex;
+    gap: var(--space-md);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    position: relative;
+}
+
+.choice-card:hover {
+    border-color: var(--color-border-accent);
+    transform: translateY(-2px);
+    background: var(--color-surface-card-hover);
+}
+
+.choice-card.selected {
+    border-color: var(--color-gold-primary);
+    background: rgba(212, 163, 115, 0.08);
+    box-shadow: 0 0 16px rgba(212, 163, 115, 0.2);
+}
+
+.choice-card.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    color: var(--color-gold-primary);
+    font-weight: bold;
+    font-size: 0.95rem;
+}
+
+.choice-icon {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.choice-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.choice-name {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--color-parchment-light);
+}
+
+.choice-badge {
+    display: inline-block;
+    align-self: flex-start;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-gold-primary);
+    background: rgba(212, 163, 115, 0.12);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(212, 163, 115, 0.25);
+}
+
+.choice-desc {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    line-height: 1.4;
+    margin-top: 2px;
+}
+
+/* Grade de Classes Compacta */
+.classes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-sm);
+}
+
+.class-card-mini {
+    flex-direction: column;
+    gap: 6px;
+    padding: var(--space-sm) var(--space-md);
+}
+
+.choice-header-mini {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.choice-icon-mini {
+    font-size: 1.25rem;
+}
+
+.choice-name-mini {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--color-parchment-light);
+}
+
+.choice-role {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+}
+
+.choice-stats-mini {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.stat-tag-pv, .stat-tag-pm {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+.stat-tag-pv {
+    background: var(--color-hp-bg);
+    color: var(--color-hp);
+    border: 1px solid var(--color-hp-border);
+}
+
+.stat-tag-pm {
+    background: var(--color-mp-bg);
+    color: var(--color-mp);
+    border: 1px solid var(--color-mp-border);
+}
+
+/* Grade de Atributos do Wizard (Passo 2) */
+.wizard-attributes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-md);
+}
+
+.wizard-attr-card {
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    transition: all var(--transition-normal);
+}
+
+.wizard-attr-card:hover {
+    border-color: var(--color-border-accent);
+}
+
+.wizard-attr-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.wizard-attr-info {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-xs);
+}
+
+.wizard-attr-abbr {
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--color-gold-primary);
+}
+
+.wizard-attr-name {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+}
+
+.wizard-attr-mod {
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 800;
+    padding: 2px 10px;
+    border-radius: var(--radius-sm);
+}
+
+.mod-positive {
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--color-success);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.mod-negative {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--color-danger);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.wizard-attr-desc {
+    font-size: 0.78rem;
+    color: var(--color-text-dim);
+}
+
+.wizard-attr-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: var(--space-xs);
+}
+
+.btn-stepper {
+    width: 34px;
+    height: 34px;
+    background: var(--color-surface-inset);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-main);
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.btn-stepper:hover {
+    border-color: var(--color-gold-primary);
+    color: var(--color-gold-primary);
+}
+
+.wizard-attr-input {
+    width: 52px;
+    height: 34px;
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 700;
+    background: var(--color-surface-inset);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-main);
+}
+
+.btn-roll-single {
+    flex: 1;
+    font-size: 0.8rem;
+    padding: 6px 10px;
+}
+
+.wizard-roll-badge {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    margin-top: 4px;
+}
+
+.roll-badge-label {
+    color: var(--color-gold-primary);
+    font-weight: 700;
+}
+
+.roll-dice-tags {
+    display: flex;
+    gap: 4px;
+}
+
+.die-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 700;
+    font-size: 0.75rem;
+}
+
+.die-kept {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.die-dropped {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+.roll-sum {
+    margin-left: auto;
+    color: var(--color-text-muted);
+}
+
+.wizard-roll-placeholder {
+    font-size: 0.75rem;
+    color: var(--color-text-dim);
+    font-style: italic;
+    padding: 4px 0;
+}
+
+/* Resumo Final (Passo 3) */
+.wizard-summary-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+.summary-identity {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    background: var(--color-surface-inset);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-md) var(--space-lg);
+}
+
+.summary-avatar {
+    font-size: 2.8rem;
+    line-height: 1;
+}
+
+.summary-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.summary-name {
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: var(--color-gold-primary);
+}
+
+.summary-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+}
+
+.summary-tag {
+    font-size: 0.8rem;
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border-subtle);
+    padding: 2px 10px;
+    border-radius: 999px;
+    color: var(--color-text-muted);
+}
+
+.summary-combat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-md);
+}
+
+.summary-combat-box {
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.summary-combat-box.pv-box {
+    background: var(--color-hp-bg);
+    border: 1px solid var(--color-hp-border);
+}
+
+.summary-combat-box.pm-box {
+    background: var(--color-mp-bg);
+    border: 1px solid var(--color-mp-border);
+}
+
+.summary-combat-box.def-box {
+    background: var(--color-defense-bg);
+    border: 1px solid var(--color-defense-border);
+}
+
+.combat-box-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+}
+
+.combat-box-val {
+    font-family: var(--font-heading);
+    font-size: 1.8rem;
+    font-weight: 900;
+}
+
+.pv-box .combat-box-val { color: var(--color-hp); }
+.pm-box .combat-box-val { color: var(--color-mp); }
+.def-box .combat-box-val { color: var(--color-defense); }
+
+.combat-box-formula {
+    font-size: 0.75rem;
+    color: var(--color-text-dim);
+}
+
+.summary-attrs-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.summary-section-title {
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-parchment-light);
+}
+
+.summary-attrs-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: var(--space-sm);
+}
+
+@media (max-width: 768px) {
+    .summary-attrs-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.summary-attr-pill {
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-sm);
+    padding: var(--space-sm);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.attr-pill-name {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--color-gold-primary);
+}
+
+.attr-pill-val {
+    font-size: 1.3rem;
+    font-weight: 900;
+}
+
+.attr-pill-mod {
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 3px;
+}
+
+.summary-c-notice {
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    display: flex;
+    gap: var(--space-sm);
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    line-height: 1.5;
+}
+
+.summary-c-notice span {
+    font-size: 1.2rem;
+}
+
+/* Rodapé do Wizard */
+.wizard-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-md) var(--space-lg);
+    box-shadow: var(--shadow-card);
+}
+
+.wizard-step-indicator {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+}
+
+

@@ -54,6 +54,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (viewName === 'sheet') {
                 updateUiState();
+            } else if (viewName === 'creator' && window.wizardView) {
+                window.wizardView.render();
             }
 
             logToConsole(`Navegação: visualizando tela "${viewName}".`);
@@ -76,6 +78,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof window.HomeView === 'function') {
         homeView = new window.HomeView(engine, router);
         homeView.init();
+        window.homeView = homeView;
+    }
+
+    // Inicializa o Assistente de Criação de Personagem (Wizard)
+    let wizardView = null;
+    if (typeof window.WizardView === 'function') {
+        wizardView = new window.WizardView(engine, router, (hero) => {
+            logToConsole(`[C Wizard] Herói "${hero.name}" criado com sucesso! PV: ${hero.pv}/${hero.pvMax}, PM: ${hero.pm}/${hero.pmMax}, Defesa: ${hero.defense}.`, 'success');
+            updateUiState();
+        });
+        wizardView.init('wizard-container');
+        window.wizardView = wizardView;
     }
 
     try {

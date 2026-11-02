@@ -155,9 +155,13 @@ class HomeView {
         if (this.btnStartNew) {
             this.btnStartNew.addEventListener('click', () => {
                 if (this.selectedSystemId === 1) {
-                    // Tormenta 20: reinicializa personagem padrão no C e vai para a ficha
-                    if (this.engine.isLoaded) {
-                        this.engine.newDefaultCharacter(0, 8); // Humano Guerreiro
+                    // Tormenta 20: abre o assistente passo-a-passo de criação
+                    if (window.wizardView) {
+                        window.wizardView.reset(0, 8);
+                    }
+                    if (this.router && typeof this.router.navigate === 'function') {
+                        this.router.navigate('creator');
+                        return;
                     }
                 }
                 if (this.router && typeof this.router.navigate === 'function') {
@@ -210,3 +214,4 @@ class HomeView {
 }
 
 window.HomeView = HomeView;
+
