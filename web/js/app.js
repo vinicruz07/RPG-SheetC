@@ -1,0 +1,150 @@
+/**
+ * app.js — Controlador Principal da Interface Web do RPG-SheetC
+ */
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const statusBadge = document.getElementById('engine-status-badge');
+    const statusText = document.getElementById('engine-status-text');
+    const heroNameEl = document.getElementById('hero-name');
+    const heroClassEl = document.getElementById('hero-class');
+    const heroLevelEl = document.getElementById('hero-level');
+    const heroHpEl = document.getElementById('hero-hp');
+    const heroMpEl = document.getElementById('hero-mp');
+    const heroDefenseEl = document.getElementById('hero-defense');
+    const consoleOutput = document.getElementById('console-output');
+
+    const logToConsole = (msg, type = 'info') => {
+        if (!consoleOutput) return;
+        const entry = document.createElement('div');
+        entry.className = `log-entry log-${type}`;
+        const time = new Date().toLocaleTimeString();
+        entry.textContent = `[${time}] ${msg}`;
+        consoleOutput.prepend(entry);
+    };
+
+    // Cria a instância do wrapper do módulo C
+    const engine = new window.SheetCWasm();
+    window.rpgEngine = engine; // Disponível no DevTools para inspeção interativa
+
+    try {
+        logToConsole('Iniciando carregamento do binário WebAssembly (sheetc_core.wasm)...');
+        await engine.load('./dist/sheetc_core.wasm');
+
+        // Atualiza o indicador de status para sucesso
+        if (statusBadge) {
+            statusBadge.classList.remove('status-loading', 'status-error');
+            statusBadge.classList.add('status-connected');
+        }
+        if (statusText) {
+            statusText.textContent = 'Motor C Conectado';
+        }
+
+        logToConsole('Motor C (Clang 16 wasm32) conectado com sucesso! Sistema padrão: Tormenta 20.', 'success');
+
+        // Atualiza a visualização inicial dos dados
+        updateUiState();
+
+        // Configuração dos eventos de teste interativos da casca
+        setupEventListeners(engine, logToConsole, updateUiState);
+
+    } catch (err) {
+        if (statusBadge) {
+            statusBadge.classList.remove('status-loading');
+            statusBadge.classList.add('status-error');
+        }
+        if (statusText) {
+            statusText.textContent = 'Erro ao Conectar Motor C';
+        }
+        logToConsole(`Falha na inicialização do WebAssembly: ${err.message}`, 'error');
+        logToConsole('Dica: Execute um servidor HTTP local simples (ex: python -m http.server 8000 na pasta web) para permitir streaming de módulos WASM.', 'warn');
+    }
+
+    function updateUiState() {
+        if (!engine.isLoaded) return;
+        const sheet = engine.exportJson();
+        if (!sheet) return;
+
+        if (heroNameEl) heroNameEl.textContent = sheet.nome || 'Herói';
+        if (heroClassEl) heroClassEl.textContent = `${sheet.raca || ''} ${sheet.classe || ''}`.trim();
+        if (heroLevelEl) heroLevelEl.textContent = `Nível ${sheet.nivel || 1}`;
+        if (heroHpEl) heroHpEl.textContent = `${sheet.pv_atual} / ${sheet.pv_max}`;
+        if (heroMpEl) heroMpEl.textContent = `${sheet.pm_atual} / ${sheet.pm_max}`;
+        if (heroDefenseEl) heroDefenseEl.textContent = `${sheet.defesa}`;
+
+        // Atualiza valores dos atributos se existirem no DOM
+        const attrNames = ['forca', 'destreza', 'constituicao', 'inteligencia', 'sabedoria', 'carisma'];
+        attrNames.forEach((attr, idx) => {
+            const valEl = document.getElementById(`attr-val-${attr}`);
+            const modEl = document.getElementById(`attr-mod-${attr}`);
+            if (valEl) valEl.textContent = sheet[attr];
+            if (modEl) {
+                const mod = engine.getModifier(idx);
+                modEl.textContent = (mod >= 0 ? `+${mod}` : `${mod}`);
+            }
+        });
+    }
+
+    function setupEventListeners(engine, log, refresh) {
+        // Botão Rolar d20 no motor C
+        const btnRollD20 = document.getElementById('btn-test-d20');
+        if (btnRollD20) {
+            btnRollD20.addEventListener('click', () => {
+                const res = engine.rollDice(1, 20, 0);
+                let tag = '';
+                if (res.isCritical) tag = ' (CRÍTICO!)';
+                if (res.isFumble) tag = ' (FALHA CRÍTICA!)';
+                log(`[C Dice Engine] Rolagem 1d20: Resultado = ${res.total}${tag}`, res.isCritical ? 'success' : (res.isFumble ? 'warn' : 'info'));
+            });
+        }
+
+        // Botão Rolar 3d6+5 no motor C
+        const btnRollComplex = document.getElementById('btn-test-complex');
+        if (btnRollComplex) {
+            btnRollComplex.addEventListener('click', () => {
+                const res = engine.rollDice(3, 6, 5);
+                log(`[C Dice Engine] Rolagem 3d6+5: Dados [${res.rolls.join(', ')}] + 5 = ${res.total}`, 'info');
+            });
+        }
+
+        // Botões de Manipulação de PV (+5 / -5)
+        const btnHeal = document.getElementById('btn-heal');
+        if (btnHeal) {
+            btnHeal.addEventListener('click', () => {
+                engine.modifyPv(5);
+                refresh();
+                log(`[C Rules] PV modificado em +5. Atual: ${engine.getPvAtual()}/${engine.getPvMax()}`);
+            });
+        }
+
+        const btnDamage = document.getElementById('btn-damage');
+        if (btnDamage) {
+            btnDamage.addEventListener('click', () => {
+                engine.modifyPv(-5);
+                refresh();
+                log(`[C Rules] PV modificado em -5. Atual: ${engine.getPvAtual()}/${engine.getPvMax()}`);
+            });
+        }
+
+        // Alterar Nome
+        const btnChangeName = document.getElementById('btn-change-name');
+        if (btnChangeName) {
+            btnChangeName.addEventListener('click', () => {
+                const newName = prompt('Digite o novo nome do personagem:', engine.getCharacterName());
+                if (newName && newName.trim() !== '') {
+                    engine.setCharacterName(newName.trim());
+                    refresh();
+                    log(`[C Memory] Nome atualizado na memória linear para: "${engine.getCharacterName()}"`);
+                }
+            });
+        }
+
+        // Dump JSON do C
+        const btnDumpJson = document.getElementById('btn-dump-json');
+        if (btnDumpJson) {
+            btnDumpJson.addEventListener('click', () => {
+                const json = engine.exportJson();
+                log(`[C Serializer] JSON exportado do C:\n${JSON.stringify(json, null, 2)}`, 'info');
+            });
+        }
+    }
+});

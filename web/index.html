@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG-SheetC — Ficha de RPG em C & WebAssembly</title>
+    <style>
+        :root {
+            --bg-color: #121418;
+            --surface-color: #1c1f26;
+            --surface-border: #2e3440;
+            --primary-color: #d4a373;
+            --primary-hover: #faedcd;
+            --text-color: #f8f9fa;
+            --text-muted: #94a3b8;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --accent-blue: #3b82f6;
+            --accent-purple: #a855f7;
+            --font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            line-height: 1.5;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Top Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--surface-border);
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .brand-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: normal;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #232730;
+            border: 1px solid var(--surface-border);
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #f59e0b;
+        }
+
+        .status-connected .status-dot {
+            background-color: var(--accent-green);
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+        }
+
+        .status-error .status-dot {
+            background-color: var(--accent-red);
+        }
+
+        /* Navigation Bar */
+        nav.nav-tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--surface-border);
+            padding-bottom: 12px;
+        }
+
+        .tab-button {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab-button:hover {
+            color: var(--text-color);
+            background: var(--surface-color);
+        }
+
+        .tab-button.active {
+            color: var(--primary-color);
+            background: #2a2217;
+            border: 1px solid rgba(212, 163, 115, 0.3);
+        }
+
+        /* Main Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--surface-color);
+            border: 1px solid var(--surface-border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--surface-border);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        /* Hero Header Overview */
+        .hero-overview {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .hero-info h2 {
+            font-size: 1.5rem;
+            color: #fff;
+        }
+
+        .hero-meta {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* Resource Meters */
+        .resources-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin: 20px 0;
+        }
+
+        .meter-box {
+            background: #14161c;
+            border: 1px solid var(--surface-border);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .meter-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .meter-value {
+            font-size: 1.4rem;
+            font-weight: 800;
+        }
+
+        .pv-meter { color: #f87171; }
+        .pm-meter { color: #60a5fa; }
+        .defesa-meter { color: #facc15; }
+
+        /* Attributes Grid */
+        .attributes-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        @media (max-width: 480px) {
+            .attributes-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .attr-card {
+            background: #15181f;
+            border: 1px solid var(--surface-border);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .attr-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-transform: uppercase;
+        }
+
+        .attr-val {
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin: 2px 0;
+        }
+
+        .attr-mod {
+            display: inline-block;
+            background: #232833;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        /* Action Buttons */
+        .action-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .btn {
+            background: #2b303c;
+            color: var(--text-color);
+            border: 1px solid var(--surface-border);
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #3a4152;
+            border-color: #4b5568;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: #121418;
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        /* Console Output */
+        .console-container {
+            background: #0d0f12;
+            border: 1px solid var(--surface-border);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.82rem;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin-bottom: 6px;
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+
+        .log-info { color: var(--text-muted); }
+        .log-success { color: var(--accent-green); }
+        .log-warn { color: #f59e0b; }
+        .log-error { color: var(--accent-red); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Principal -->
+        <header>
+            <div>
+                <h1 class="brand-title">
+                    ⚔️ RPG-SheetC
+                </h1>
+                <p class="brand-subtitle">Lógica de regras 100% em C puro (C99) + Frontend Web (WebAssembly)</p>
+            </div>
+            <div id="engine-status-badge" class="status-badge status-loading">
+                <span class="status-dot"></span>
+                <span id="engine-status-text">Conectando ao Motor C...</span>
+            </div>
+        </header>
+
+        <!-- Navegação da Aplicação (SPA) -->
+        <nav class="nav-tabs">
+            <button class="tab-button active">Visão Geral da Ficha</button>
+            <button class="tab-button" disabled title="Fase 4">Criador de Personagem</button>
+            <button class="tab-button" disabled title="Fase 4">Sistemas de RPG</button>
+            <button class="tab-button" disabled title="Fase 4">Rolador de Dados</button>
+        </nav>
+
+        <div class="dashboard-grid">
+            <!-- Painel Esquerdo: Ficha Ativa no Motor C -->
+            <main>
+                <section class="card">
+                    <div class="card-header">
+                        <span class="card-title">Ficha Ativa no Motor C (Tormenta 20)</span>
+                        <button id="btn-change-name" class="btn" title="Altera o nome do personagem diretamente na memória do C">Renomear</button>
+                    </div>
+
+                    <div class="hero-overview">
+                        <div class="hero-info">
+                            <h2 id="hero-name">Carregando...</h2>
+                            <p class="hero-meta">
+                                <span id="hero-class">Guerreiro Humano</span> &bull; 
+                                <span id="hero-level">Nível 1</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Medidores de Vida, Mana e Defesa -->
+                    <div class="resources-row">
+                        <div class="meter-box">
+                            <div class="meter-label">Pontos de Vida</div>
+                            <div id="hero-hp" class="meter-value pv-meter">-- / --</div>
+                        </div>
+                        <div class="meter-box">
+                            <div class="meter-label">Pontos de Mana</div>
+                            <div id="hero-mp" class="meter-value pm-meter">-- / --</div>
+                        </div>
+                        <div class="meter-box">
+                            <div class="meter-label">Defesa Passiva</div>
+                            <div id="hero-defense" class="meter-value defesa-meter">--</div>
+                        </div>
+                    </div>
+
+                    <!-- Grade de Atributos -->
+                    <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-top: 16px; text-transform: uppercase;">Atributos Básicos</h3>
+                    <div class="attributes-grid">
+                        <div class="attr-card">
+                            <div class="attr-label">Força</div>
+                            <div id="attr-val-forca" class="attr-val">10</div>
+                            <div id="attr-mod-forca" class="attr-mod">+0</div>
+                        </div>
+                        <div class="attr-card">
+                            <div class="attr-label">Destreza</div>
+                            <div id="attr-val-destreza" class="attr-val">10</div>
+                            <div id="attr-mod-destreza" class="attr-mod">+0</div>
+                        </div>
+                        <div class="attr-card">
+                            <div class="attr-label">Constituição</div>
+                            <div id="attr-val-constituicao" class="attr-val">10</div>
+                            <div id="attr-mod-constituicao" class="attr-mod">+0</div>
+                        </div>
+                        <div class="attr-card">
+                            <div class="attr-label">Inteligência</div>
+                            <div id="attr-val-inteligencia" class="attr-val">10</div>
+                            <div id="attr-mod-inteligencia" class="attr-mod">+0</div>
+                        </div>
+                        <div class="attr-card">
+                            <div class="attr-label">Sabedoria</div>
+                            <div id="attr-val-sabedoria" class="attr-val">10</div>
+                            <div id="attr-mod-sabedoria" class="attr-mod">+0</div>
+                        </div>
+                        <div class="attr-card">
+                            <div class="attr-label">Carisma</div>
+                            <div id="attr-val-carisma" class="attr-val">10</div>
+                            <div id="attr-mod-carisma" class="attr-mod">+0</div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
+            <!-- Painel Direito: Testes de Interoperabilidade e Logs -->
+            <aside>
+                <section class="card">
+                    <div class="card-header">
+                        <span class="card-title">Interoperabilidade C & Web</span>
+                    </div>
+
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+                        Comandos executados instantaneamente pelo motor compilado em C puro:
+                    </p>
+
+                    <div class="action-group">
+                        <button id="btn-test-d20" class="btn btn-primary">🎲 Rolar 1d20</button>
+                        <button id="btn-test-complex" class="btn">🎲 Rolar 3d6+5</button>
+                        <button id="btn-heal" class="btn" style="color: #4ade80;">❤️ Curar +5 PV</button>
+                        <button id="btn-damage" class="btn" style="color: #f87171;">⚔️ Dano -5 PV</button>
+                        <button id="btn-dump-json" class="btn">📄 Dump JSON do C</button>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-header">
+                        <span class="card-title">Console de Execução WASM</span>
+                    </div>
+                    <div id="console-output" class="console-container">
+                        <div class="log-entry log-info">[Sistema] Aguardando instanciação do módulo C...</div>
+                    </div>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Scripts da Aplicação -->
+    <script src="js/wasm_loader.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
