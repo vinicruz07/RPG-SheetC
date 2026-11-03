@@ -13,8 +13,7 @@ TEST_DIR  = tests
 WEB_DIST  = web/dist
 
 # Fontes C do Core
-CORE_SRCS = $(SRC_DIR)/sheet_t20.c $(SRC_DIR)/rpg_base.c $(SRC_DIR)/dice.c $(SRC_DIR)/sheet_json.c \
-            $(SRC_DIR)/sheet_dnd5e.c $(SRC_DIR)/sheet_fabula.c $(SRC_DIR)/sheet_3det.c $(SRC_DIR)/sheet_types.c
+CORE_SRCS = $(SRC_DIR)/card_engine.c $(SRC_DIR)/rpg_base.c $(SRC_DIR)/dice.c
 
 # Fontes específicas do WebAssembly (Core + API bindings)
 WASM_SRCS = $(CORE_SRCS) $(WASM_DIR)/wasm_api.c
@@ -44,8 +43,8 @@ wasm: $(WEB_DIST)
 
 
 # Alvo de testes: compila e executa a suite de testes unitarios com GCC nativo
-test: $(CORE_SRCS) $(TEST_DIR)/test_core.c
-	$(CC_NATIVE) $(NATIVE_FLAGS) $(CORE_SRCS) $(TEST_DIR)/test_core.c -o $(TEST_TARGET)
+test: $(CORE_SRCS) $(TEST_DIR)/test_cards.c
+	$(CC_NATIVE) $(NATIVE_FLAGS) $(CORE_SRCS) $(TEST_DIR)/test_cards.c -o $(TEST_TARGET)
 	@./$(TEST_TARGET)
 
 # Limpeza de artefatos temporários e binários compilados
