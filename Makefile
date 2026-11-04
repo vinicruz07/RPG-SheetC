@@ -13,7 +13,7 @@ TEST_DIR  = tests
 WEB_DIST  = web/dist
 
 # Fontes C do Core
-CORE_SRCS = $(SRC_DIR)/card_engine.c $(SRC_DIR)/card_eval.c $(SRC_DIR)/rpg_base.c $(SRC_DIR)/dice.c
+CORE_SRCS = $(SRC_DIR)/card_engine.c $(SRC_DIR)/card_eval.c $(SRC_DIR)/card_pack.c $(SRC_DIR)/rpg_base.c $(SRC_DIR)/dice.c
 
 # Fontes específicas do WebAssembly (Core + API bindings)
 WASM_SRCS = $(CORE_SRCS) $(WASM_DIR)/wasm_api.c

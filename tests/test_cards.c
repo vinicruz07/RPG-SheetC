@@ -8,6 +8,7 @@
 #include "../src/core/card_types.h"
 #include "../src/core/card_engine.h"
 #include "../src/core/card_eval.h"
+#include "../src/core/card_pack.h"
 
 static void test_card_types_and_strings(void) {
     assert(strcmp(card_type_to_string(CARD_TYPE_ATTRIBUTE), "Atributo") == 0);
@@ -242,6 +243,106 @@ static void test_card_eval(void) {
     printf("  [OK] Avaliador de expressoes matematicas, precedencia, parenteses e referencias @card\n");
 }
 
+static char g_test_json_buf[CARD_PACK_JSON_BUFFER_SIZE];
+
+static void test_card_pack(void) {
+    CardDeck src_deck;
+    card_deck_init(&src_deck, "Compendio Fantasia", "Sistema Modular v2");
+    src_deck.level = 12;
+    src_deck.xp = 45000;
+
+    /* Popula 60 cards variados (atributos, recursos, perícias, equipamentos e magias) */
+    for (int i = 0; i < 60; i++) {
+        RPGCard c;
+        memset(&c, 0, sizeof(RPGCard));
+        c.id = (unsigned int)(i + 1);
+        c.type = (CardType)(i % CARD_TYPE_COUNT);
+        snprintf(c.key, CARD_KEY_MAX_LEN, "card_%d", i);
+        snprintf(c.name, CARD_NAME_MAX_LEN, "Card Especial #%d", i);
+        snprintf(c.desc, CARD_DESC_MAX_LEN, "Descricao com \"aspas\" e linha %d", i);
+        c.base_value = 10 + i;
+        c.max_value = 10 + i;
+        c.current_value = 5 + i;
+        snprintf(c.cost_resource, CARD_KEY_MAX_LEN, "mana");
+        c.cost_value = (i % 5);
+        snprintf(c.formula, CARD_FORMULA_MAX_LEN, "10 + @card_0 + %d", i);
+        c.is_equipped = (unsigned char)((i % 2 == 0) ? 1 : 0);
+        c.is_trained = (unsigned char)((i % 3 == 0) ? 1 : 0);
+        c.is_favorite = (unsigned char)((i % 7 == 0) ? 1 : 0);
+
+        /* Adiciona modificadores cruzados */
+        card_add_modifier(&c, "card_0", 1);
+        if (i % 2 == 0) {
+            card_add_modifier(&c, "card_1", -2);
+        }
+
+        int added = card_deck_add(&src_deck, &c);
+        assert(added == i);
+    }
+
+    assert(src_deck.card_count == 60);
+
+    /* Exporta os 60 cards para JSON (.cardpack) */
+    int bytes_written = card_pack_export_json(&src_deck, g_test_json_buf, sizeof(g_test_json_buf));
+    assert(bytes_written > 0);
+
+    /* Importa para um novo deck limpo (Round-trip completo) */
+    CardDeck dst_deck;
+    int imported_count = card_pack_import(&dst_deck, g_test_json_buf);
+    assert(imported_count == 60);
+    assert(dst_deck.card_count == 60);
+    assert(strcmp(dst_deck.sheet_name, "Compendio Fantasia") == 0);
+    assert(strcmp(dst_deck.system_name, "Sistema Modular v2") == 0);
+    assert(dst_deck.level == 12);
+    assert(dst_deck.xp == 45000);
+
+    /* Verifica 100% de integridade em todos os 60 cards */
+    for (int i = 0; i < 60; i++) {
+        const RPGCard *orig = &src_deck.cards[i];
+        const RPGCard *copy = &dst_deck.cards[i];
+
+        assert(orig->id == copy->id);
+        assert(orig->type == copy->type);
+        assert(strcmp(orig->key, copy->key) == 0);
+        assert(strcmp(orig->name, copy->name) == 0);
+        assert(strcmp(orig->desc, copy->desc) == 0);
+        assert(orig->base_value == copy->base_value);
+        assert(orig->current_value == copy->current_value);
+        assert(orig->max_value == copy->max_value);
+        assert(orig->effective_value == copy->effective_value);
+        assert(strcmp(orig->cost_resource, copy->cost_resource) == 0);
+        assert(orig->cost_value == copy->cost_value);
+        assert(strcmp(orig->formula, copy->formula) == 0);
+        assert(orig->is_equipped == copy->is_equipped);
+        assert(orig->is_trained == copy->is_trained);
+        assert(orig->is_favorite == copy->is_favorite);
+        assert(orig->modifier_count == copy->modifier_count);
+
+        for (int m = 0; m < orig->modifier_count; m++) {
+            assert(strcmp(orig->modifiers[m].target_key, copy->modifiers[m].target_key) == 0);
+            assert(orig->modifiers[m].value == copy->modifiers[m].value);
+        }
+    }
+
+    /* Testa merge_mode = 1 (aplicar pacote comunitário sobre ficha existente) */
+    const char *community_pack =
+        "["
+        "  {\"key\":\"espada_flamejante\",\"name\":\"Espada Flamejante\",\"type\":\"Equipamento\",\"formula\":\"@card_0 + 5\",\"mods\":[{\"target\":\"card_0\",\"val\":4}]},"
+        "  {\"key\":\"card_0\",\"name\":\"Atributo Primario Tunado\",\"type\":\"Atributo\",\"base\":25}"
+        "]";
+
+    int merged = card_pack_import_json(&dst_deck, community_pack, 1);
+    assert(merged == 2);
+    assert(dst_deck.card_count == 61); /* 60 originais + 1 novo (card_0 foi atualizado in-place) */
+
+    RPGCard *espada = card_deck_find_by_key(&dst_deck, "espada_flamejante");
+    assert(espada != NULL);
+    assert(espada->type == CARD_TYPE_EQUIPMENT);
+    assert(strcmp(espada->formula, "@card_0 + 5") == 0);
+
+    printf("  [OK] Serializador e parser JSON (.cardpack) round-trip 60+ cards e merge comunitario\n");
+}
+
 int main(void) {
     printf("=== Suite de Testes Unitarios do Motor de Cards C (RPG-SheetC v2.0) ===\n");
     test_card_types_and_strings();
@@ -249,6 +350,7 @@ int main(void) {
     test_modifiers_and_recalculation();
     test_resources_and_clamping();
     test_card_eval();
+    test_card_pack();
     printf("=== Todos os testes do Motor de Cards passaram com 100%% de sucesso! ===\n");
     return 0;
 }
