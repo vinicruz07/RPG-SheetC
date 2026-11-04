@@ -18,7 +18,7 @@ extern "C" {
 #define CARD_DESC_MAX_LEN      128
 #define CARD_FORMULA_MAX_LEN   48
 #define MAX_CARD_MODIFIERS     4
-#define MAX_DECK_CARDS         256
+#define MAX_DECK_CARDS         2048
 
 /**
  * Tipos fundamentais de Card em qualquer sistema de RPG

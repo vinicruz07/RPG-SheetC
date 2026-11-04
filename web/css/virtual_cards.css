@@ -377,3 +377,163 @@
     color: var(--color-text-muted, #94a3b8);
     margin-bottom: 6px;
 }
+
+/* =========================================================================
+ * 6. Painel do Compêndio de Cards (.compendium-view-container)
+ * ========================================================================= */
+
+.compendium-view-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md, 16px);
+    width: 100%;
+}
+
+.compendium-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: var(--space-md, 16px) var(--space-lg, 24px);
+    background: var(--color-surface-card, #1a1e27);
+    border: 1px solid var(--color-border-subtle, #2a303d);
+    border-radius: var(--radius-md, 10px);
+}
+
+.compendium-title-group h2 {
+    font-family: var(--font-heading, serif);
+    font-size: 1.35rem;
+    color: var(--color-gold-primary, #d4a373);
+    margin: 0 0 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.compendium-title-group p {
+    font-size: 0.85rem;
+    color: var(--color-text-muted, #94a3b8);
+    margin: 0;
+}
+
+.compendium-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.compendium-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: var(--space-md, 16px);
+    background: var(--color-surface-card, #1a1e27);
+    border: 1px solid var(--color-border-subtle, #2a303d);
+    border-radius: var(--radius-md, 10px);
+}
+
+.compendium-search-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.compendium-search-box {
+    flex: 1;
+    min-width: 240px;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.compendium-search-icon {
+    position: absolute;
+    left: 12px;
+    font-size: 1rem;
+    color: var(--color-text-dim, #64748b);
+    pointer-events: none;
+}
+
+.compendium-search-input {
+    width: 100%;
+    padding: 10px 14px 10px 38px;
+    font-size: 0.9rem;
+    font-family: var(--font-sans, sans-serif);
+    background: var(--color-surface-inset, #111318);
+    border: 1px solid var(--color-border-subtle, #2a303d);
+    border-radius: var(--radius-sm, 6px);
+    color: var(--color-text-main, #f8f9fa);
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.compendium-search-input:focus {
+    outline: none;
+    border-color: var(--color-gold-primary, #d4a373);
+    box-shadow: 0 0 0 2px rgba(212, 163, 115, 0.2);
+}
+
+.compendium-filters-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.compendium-filter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: var(--font-sans, sans-serif);
+    background: var(--color-surface-inset, #111318);
+    border: 1px solid var(--color-border-subtle, #2a303d);
+    border-radius: var(--radius-pill, 9999px);
+    color: var(--color-text-muted, #94a3b8);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.compendium-filter-pill:hover {
+    border-color: var(--color-gold-primary, #d4a373);
+    color: var(--color-text-main, #f8f9fa);
+}
+
+.compendium-filter-pill.active {
+    background: rgba(212, 163, 115, 0.18);
+    border-color: var(--color-gold-primary, #d4a373);
+    color: var(--color-gold-hover, #faedcd);
+}
+
+.compendium-count-tag {
+    font-size: 0.7rem;
+    padding: 1px 6px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.compendium-status-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--color-text-muted, #94a3b8);
+    cursor: pointer;
+    user-select: none;
+    padding: 6px 10px;
+    background: var(--color-surface-inset, #111318);
+    border: 1px solid var(--color-border-subtle, #2a303d);
+    border-radius: var(--radius-sm, 6px);
+}
+
+.compendium-status-toggle input[type="checkbox"] {
+    accent-color: var(--color-gold-primary, #d4a373);
+    cursor: pointer;
+}
+

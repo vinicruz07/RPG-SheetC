@@ -54,6 +54,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (viewName === 'sheet') {
                 updateUiState();
+            } else if (viewName === 'compendium' && window.compendiumView) {
+                window.compendiumView.init('compendium-container');
             } else if (viewName === 'creator' && window.wizardView) {
                 window.wizardView.render();
             } else if (viewName === 'roller' && window.diceRoller) {
@@ -143,6 +145,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.diceRoller = diceRoller;
     }
 
+    // Inicializa a View do Compêndio de Cards (Virtual Scrolling)
+    let compendiumView = null;
+    if (typeof window.CompendiumView === 'function') {
+        compendiumView = new window.CompendiumView(engine, router, logToConsole);
+        window.compendiumView = compendiumView;
+    }
+
     try {
         logToConsole('Iniciando carregamento do binário WebAssembly (sheetc_core.wasm)...');
         await engine.load('./dist/sheetc_core.wasm');
@@ -192,6 +201,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!engine.isLoaded) return;
         if (sheetView) {
             sheetView.init('sheet-container');
+        }
+        if (compendiumView && router.currentView === 'compendium') {
+            compendiumView.init('compendium-container');
         }
     }
 

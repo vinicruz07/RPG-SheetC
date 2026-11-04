@@ -14,7 +14,7 @@ extern "C" {
 #endif
 
 /* Capacidade recomendada de buffer JSON para compêndios completos (64 KB) */
-#define CARD_PACK_JSON_BUFFER_SIZE 65536
+#define CARD_PACK_JSON_BUFFER_SIZE 1048576
 
 /**
  * Códigos de retorno das operações de serialização/parse de CardPack
