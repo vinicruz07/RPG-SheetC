@@ -56,6 +56,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 updateUiState();
             } else if (viewName === 'compendium' && window.compendiumView) {
                 window.compendiumView.init('compendium-container');
+            } else if (viewName === 'editor' && window.cardEditorView) {
+                window.cardEditorView.init('editor-container');
             } else if (viewName === 'creator' && window.wizardView) {
                 window.wizardView.render();
             } else if (viewName === 'roller' && window.diceRoller) {
@@ -150,6 +152,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof window.CompendiumView === 'function') {
         compendiumView = new window.CompendiumView(engine, router, logToConsole);
         window.compendiumView = compendiumView;
+    }
+
+    // Inicializa o Editor e Criador Visual de Cards Personalizados
+    let cardEditorView = null;
+    if (typeof window.CardEditorView === 'function') {
+        cardEditorView = new window.CardEditorView(engine, router, logToConsole);
+        window.cardEditorView = cardEditorView;
     }
 
     try {

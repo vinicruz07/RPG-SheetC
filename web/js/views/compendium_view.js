@@ -60,6 +60,9 @@ class CompendiumView {
                         <p>Navegue, pesquise e equipe cards de atributos, perícias, itens e magias gerenciados pelo motor C.</p>
                     </div>
                     <div class="compendium-header-actions">
+                        <button type="button" id="btn-compendium-new-card" class="btn btn-primary" title="Criar um novo card personalizado">
+                            ➕ Novo Card
+                        </button>
                         <button type="button" id="btn-compendium-import" class="btn" title="Importar arquivo .cardpack JSON">
                             📦 Importar Pacote
                         </button>
@@ -192,6 +195,17 @@ class CompendiumView {
                     this.currentFilterType = typeAttr === 'all' ? null : parseInt(typeAttr, 10);
                     this.renderFilterPills();
                     this.updateCardsList();
+                }
+            });
+        }
+
+        // Botão Novo Card
+        const btnNewCard = document.getElementById('btn-compendium-new-card');
+        if (btnNewCard) {
+            btnNewCard.addEventListener('click', () => {
+                if (this.router && typeof this.router.navigate === 'function') {
+                    window.cardEditorTargetKey = null;
+                    this.router.navigate('editor');
                 }
             });
         }
