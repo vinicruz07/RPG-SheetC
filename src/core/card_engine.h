@@ -47,6 +47,7 @@ RPGCard card_create_attribute(unsigned int id, const char *key, const char *name
 RPGCard card_create_resource(unsigned int id, const char *key, const char *name, int max_val);
 RPGCard card_create_stat(unsigned int id, const char *key, const char *name, int base_val);
 RPGCard card_create_skill(unsigned int id, const char *key, const char *name, const char *attr_key);
+RPGCard card_create_ability(unsigned int id, const char *key, const char *name, const char *formula);
 RPGCard card_create_equipment(unsigned int id, const char *key, const char *name, const char *target_key, int bonus);
 
 #ifdef __cplusplus

@@ -328,6 +328,20 @@ RPGCard card_create_skill(unsigned int id, const char *key, const char *name, co
     return c;
 }
 
+RPGCard card_create_ability(unsigned int id, const char *key, const char *name, const char *formula) {
+    RPGCard c;
+    memset(&c, 0, sizeof(RPGCard));
+    c.id = id;
+    c.type = CARD_TYPE_ABILITY;
+    strncpy(c.key, key ? key : "habilidade", CARD_KEY_MAX_LEN - 1);
+    strncpy(c.name, name ? name : "Habilidade", CARD_NAME_MAX_LEN - 1);
+    c.is_equipped = 1;
+    if (formula) {
+        strncpy(c.formula, formula, CARD_FORMULA_MAX_LEN - 1);
+    }
+    return c;
+}
+
 RPGCard card_create_equipment(unsigned int id, const char *key, const char *name, const char *target_key, int bonus) {
     RPGCard c;
     memset(&c, 0, sizeof(RPGCard));

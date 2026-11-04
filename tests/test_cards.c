@@ -7,6 +7,7 @@
 #include <string.h>
 #include "../src/core/card_types.h"
 #include "../src/core/card_engine.h"
+#include "../src/core/card_eval.h"
 
 static void test_card_types_and_strings(void) {
     assert(strcmp(card_type_to_string(CARD_TYPE_ATTRIBUTE), "Atributo") == 0);
@@ -146,12 +147,108 @@ static void test_resources_and_clamping(void) {
     printf("  [OK] Manipulacao de recursos dinâmicos e controle de limites maximos\n");
 }
 
+static void test_card_eval(void) {
+    int res = 0;
+    EvalStatus st;
+
+    /* Aritmética pura e precedência de operadores */
+    st = card_eval_expression("2 + 3 * 4", NULL, &res);
+    assert(st == EVAL_OK && res == 14);
+
+    st = card_eval_expression("(2 + 3) * 4", NULL, &res);
+    assert(st == EVAL_OK && res == 20);
+
+    st = card_eval_expression("100 / 10 / 2", NULL, &res);
+    assert(st == EVAL_OK && res == 5);
+
+    /* Operadores unários */
+    st = card_eval_expression("-5 + 15", NULL, &res);
+    assert(st == EVAL_OK && res == 10);
+
+    st = card_eval_expression("-(10 + 20)", NULL, &res);
+    assert(st == EVAL_OK && res == -30);
+
+    st = card_eval_expression("+42", NULL, &res);
+    assert(st == EVAL_OK && res == 42);
+
+    /* Proteção contra divisão por zero */
+    st = card_eval_expression("10 / 0", NULL, &res);
+    assert(st == EVAL_ERR_DIV_BY_ZERO);
+
+    /* Erro de sintaxe */
+    st = card_eval_expression("2 + * 3", NULL, &res);
+    assert(st == EVAL_ERR_SYNTAX);
+
+    st = card_eval_expression("(2 + 3", NULL, &res);
+    assert(st == EVAL_ERR_SYNTAX);
+
+    /* Expressão vazia ou nula */
+    st = card_eval_expression("", NULL, &res);
+    assert(st == EVAL_OK && res == 0);
+
+    st = card_eval_expression(NULL, NULL, &res);
+    assert(st == EVAL_OK && res == 0);
+
+    /* Avaliação com referências a Cards de um Deck */
+    CardDeck deck;
+    card_deck_init(&deck, "Personagem Formula", "Sistema Custom");
+    deck.level = 5;
+    deck.xp = 1200;
+
+    RPGCard forca = card_create_attribute(1, "for", "Forca", 16);
+    card_deck_add(&deck, &forca);
+
+    RPGCard des = card_create_attribute(2, "des", "Destreza", 14);
+    card_deck_add(&deck, &des);
+
+    RPGCard armadura = card_create_stat(3, "armadura", "Cota de Malha", 6);
+    card_deck_add(&deck, &armadura);
+
+    /* Referência com @ e sem @ */
+    st = card_eval_expression("10 + @des + @armadura", &deck, &res);
+    assert(st == EVAL_OK && res == (10 + 14 + 6)); /* 30 */
+
+    st = card_eval_expression("10 + des + armadura", &deck, &res);
+    assert(st == EVAL_OK && res == 30);
+
+    /* Modificador clássico D&D/T20: (atributo - 10) / 2 */
+    st = card_eval_expression("(@for - 10) / 2", &deck, &res);
+    assert(st == EVAL_OK && res == 3); /* (16 - 10) / 2 = 3 */
+
+    /* Referência a nível e xp do deck */
+    st = card_eval_expression("@nivel * 2 + 10", &deck, &res);
+    assert(st == EVAL_OK && res == 20); /* 5 * 2 + 10 = 20 */
+
+    /* Case-insensitivity de referências */
+    st = card_eval_expression("@FOR + @DES", &deck, &res);
+    assert(st == EVAL_OK && res == 30);
+
+    /* Chave inexistente deve resolver como 0 com segurança */
+    st = card_eval_expression("@inexistente + 10", &deck, &res);
+    assert(st == EVAL_OK && res == 10);
+
+    /* card_eval_simple com fallback */
+    int simple_val = card_eval_simple("20 + @des", &deck, -1);
+    assert(simple_val == 34);
+
+    int fallback_val = card_eval_simple("10 / 0", &deck, 999);
+    assert(fallback_val == 999);
+
+    /* card_eval_card_formula */
+    RPGCard ataque = card_create_ability(4, "ataque_espada", "Ataque com Espada", "@for + 2");
+    st = card_eval_card_formula(&ataque, &deck, &res);
+    assert(st == EVAL_OK && res == 18); /* 16 + 2 */
+
+    printf("  [OK] Avaliador de expressoes matematicas, precedencia, parenteses e referencias @card\n");
+}
+
 int main(void) {
     printf("=== Suite de Testes Unitarios do Motor de Cards C (RPG-SheetC v2.0) ===\n");
     test_card_types_and_strings();
     test_deck_crud_operations();
     test_modifiers_and_recalculation();
     test_resources_and_clamping();
+    test_card_eval();
     printf("=== Todos os testes do Motor de Cards passaram com 100%% de sucesso! ===\n");
     return 0;
 }

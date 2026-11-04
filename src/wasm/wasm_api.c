@@ -4,6 +4,7 @@
  */
 
 #include "../core/card_engine.h"
+#include "../core/card_eval.h"
 #include "../core/dice.h"
 #include "../core/rpg_base.h"
 
@@ -259,4 +260,22 @@ WASM_EXPORT int wasm_get_last_roll_is_critical(void) {
 
 WASM_EXPORT int wasm_get_last_roll_is_fumble(void) {
     return g_last_roll.is_fumble;
+}
+
+/* =========================================================================
+ * 6. Avaliador de Expressões e Fórmulas
+ * ========================================================================= */
+
+WASM_EXPORT int wasm_eval_expression(void) {
+    int res = 0;
+    EvalStatus st = card_eval_expression(g_wasm_str_buf, &g_active_deck, &res);
+    return (st == EVAL_OK) ? res : 0;
+}
+
+WASM_EXPORT int wasm_eval_card_formula(int card_idx) {
+    const RPGCard *c = card_deck_get_at(&g_active_deck, card_idx);
+    if (!c) return 0;
+    int res = 0;
+    EvalStatus st = card_eval_card_formula(c, &g_active_deck, &res);
+    return (st == EVAL_OK) ? res : 0;
 }
