@@ -343,6 +343,59 @@ static void test_card_pack(void) {
     printf("  [OK] Serializador e parser JSON (.cardpack) round-trip 60+ cards e merge comunitario\n");
 }
 
+/* Protótipos da API exportada pelo wasm_api.c */
+extern void wasm_deck_init(void);
+extern char* wasm_get_str_buffer(void);
+extern char* wasm_get_json_buffer(void);
+extern int wasm_card_add(int type, int base_val);
+extern int wasm_card_remove(unsigned int card_id);
+extern int wasm_card_count(void);
+extern unsigned int wasm_card_get_id(int idx);
+extern int wasm_card_get_type(int idx);
+extern const char* wasm_card_get_name_ptr(int idx);
+extern int wasm_card_get_val(int idx);
+extern int wasm_card_eval_formula(int card_idx);
+extern void wasm_card_apply_all(void);
+extern int wasm_pack_import(int merge_mode);
+extern int wasm_pack_export(void);
+
+static void test_wasm_api_bridge(void) {
+    wasm_deck_init();
+    assert(wasm_card_count() == 0);
+
+    /* Adiciona card via buffer de string ("chave:Nome") */
+    char *str_buf = wasm_get_str_buffer();
+    strcpy(str_buf, "for:Forca Bruta");
+    int idx = wasm_card_add(CARD_TYPE_ATTRIBUTE, 18);
+    assert(idx == 0);
+    assert(wasm_card_count() == 1);
+
+    assert(wasm_card_get_id(0) == 1);
+    assert(wasm_card_get_type(0) == CARD_TYPE_ATTRIBUTE);
+    assert(strcmp(wasm_card_get_name_ptr(0), "Forca Bruta") == 0);
+    assert(wasm_card_get_val(0) == 18);
+
+    /* Exporta para o buffer JSON do WASM e reimporta */
+    int json_len = wasm_pack_export();
+    assert(json_len > 0);
+
+    /* Adiciona um card com fórmula via import JSON (merge_mode = 1) */
+    char *json_buf = wasm_get_json_buffer();
+    strcpy(json_buf, "[{\"id\":99,\"type\":\"Habilidade\",\"key\":\"golpe\",\"name\":\"Golpe Pesado\",\"formula\":\"@for * 2\"}]");
+    int imported = wasm_pack_import(1);
+    assert(imported == 1);
+    assert(wasm_card_count() == 2);
+
+    wasm_card_apply_all();
+    assert(wasm_card_eval_formula(1) == 36); /* 18 * 2 */
+
+    /* Remove card pelo ID */
+    assert(wasm_card_remove(99) == 1);
+    assert(wasm_card_count() == 1);
+
+    printf("  [OK] Ponte WebAssembly (wasm_api.c) e simbolos exportados verificados\n");
+}
+
 int main(void) {
     printf("=== Suite de Testes Unitarios do Motor de Cards C (RPG-SheetC v2.0) ===\n");
     test_card_types_and_strings();
@@ -351,6 +404,7 @@ int main(void) {
     test_resources_and_clamping();
     test_card_eval();
     test_card_pack();
+    test_wasm_api_bridge();
     printf("=== Todos os testes do Motor de Cards passaram com 100%% de sucesso! ===\n");
     return 0;
 }

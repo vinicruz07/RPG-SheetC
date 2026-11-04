@@ -43,8 +43,8 @@ wasm: $(WEB_DIST)
 
 
 # Alvo de testes: compila e executa a suite de testes unitarios com GCC nativo
-test: $(CORE_SRCS) $(TEST_DIR)/test_cards.c
-	$(CC_NATIVE) $(NATIVE_FLAGS) $(CORE_SRCS) $(TEST_DIR)/test_cards.c -o $(TEST_TARGET)
+test: $(WASM_SRCS) $(TEST_DIR)/test_cards.c
+	$(CC_NATIVE) $(NATIVE_FLAGS) $(WASM_SRCS) $(TEST_DIR)/test_cards.c -o $(TEST_TARGET)
 	@./$(TEST_TARGET)
 
 # Limpeza de artefatos temporários e binários compilados
