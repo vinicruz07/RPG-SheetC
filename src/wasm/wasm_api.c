@@ -317,6 +317,23 @@ WASM_EXPORT int wasm_card_get_favorite_at(int idx) {
     return c ? (int)c->is_favorite : 0;
 }
 
+WASM_EXPORT int wasm_card_get_mod_count(int idx) {
+    const RPGCard *c = card_deck_get_at(&g_active_deck, idx);
+    return c ? c->modifier_count : 0;
+}
+
+WASM_EXPORT const char* wasm_card_get_mod_target_ptr(int idx, int mod_idx) {
+    const RPGCard *c = card_deck_get_at(&g_active_deck, idx);
+    if (!c || mod_idx < 0 || mod_idx >= c->modifier_count) return "";
+    return c->modifiers[mod_idx].target_key;
+}
+
+WASM_EXPORT int wasm_card_get_mod_val(int idx, int mod_idx) {
+    const RPGCard *c = card_deck_get_at(&g_active_deck, idx);
+    if (!c || mod_idx < 0 || mod_idx >= c->modifier_count) return 0;
+    return c->modifiers[mod_idx].value;
+}
+
 WASM_EXPORT void wasm_card_apply_all(void) {
     card_deck_recalculate(&g_active_deck);
 }

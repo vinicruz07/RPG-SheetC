@@ -286,8 +286,23 @@ class SheetCWasm {
             costValue: this.exports.wasm_card_get_cost_val(idx),
             equipped: Boolean(this.exports.wasm_card_get_equipped_at(idx)),
             trained: Boolean(this.exports.wasm_card_get_trained_at(idx)),
-            favorite: Boolean(this.exports.wasm_card_get_favorite_at(idx))
+            favorite: Boolean(this.exports.wasm_card_get_favorite_at(idx)),
+            modifiers: this._readCardModifiers(idx)
         };
+    }
+
+    _readCardModifiers(idx) {
+        if (!this.isLoaded || typeof this.exports.wasm_card_get_mod_count !== 'function') {
+            return [];
+        }
+        const count = this.exports.wasm_card_get_mod_count(idx);
+        const mods = [];
+        for (let m = 0; m < count; m++) {
+            const target = this.readString(this.exports.wasm_card_get_mod_target_ptr(idx, m), 24);
+            const value = this.exports.wasm_card_get_mod_val(idx, m);
+            mods.push({ target_key: target, target, value, val: value });
+        }
+        return mods;
     }
 
     /**

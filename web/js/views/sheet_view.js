@@ -1,6 +1,6 @@
 /**
- * sheet_view.js — Painel Interativo Completo da Ficha (Edição In-Place)
- * Integrado ao Motor C99 (WebAssembly)
+ * sheet_view.js — Painel Modular Orientado a Cards Aplicados (RPG-SheetC v2.0)
+ * Integrado 100% ao Motor C99 (WebAssembly) via SheetCWasm
  */
 
 class SheetView {
@@ -13,21 +13,24 @@ class SheetView {
         this.skillFilter = '';
         this.skillFilterOnlyTrained = false;
 
-        this.attrMeta = [
-            { id: 0, name: 'Força', abbr: 'FOR', desc: 'Ataques corpo a corpo, dano e atletismo' },
-            { id: 1, name: 'Destreza', abbr: 'DES', desc: 'Iniciativa, reflexos, pontaria e defesa' },
-            { id: 2, name: 'Constituição', abbr: 'CON', desc: 'Pontos de vida, vigor e fortitude' },
-            { id: 3, name: 'Inteligência', abbr: 'INT', desc: 'Conhecimento, investigação e perícias' },
-            { id: 4, name: 'Sabedoria', abbr: 'SAB', desc: 'Percepção, intuição, vontade e cura' },
-            { id: 5, name: 'Carisma', abbr: 'CAR', desc: 'Diplomacia, atuação, enganação e liderança' }
-        ];
+        // Inscrição reativa para atualizar a ficha sempre que o deck no C for modificado
+        if (this.engine && typeof this.engine.onChange === 'function') {
+            this.engine.onChange((reason) => {
+                if (this.container && (this.container.offsetParent !== null || typeof window === 'undefined')) {
+                    this.render();
+                }
+            });
+        }
     }
 
     /**
      * Inicializa a view da ficha
      */
-    init(containerId = 'view-sheet') {
+    init(containerId = 'sheet-container') {
         this.container = document.getElementById(containerId);
+        if (!this.container) {
+            this.container = document.getElementById('view-sheet');
+        }
         if (!this.container) return;
 
         this.render();
@@ -41,29 +44,38 @@ class SheetView {
     }
 
     /**
-     * Renderiza o painel da ficha completo
+     * Renderiza o painel modular completo da ficha
      */
     render() {
-        if (!this.container || !this.engine.isLoaded) return;
+        if (!this.container || !this.engine || !this.engine.isLoaded) return;
 
-        const sheet = this.engine.exportJson() || {};
-        const name = sheet.nome || this.engine.getCharacterName() || 'Herói';
-        const race = sheet.raca || this.engine.getActiveRace() || 'Humano';
-        const cls = sheet.classe || this.engine.getActiveClass() || 'Guerreiro';
-        const level = sheet.nivel || this.engine.getLevel() || 1;
-        const xp = this.engine.getXp();
+        const name = this.engine.getCharacterName() || 'Novo Herói';
+        const system = this.engine.getSystemName() || 'Sistema Aberto';
+        const level = this.engine.getLevel() || 1;
+        const xp = this.engine.getXp() || 0;
+        const cardCount = this.engine.getCardCount();
 
-        const pvCur = this.engine.getPvAtual();
-        const pvMax = this.engine.getPvMax();
-        const pmCur = this.engine.getPmAtual();
-        const pmMax = this.engine.getPmMax();
-        const defense = this.engine.getDefesa();
-        const armorBonus = this.engine.getBonusArmadura();
-        const shieldBonus = this.engine.getBonusEscudo();
+        // 1. Coleta de Cards Categorizados do Motor C
+        const CARD_TYPES = (typeof window !== 'undefined' && window.CARD_TYPES) ? window.CARD_TYPES : {
+            ATTRIBUTE: 0, RESOURCE: 1, STAT: 2, SKILL: 3, ABILITY: 4, EQUIPMENT: 5, SPELL: 6, TRAIT: 7
+        };
 
-        const desMod = this.engine.getModifier(1);
-        const pvPct = pvMax > 0 ? Math.min(100, Math.max(0, (pvCur / pvMax) * 100)) : 0;
-        const pmPct = pmMax > 0 ? Math.min(100, Math.max(0, (pmCur / pmMax) * 100)) : 0;
+        const resourceCards = this.engine.getAllCards(c => c.type === CARD_TYPES.RESOURCE);
+        const statCards = this.engine.getAllCards(c => c.type === CARD_TYPES.STAT);
+        const attributeCards = this.engine.getAllCards(c => c.type === CARD_TYPES.ATTRIBUTE);
+        const equippedEquipment = this.engine.getAllCards(c => c.type === CARD_TYPES.EQUIPMENT && c.equipped);
+        const inventoryEquipment = this.engine.getAllCards(c => c.type === CARD_TYPES.EQUIPMENT && !c.equipped);
+        const activeSpellsAbilities = this.engine.getAllCards(c => (c.type === CARD_TYPES.SPELL || c.type === CARD_TYPES.ABILITY || c.type === CARD_TYPES.TRAIT) && c.equipped);
+        const availableSpellsAbilities = this.engine.getAllCards(c => (c.type === CARD_TYPES.SPELL || c.type === CARD_TYPES.ABILITY || c.type === CARD_TYPES.TRAIT) && !c.equipped);
+        const skillCards = this.engine.getAllCards(c => c.type === CARD_TYPES.SKILL);
+
+        // Se o deck estiver completamente vazio, oferece tela inicial amigável
+        if (cardCount === 0) {
+            this.container.innerHTML = this.renderEmptyDeckState(name, system, level, xp);
+            this.setupHeaderEventListeners();
+            this.setupEmptyStateEventListeners();
+            return;
+        }
 
         this.container.innerHTML = `
             <div class="sheet-main-layout">
@@ -75,15 +87,15 @@ class SheetView {
                             <input type="text" id="sheet-name-input" class="sheet-name-field" value="${name}" maxlength="30" placeholder="Nome do Herói">
                         </div>
                         <div class="sheet-badges-group">
-                            <span class="sheet-meta-pill race-pill">🧬 ${race}</span>
-                            <span class="sheet-meta-pill class-pill">🛡️ ${cls}</span>
-                            <span class="sheet-meta-pill system-pill">📜 Tormenta 20</span>
+                            <span class="sheet-meta-pill race-pill">🃏 ${cardCount} Cards Ativos</span>
+                            <span class="sheet-meta-pill class-pill">⚔️ ${equippedEquipment.length} Equipados</span>
+                            <span class="sheet-meta-pill system-pill">📜 ${system}</span>
                         </div>
                     </div>
 
                     <div class="sheet-level-xp-row">
                         <div class="sheet-stepper-control">
-                            <span class="sheet-field-label">Nível de Personagem</span>
+                            <span class="sheet-field-label">Nível</span>
                             <div class="stepper-box">
                                 <button type="button" id="btn-lvl-down" class="btn-stepper" title="Diminuir Nível">-</button>
                                 <span class="stepper-value" id="sheet-level-val">${level}</span>
@@ -92,154 +104,248 @@ class SheetView {
                         </div>
 
                         <div class="sheet-xp-control">
-                            <label class="sheet-field-label" for="sheet-xp-input">Pontos de Experiência (XP)</label>
+                            <label class="sheet-field-label" for="sheet-xp-input">Experiência (XP)</label>
                             <input type="number" id="sheet-xp-input" class="sheet-number-field" value="${xp}" min="0" step="100">
                         </div>
 
                         <div class="sheet-header-actions">
-                            <button type="button" id="btn-sheet-save" class="btn btn-primary" title="Salvar Ficha Atual no Navegador">
+                            <button type="button" id="btn-sheet-save" class="btn btn-primary" title="Salvar no Navegador">
                                 💾 Salvar
                             </button>
-                            <button type="button" id="btn-sheet-export-file" class="btn" title="Baixar arquivo da ficha (.sheetc JSON)">
+                            <button type="button" id="btn-sheet-export-file" class="btn" title="Exportar Deck (.cardpack JSON)">
                                 📥 Exportar
                             </button>
-                            <button type="button" id="btn-sheet-import-file" class="btn" title="Carregar arquivo do computador (.sheetc ou .json)">
+                            <button type="button" id="btn-sheet-import-file" class="btn" title="Importar Pacote (.cardpack JSON)">
                                 📤 Importar
                             </button>
-                            <button type="button" id="btn-sheet-print-pdf" class="btn" title="Imprimir ou Salvar como PDF">
-                                🖨️ PDF / Imprimir
+                            <button type="button" id="btn-sheet-print-pdf" class="btn" title="Imprimir / Salvar como PDF">
+                                🖨️ PDF
                             </button>
-                            <button type="button" id="btn-sheet-manage-saved" class="btn" title="Abrir Gerenciador de Fichas Salvas">
-                                📜 Minhas Fichas
+                            <button type="button" id="btn-sheet-manage-saved" class="btn" title="Gerenciar Fichas">
+                                📜 Fichas
                             </button>
-                            <button type="button" id="btn-sheet-open-wizard" class="btn" title="Abre o assistente para recriar ou configurar este personagem">
-                                🪄 Assistente
+                            <button type="button" id="btn-sheet-open-compendium" class="btn btn-accent" title="Abrir Compêndio e Adicionar Novos Cards">
+                                🗂️ Compêndio
+                            </button>
+                            <button type="button" id="btn-sheet-create-card" class="btn" title="Criar Novo Card Personalizado">
+                                ➕ Criar Card
                             </button>
                         </div>
                     </div>
                 </section>
 
                 <div class="dashboard-grid sheet-grid-columns">
-                    <!-- Coluna Principal (Recursos, Atributos, Perícias) -->
-                    <main class="sheet-column-main">
-                        <!-- Barra de Recursos de Combate (PV / PM / Defesa) -->
+                    <!-- Coluna Principal (Recursos, Stats, Atributos, Equipamentos, Habilidades, Perícias) -->
+                    <main class="sheet-column-main" style="display: flex; flex-direction: column; gap: var(--space-lg);">
+                        
+                        <!-- 1. Recursos Dinâmicos (PV, PM, Sanidade, etc.) e Estatísticas (Defesa, etc.) -->
                         <section class="card sheet-resources-card">
+                            <div class="card-header" style="margin-bottom: var(--space-md);">
+                                <div>
+                                    <span class="card-title">Recursos de Combate & Estatísticas</span>
+                                    <span class="card-subtitle-small">Recalculados automaticamente na memória C</span>
+                                </div>
+                            </div>
+
+                            <!-- Grade de Recursos Dinâmicos -->
+                            ${resourceCards.length > 0 ? `
+                                <div class="sheet-combat-meters" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-md); margin-bottom: var(--space-lg);">
+                                    ${resourceCards.map(rc => {
+                                        const cur = rc.current;
+                                        const max = rc.max > 0 ? rc.max : 1;
+                                        const pct = Math.min(100, Math.max(0, (cur / max) * 100));
+                                        const isMana = rc.key.includes('pm') || rc.key.includes('mana') || rc.key.includes('mp');
+                                        const icon = isMana ? '✨' : '❤️';
+                                        return `
+                                            <div class="resource-block ${isMana ? 'pm-block' : 'pv-block'}" data-res-key="${rc.key}">
+                                                <div class="resource-block-header">
+                                                    <span class="res-label">${icon} ${rc.name} (${rc.key.toUpperCase()})</span>
+                                                    <div class="res-inputs">
+                                                        <input type="number" class="res-num-input res-cur-input" data-res-key="${rc.key}" value="${cur}" min="0" max="${max}">
+                                                        <span class="res-sep">/</span>
+                                                        <span class="res-max">${max}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="res-progress-track">
+                                                    <div class="res-progress-fill ${isMana ? 'pm-fill' : 'pv-fill'}" style="width: ${pct}%;"></div>
+                                                </div>
+                                                <div class="res-quick-buttons">
+                                                    <button type="button" class="btn-res-delta btn-quick-dmg" data-res-key="${rc.key}" data-delta="-5">-5</button>
+                                                    <button type="button" class="btn-res-delta btn-quick-dmg" data-res-key="${rc.key}" data-delta="-1">-1</button>
+                                                    <button type="button" class="btn-res-delta btn-quick-heal" data-res-key="${rc.key}" data-delta="1">+1</button>
+                                                    <button type="button" class="btn-res-delta btn-quick-heal" data-res-key="${rc.key}" data-delta="5">+5</button>
+                                                    <button type="button" class="btn-res-full btn-quick-action" data-res-key="${rc.key}" data-max="${max}" title="Recuperar Total">Total</button>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            ` : ''}
+
+                            <!-- Estatísticas Derivadas (Defesa, etc.) -->
+                            ${statCards.length > 0 ? `
+                                <div class="sheet-stats-container" style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
+                                    ${statCards.map(sc => `
+                                        <div class="defense-breakdown-card" style="flex: 1; min-width: 240px;" data-stat-key="${sc.key}">
+                                            <div class="defense-main-badge">
+                                                <span class="def-badge-label">${sc.name}</span>
+                                                <div class="def-badge-val" id="stat-val-${sc.key}">${sc.effective}</div>
+                                            </div>
+                                            <div class="defense-calc-items">
+                                                <div class="def-calc-item">
+                                                    <span class="calc-label">Base</span>
+                                                    <span class="calc-val">${sc.base}</span>
+                                                </div>
+                                                ${sc.formula ? `
+                                                    <span class="calc-op">•</span>
+                                                    <div class="def-calc-item">
+                                                        <span class="calc-label">Fórmula</span>
+                                                        <span class="calc-val" style="font-size: 0.82rem; font-family: var(--font-mono); color: #67e8f9;">${sc.formula}</span>
+                                                    </div>
+                                                ` : ''}
+                                                ${sc.effective !== sc.base ? `
+                                                    <span class="calc-op">=</span>
+                                                    <div class="def-calc-item">
+                                                        <span class="calc-label">Bônus Cards</span>
+                                                        <span class="calc-val" style="color: #4ade80;">${this.formatMod(sc.effective - sc.base)}</span>
+                                                    </div>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </section>
+
+                        <!-- 2. Atributos Básicos com Edição In-Place -->
+                        ${attributeCards.length > 0 ? `
+                            <section class="card sheet-attributes-card">
+                                <div class="card-header">
+                                    <span class="card-title">Atributos Básicos</span>
+                                    <span class="card-subtitle-small">Modifique a base ou clique no modificador para rolar d20</span>
+                                </div>
+
+                                <div class="sheet-attributes-grid">
+                                    ${attributeCards.map(attr => {
+                                        const eff = attr.effective;
+                                        const mod = Math.floor((eff - 10) / 2);
+                                        const hasBonus = eff !== attr.base;
+                                        return `
+                                            <div class="sheet-attr-card" data-attr-key="${attr.key}">
+                                                <div class="sheet-attr-header">
+                                                    <span class="attr-abbr-tag">${attr.key.toUpperCase()}</span>
+                                                    <span class="attr-title-text">${attr.name}</span>
+                                                </div>
+                                                <div class="sheet-attr-mod ${mod >= 0 ? 'mod-positive' : 'mod-negative'}" 
+                                                     data-attr-key="${attr.key}" 
+                                                     data-attr-name="${attr.name}" 
+                                                     data-attr-mod="${mod}"
+                                                     title="Clique para rolar 1d20 ${this.formatMod(mod)}"
+                                                     style="cursor: pointer;">
+                                                    ${this.formatMod(mod)}
+                                                </div>
+                                                <div class="sheet-attr-input-row">
+                                                    <button type="button" class="btn-attr-stepper btn-attr-minus" data-attr-key="${attr.key}">-</button>
+                                                    <input type="number" class="sheet-attr-val-input" data-attr-key="${attr.key}" value="${attr.base}" min="1" max="40">
+                                                    <button type="button" class="btn-attr-stepper btn-attr-plus" data-attr-key="${attr.key}">+</button>
+                                                </div>
+                                                ${hasBonus ? `
+                                                    <span style="font-size: 0.68rem; color: #4ade80; font-weight: 700;">Efetivo: ${eff}</span>
+                                                ` : ''}
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </section>
+                        ` : ''}
+
+                        <!-- 3. Equipamentos e Itens Aplicados (Cards com Recálculo Dinâmico) -->
+                        <section class="card sheet-equipment-card">
                             <div class="card-header">
-                                <span class="card-title">Recursos de Combate</span>
-                                <span class="card-subtitle-small">Sincronizado na memória linear do C</span>
+                                <div>
+                                    <span class="card-title">Equipamento & Itens Ativos</span>
+                                    <span class="card-subtitle-small">Itens em uso afetam dinamicamente os valores da ficha</span>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-open-compendium-equip" style="font-size: 0.8rem;">
+                                    + Adicionar do Compêndio
+                                </button>
                             </div>
 
-                            <div class="sheet-combat-meters">
-                                <!-- Pontos de Vida (PV) -->
-                                <div class="resource-block pv-block">
-                                    <div class="resource-block-header">
-                                        <span class="res-label">❤️ Pontos de Vida (PV)</span>
-                                        <div class="res-inputs">
-                                            <input type="number" id="sheet-pv-cur-input" class="res-num-input" value="${pvCur}" min="0" max="${pvMax}">
-                                            <span class="res-sep">/</span>
-                                            <span class="res-max" id="sheet-pv-max-val">${pvMax}</span>
-                                        </div>
+                            <!-- Equipamentos Atualmente Equipados -->
+                            <div style="margin-bottom: var(--space-md);">
+                                <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-gold-primary); margin-bottom: var(--space-xs);">
+                                    🛡️ Equipados na Ficha (${equippedEquipment.length})
+                                </h4>
+                                ${equippedEquipment.length > 0 ? `
+                                    <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
+                                        ${equippedEquipment.map(eq => this.renderMiniCard(eq, true)).join('')}
                                     </div>
-                                    <div class="res-progress-track">
-                                        <div class="res-progress-fill pv-fill" style="width: ${pvPct}%;"></div>
-                                    </div>
-                                    <div class="res-quick-buttons">
-                                        <button type="button" class="btn-quick-dmg" data-delta="-5">-5</button>
-                                        <button type="button" class="btn-quick-dmg" data-delta="-1">-1</button>
-                                        <button type="button" class="btn-quick-heal" data-delta="1">+1</button>
-                                        <button type="button" class="btn-quick-heal" data-delta="5">+5</button>
-                                        <button type="button" id="btn-full-heal" class="btn-quick-action" title="Cura total">Cura Total</button>
-                                    </div>
-                                </div>
-
-                                <!-- Pontos de Mana (PM) -->
-                                <div class="resource-block pm-block">
-                                    <div class="resource-block-header">
-                                        <span class="res-label">✨ Pontos de Mana (PM)</span>
-                                        <div class="res-inputs">
-                                            <input type="number" id="sheet-pm-cur-input" class="res-num-input" value="${pmCur}" min="0" max="${pmMax}">
-                                            <span class="res-sep">/</span>
-                                            <span class="res-max" id="sheet-pm-max-val">${pmMax}</span>
-                                        </div>
-                                    </div>
-                                    <div class="res-progress-track">
-                                        <div class="res-progress-fill pm-fill" style="width: ${pmPct}%;"></div>
-                                    </div>
-                                    <div class="res-quick-buttons">
-                                        <button type="button" class="btn-quick-mana-sub" data-delta="-5">-5</button>
-                                        <button type="button" class="btn-quick-mana-sub" data-delta="-1">-1</button>
-                                        <button type="button" class="btn-quick-mana-add" data-delta="1">+1</button>
-                                        <button type="button" class="btn-quick-mana-add" data-delta="5">+5</button>
-                                        <button type="button" id="btn-full-pm" class="btn-quick-action" title="Recupera todo PM">PM Total</button>
-                                    </div>
-                                </div>
+                                ` : `
+                                    <p style="font-size: 0.85rem; color: var(--color-text-dim); margin: 0; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+                                        Nenhum equipamento equipado no momento. Equipe um item do inventário abaixo para aplicar seus bônus.
+                                    </p>
+                                `}
                             </div>
 
-                            <!-- Defesa e Bônus de Armadura / Escudo -->
-                            <div class="defense-breakdown-card">
-                                <div class="defense-main-badge">
-                                    <span class="def-badge-label">Defesa Passiva Total</span>
-                                    <div class="def-badge-val" id="sheet-def-val">${defense}</div>
-                                </div>
-                                <div class="defense-calc-items">
-                                    <div class="def-calc-item">
-                                        <span class="calc-label">Base</span>
-                                        <span class="calc-val">10</span>
+                            <!-- Mochila / Inventário Disponível -->
+                            <div>
+                                <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted); margin-bottom: var(--space-xs);">
+                                    🎒 Mochila / Inventário (${inventoryEquipment.length})
+                                </h4>
+                                ${inventoryEquipment.length > 0 ? `
+                                    <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
+                                        ${inventoryEquipment.map(eq => this.renderMiniCard(eq, false)).join('')}
                                     </div>
-                                    <span class="calc-op">+</span>
-                                    <div class="def-calc-item">
-                                        <span class="calc-label">DES</span>
-                                        <span class="calc-val" id="def-mod-des">${this.formatMod(desMod)}</span>
-                                    </div>
-                                    <span class="calc-op">+</span>
-                                    <div class="def-calc-item def-input-item">
-                                        <label class="calc-label" for="sheet-armor-input">Armadura</label>
-                                        <input type="number" id="sheet-armor-input" class="calc-input" value="${armorBonus}" min="0" max="20">
-                                    </div>
-                                    <span class="calc-op">+</span>
-                                    <div class="def-calc-item def-input-item">
-                                        <label class="calc-label" for="sheet-shield-input">Escudo</label>
-                                        <input type="number" id="sheet-shield-input" class="calc-input" value="${shieldBonus}" min="0" max="10">
-                                    </div>
-                                </div>
+                                ` : `
+                                    <p style="font-size: 0.82rem; color: var(--color-text-dim); margin: 0;">
+                                        Mochila vazia. Adicione novos equipamentos no Compêndio ou crie novos cards.
+                                    </p>
+                                `}
                             </div>
                         </section>
 
-                        <!-- Grade de 6 Atributos Básicos com Edição In-Place -->
-                        <section class="card sheet-attributes-card">
+                        <!-- 4. Magias, Habilidades & Características -->
+                        <section class="card sheet-spells-abilities-card">
                             <div class="card-header">
-                                <span class="card-title">Atributos Básicos</span>
-                                <span class="card-subtitle-small">Edite os valores para recalcular modificadores, PV e perícias na hora</span>
+                                <div>
+                                    <span class="card-title">Habilidades, Magias & Poderes</span>
+                                    <span class="card-subtitle-small">Cards ativos aplicam bônus ou executam rolagens com custo</span>
+                                </div>
                             </div>
 
-                            <div class="sheet-attributes-grid">
-                                ${this.attrMeta.map(attr => {
-                                    const val = this.engine.getAttribute(attr.id);
-                                    const mod = this.engine.getModifier(attr.id);
-                                    return `
-                                        <div class="sheet-attr-card" data-attr-id="${attr.id}">
-                                            <div class="sheet-attr-header">
-                                                <span class="attr-abbr-tag">${attr.abbr}</span>
-                                                <span class="attr-title-text">${attr.name}</span>
-                                            </div>
-                                            <div class="sheet-attr-mod ${mod >= 0 ? 'mod-positive' : 'mod-negative'}">
-                                                ${this.formatMod(mod)}
-                                            </div>
-                                            <div class="sheet-attr-input-row">
-                                                <button type="button" class="btn-attr-stepper btn-attr-minus" data-attr-id="${attr.id}">-</button>
-                                                <input type="number" class="sheet-attr-val-input" data-attr-id="${attr.id}" value="${val}" min="1" max="40">
-                                                <button type="button" class="btn-attr-stepper btn-attr-plus" data-attr-id="${attr.id}">+</button>
-                                            </div>
-                                        </div>
-                                    `;
-                                }).join('')}
+                            <!-- Cards de Habilidade / Magia Ativos / Sustentados -->
+                            ${activeSpellsAbilities.length > 0 ? `
+                                <div style="margin-bottom: var(--space-md);">
+                                    <h4 style="font-size: 0.85rem; text-transform: uppercase; color: #a78bfa; margin-bottom: var(--space-xs);">
+                                        ⚡ Ativos / Sustentados (${activeSpellsAbilities.length})
+                                    </h4>
+                                    <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
+                                        ${activeSpellsAbilities.map(sp => this.renderMiniCard(sp, true)).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            <!-- Grimório / Habilidades Disponíveis -->
+                            <div>
+                                <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: var(--space-xs);">
+                                    ✨ Grimório e Talentos (${availableSpellsAbilities.length})
+                                </h4>
+                                ${availableSpellsAbilities.length > 0 ? `
+                                    <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
+                                        ${availableSpellsAbilities.map(sp => this.renderMiniCard(sp, false)).join('')}
+                                    </div>
+                                ` : `
+                                    <p style="font-size: 0.82rem; color: var(--color-text-dim); margin: 0;">
+                                        Nenhuma magia ou habilidade cadastrada.
+                                    </p>
+                                `}
                             </div>
                         </section>
 
-                        <!-- Tabela Completa das 29 Perícias Oficiais de Tormenta 20 -->
+                        <!-- 5. Perícias Baseadas em Cards -->
                         <section class="card sheet-skills-card">
                             <div class="card-header">
-                                <span class="card-title">Perícias de Tormenta 20 (29 Perícias Oficiais)</span>
+                                <span class="card-title">Perícias (${skillCards.length})</span>
                                 <div class="skills-filter-bar">
                                     <input type="text" id="skills-search-input" class="skills-search" placeholder="🔍 Filtrar perícia..." value="${this.skillFilter}">
                                     <label class="skills-checkbox-label">
@@ -255,13 +361,13 @@ class SheetView {
                                         <tr>
                                             <th class="th-train">Treino</th>
                                             <th class="th-name">Perícia</th>
-                                            <th class="th-attr">Atributo</th>
-                                            <th class="th-bonus">Bônus Total</th>
+                                            <th class="th-attr">Referência</th>
+                                            <th class="th-bonus">Bônus</th>
                                             <th class="th-roll">Ação</th>
                                         </tr>
                                     </thead>
                                     <tbody id="skills-table-body">
-                                        <!-- Preenchido dinamicamente -->
+                                        ${this.renderSkillsTableRows(skillCards)}
                                     </tbody>
                                 </table>
                             </div>
@@ -278,6 +384,9 @@ class SheetView {
                                 <button id="btn-test-d20" class="btn btn-primary">🎲 Rolar 1d20</button>
                                 <button id="btn-test-complex" class="btn">🎲 Rolar 3d6+5</button>
                                 <button id="btn-dump-json" class="btn">📄 Visualizar JSON do C</button>
+                                <button id="btn-reload-starter" class="btn" title="Carrega um kit inicial com atributos, equipamentos e perícias">
+                                    ✨ Kit Inicial
+                                </button>
                             </div>
                         </section>
 
@@ -286,7 +395,7 @@ class SheetView {
                                 <span class="card-title">Console de Execução WASM</span>
                             </div>
                             <div id="console-output" class="console-container">
-                                <div class="log-entry log-info">[Motor C] Pronto para executar comandos.</div>
+                                <div class="log-entry log-info">[Motor C] Pronto para executar comandos. Deck ativo com ${cardCount} cards.</div>
                             </div>
                         </section>
                     </aside>
@@ -294,132 +403,211 @@ class SheetView {
             </div>
         `;
 
+        this.setupHeaderEventListeners();
         this.setupEventListeners();
-        this.renderSkillsTable();
     }
 
     /**
-     * Renderiza a tabela de 29 perícias com base nos filtros
+     * Renderiza o HTML de um mini card para as listas de equipamento/magia/habilidade
      */
-    renderSkillsTable() {
-        const tbody = document.getElementById('skills-table-body');
-        if (!tbody || !this.engine.isLoaded) return;
+    renderMiniCard(card, isEquippedSection) {
+        const CARD_TYPES = (typeof window !== 'undefined' && window.CARD_TYPES) ? window.CARD_TYPES : {
+            ATTRIBUTE: 0, RESOURCE: 1, STAT: 2, SKILL: 3, ABILITY: 4, EQUIPMENT: 5, SPELL: 6, TRAIT: 7
+        };
 
-        const count = this.engine.getSkillCount();
-        const search = this.skillFilter.toLowerCase().trim();
+        const isEquip = card.type === CARD_TYPES.EQUIPMENT;
+        const icon = card.typeIcon || (isEquip ? '⚔️' : '✨');
+        const badgeClass = card.badgeClass || (isEquip ? 'badge-equip' : 'badge-spell');
+
+        // Bônus formatados
+        const mods = card.modifiers || [];
+        const modsHtml = mods.map(m => `
+            <span class="card-mod-badge" style="background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3);">
+                ${this.formatMod(m.value)} ${m.target_key.toUpperCase()}
+            </span>
+        `).join('');
+
+        // Custo
+        const costHtml = (card.costResource && card.costValue > 0) ? `
+            <span class="card-chip card-chip-cost">⚡ ${card.costValue} ${card.costResource.toUpperCase()}</span>
+        ` : '';
+
+        // Fórmula
+        const formulaHtml = card.formula ? `
+            <span class="card-chip card-chip-formula">🎲 ${card.formula}</span>
+        ` : '';
+
+        return `
+            <div class="rpg-card sheet-mini-card ${card.equipped ? 'is-equipped' : ''}" data-card-key="${card.key}" style="min-height: 120px;">
+                <div class="rpg-card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 1.1rem;">${icon}</span>
+                        <strong style="font-size: 0.9rem; color: var(--color-parchment-light);">${card.name}</strong>
+                    </div>
+                    <span class="card-type-badge ${badgeClass}" style="font-size: 0.65rem;">${card.typeLabel}</span>
+                </div>
+
+                <div class="rpg-card-body" style="font-size: 0.78rem; color: var(--color-text-muted); line-height: 1.3; margin-bottom: 8px;">
+                    ${card.desc || ''}
+                    <div class="card-chips-row" style="margin-top: 4px;">
+                        ${costHtml}
+                        ${formulaHtml}
+                        ${modsHtml}
+                    </div>
+                </div>
+
+                <div class="sheet-mini-card-actions" style="display: flex; justify-content: flex-end; gap: 6px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px;">
+                    ${card.formula ? `
+                        <button type="button" class="btn btn-sm btn-roll-card" data-card-key="${card.key}" data-card-name="${card.name}" title="Rolar fórmula">
+                            🎲 Rolar
+                        </button>
+                    ` : ''}
+
+                    ${isEquippedSection ? `
+                        <button type="button" class="btn btn-sm btn-unequip-card" data-card-key="${card.key}" style="color: #f87171; border-color: rgba(239, 68, 68, 0.4);" title="Desequipar este item e recalcular">
+                            ❌ Desequipar
+                        </button>
+                    ` : `
+                        <button type="button" class="btn btn-sm btn-primary btn-equip-card" data-card-key="${card.key}" title="Equipar este item e aplicar bônus no motor C">
+                            ⚔️ Equipar
+                        </button>
+                    `}
+
+                    <button type="button" class="btn btn-sm btn-remove-card" data-card-key="${card.key}" title="Excluir card da ficha" style="color: var(--color-text-dim);">
+                        🗑️
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Renderiza as linhas da tabela de perícias
+     */
+    renderSkillsTableRows(skillCards) {
+        const search = (this.skillFilter || '').toLowerCase().trim();
         const onlyTrained = this.skillFilterOnlyTrained;
 
-        let rowsHtml = '';
-        for (let i = 0; i < count; i++) {
-            const skillName = this.engine.getSkillName(i);
-            const attrId = this.engine.getSkillAttr(i);
-            const isTrained = this.engine.isSkillTrained(i);
-            const totalBonus = this.engine.calcSkill(i, 0);
+        let filtered = skillCards;
+        if (search) {
+            filtered = filtered.filter(s => 
+                s.name.toLowerCase().includes(search) || 
+                s.key.toLowerCase().includes(search) ||
+                (s.formula && s.formula.toLowerCase().includes(search))
+            );
+        }
+        if (onlyTrained) {
+            filtered = filtered.filter(s => s.trained);
+        }
 
-            const attrMeta = this.attrMeta[attrId] || { abbr: '???' };
+        if (filtered.length === 0) {
+            return `
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 20px; color: var(--color-text-dim);">
+                        Nenhuma perícia encontrada para os filtros atuais.
+                    </td>
+                </tr>
+            `;
+        }
 
-            // Aplica filtros de busca e treinamento
-            if (search && !skillName.toLowerCase().includes(search) && !attrMeta.abbr.toLowerCase().includes(search)) {
-                continue;
-            }
-            if (onlyTrained && !isTrained) {
-                continue;
-            }
-
-            rowsHtml += `
-                <tr class="skill-row ${isTrained ? 'skill-trained' : ''}" data-skill-id="${i}">
+        return filtered.map(s => {
+            const bonus = s.formula ? (s.formulaValue ?? s.effective) : s.effective;
+            return `
+                <tr class="skill-row ${s.trained ? 'skill-trained' : ''}" data-skill-key="${s.key}">
                     <td class="td-train">
-                        <input type="checkbox" class="skill-trained-checkbox" data-skill-id="${i}" ${isTrained ? 'checked' : ''} title="Marcar/Desmarcar como Perícia Treinada (+2 de bônus do 1º ao 6º nível)">
+                        <input type="checkbox" class="skill-trained-checkbox" data-skill-key="${s.key}" ${s.trained ? 'checked' : ''} title="Marcar/Desmarcar Treinada (+2 no motor C)">
                     </td>
                     <td class="td-name">
-                        <strong>${skillName}</strong>
+                        <strong>${s.name}</strong>
                     </td>
                     <td class="td-attr">
-                        <span class="skill-attr-tag">${attrMeta.abbr}</span>
+                        <span class="skill-attr-tag">${s.formula || s.key.toUpperCase()}</span>
                     </td>
                     <td class="td-bonus">
-                        <span class="skill-bonus-val ${totalBonus >= 0 ? 'bonus-pos' : 'bonus-neg'}">
-                            ${this.formatMod(totalBonus)}
+                        <span class="skill-bonus-val ${bonus >= 0 ? 'bonus-pos' : 'bonus-neg'}">
+                            ${this.formatMod(bonus)}
                         </span>
                     </td>
                     <td class="td-roll">
-                        <button type="button" class="btn btn-roll-skill" data-skill-id="${i}" data-skill-name="${skillName}" data-skill-bonus="${totalBonus}" title="Rolar 1d20 + ${totalBonus} no Motor C">
+                        <button type="button" class="btn btn-roll-skill" data-skill-key="${s.key}" data-skill-name="${s.name}" data-skill-bonus="${bonus}" title="Rolar 1d20 + ${bonus}">
                             🎲 Rolar
                         </button>
                     </td>
                 </tr>
             `;
-        }
-
-        if (!rowsHtml) {
-            rowsHtml = `
-                <tr>
-                    <td colspan="5" style="text-align: center; padding: 20px; color: var(--color-text-dim);">
-                        Nenhuma perícia encontrada para o filtro atual.
-                    </td>
-                </tr>
-            `;
-        }
-
-        tbody.innerHTML = rowsHtml;
-
-        // Conecta eventos dos checkboxes de treino
-        tbody.querySelectorAll('.skill-trained-checkbox').forEach(chk => {
-            chk.addEventListener('change', (e) => {
-                const skillId = parseInt(chk.dataset.skillId, 10);
-                const trained = e.target.checked;
-                this.engine.setSkillTrained(skillId, trained);
-                this.logger(`[C Rules] Perícia "${this.engine.getSkillName(skillId)}" marcada como ${trained ? 'Treinada' : 'Não-Treinada'}.`, 'info');
-                this.refreshState();
-            });
-        });
-
-        // Conecta eventos dos botões de rolagem de perícia
-        tbody.querySelectorAll('.btn-roll-skill').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const skillName = btn.dataset.skillName;
-                const bonus = parseInt(btn.dataset.skillBonus, 10);
-                if (window.diceRoller) {
-                    window.diceRoller.roll(1, 20, bonus, `Teste de Perícia: ${skillName}`);
-                    window.diceRoller.openDrawer();
-                } else {
-                    const roll = this.engine.rollDice(1, 20, bonus);
-                    let tag = '';
-                    if (roll.isCritical) tag = ' ⭐ CRÍTICO!';
-                    if (roll.isFumble) tag = ' 💀 FALHA CRÍTICA!';
-                    this.logger(`[C Roll] Teste de ${skillName}: 1d20 (${roll.rolls[0]}) ${this.formatMod(bonus)} = ${roll.total}${tag}`, roll.isCritical ? 'success' : (roll.isFumble ? 'warn' : 'info'));
-                }
-            });
-        });
+        }).join('');
     }
 
     /**
-     * Configura todos os eventos de edição in-place
+     * Renderiza o estado vazio quando o deck não possui cards
      */
-    setupEventListeners() {
-        // 1. Nome do personagem in-place
+    renderEmptyDeckState(name, system, level, xp) {
+        return `
+            <div class="sheet-main-layout">
+                <section class="card sheet-header-card">
+                    <div class="sheet-header-top">
+                        <div class="sheet-identity-group">
+                            <label class="sheet-field-label">Nome do Personagem</label>
+                            <input type="text" id="sheet-name-input" class="sheet-name-field" value="${name}" maxlength="30">
+                        </div>
+                        <div class="sheet-badges-group">
+                            <span class="sheet-meta-pill race-pill">0 Cards</span>
+                            <span class="sheet-meta-pill system-pill">📜 ${system}</span>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="card" style="text-align: center; padding: 48px 24px; background: var(--color-surface-card);">
+                    <div style="font-size: 3rem; margin-bottom: 12px;">🃏</div>
+                    <h2 style="font-family: var(--font-heading); color: var(--color-gold-primary); margin-bottom: 8px;">
+                        Ficha Modular Vazia
+                    </h2>
+                    <p style="color: var(--color-text-muted); max-width: 600px; margin: 0 auto 24px auto; line-height: 1.6;">
+                        Esta ficha ainda não possui cards ativos na memória do motor C. Você pode carregar um kit inicial pronto com atributos d20, recursos e equipamentos, navegar pelo Compêndio ou criar seus próprios cards.
+                    </p>
+                    <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+                        <button type="button" id="btn-load-starter-empty" class="btn btn-primary" style="padding: 10px 20px; font-weight: 700;">
+                            ✨ Carregar Kit Inicial Padrão
+                        </button>
+                        <button type="button" id="btn-open-compendium-empty" class="btn" style="padding: 10px 20px;">
+                            🗂️ Abrir Compêndio de Cards
+                        </button>
+                        <button type="button" id="btn-create-card-empty" class="btn" style="padding: 10px 20px;">
+                            ➕ Criar Card Personalizado
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Configura ouvintes de cabeçalho
+     */
+    setupHeaderEventListeners() {
+        // Nome
         const nameInput = document.getElementById('sheet-name-input');
         if (nameInput) {
             const updateName = () => {
                 const newName = nameInput.value.trim();
                 if (newName && newName !== this.engine.getCharacterName()) {
                     this.engine.setCharacterName(newName);
-                    this.logger(`[C Memory] Nome atualizado na struct para: "${newName}".`, 'info');
+                    this.logger(`[C Memory] Nome atualizado para: "${newName}".`, 'info');
                 }
             };
             nameInput.addEventListener('change', updateName);
             nameInput.addEventListener('blur', updateName);
         }
 
-        // 2. Nível (Aumentar / Diminuir)
+        // Nível
         const btnLvlUp = document.getElementById('btn-lvl-up');
         if (btnLvlUp) {
             btnLvlUp.addEventListener('click', () => {
                 const cur = this.engine.getLevel();
                 if (cur < 20) {
                     this.engine.setLevel(cur + 1);
-                    this.logger(`[C Level Up] Personagem subiu para o Nível ${cur + 1}! PV e PM recalculados.`, 'success');
-                    this.refreshState();
+                    this.logger(`[C Level Up] Nível alterado para ${cur + 1}.`, 'success');
+                    this.render();
                 }
             });
         }
@@ -430,13 +618,13 @@ class SheetView {
                 const cur = this.engine.getLevel();
                 if (cur > 1) {
                     this.engine.setLevel(cur - 1);
-                    this.logger(`[C Level Down] Personagem ajustado para o Nível ${cur - 1}.`, 'info');
-                    this.refreshState();
+                    this.logger(`[C Level Down] Nível alterado para ${cur - 1}.`, 'info');
+                    this.render();
                 }
             });
         }
 
-        // 3. Pontos de Experiência (XP)
+        // XP
         const xpInput = document.getElementById('sheet-xp-input');
         if (xpInput) {
             xpInput.addEventListener('change', (e) => {
@@ -447,232 +635,344 @@ class SheetView {
             });
         }
 
-        // 4. Salvar Ficha no localStorage & Gerenciador de Fichas
-        const btnSaveSheet = document.getElementById('btn-sheet-save');
-        if (btnSaveSheet) {
-            btnSaveSheet.addEventListener('click', () => {
+        // Salvar
+        const btnSave = document.getElementById('btn-sheet-save');
+        if (btnSave) {
+            btnSave.addEventListener('click', () => {
                 if (window.characterStorage) {
                     try {
                         const saved = window.characterStorage.saveCurrent(this.engine);
-                        this.logger(`[Storage] Ficha "${saved.name}" salva com sucesso no navegador!`, 'success');
-                        btnSaveSheet.textContent = '✅ Salvo!';
-                        setTimeout(() => {
-                            btnSaveSheet.textContent = '💾 Salvar Ficha';
-                        }, 2000);
+                        this.logger(`[Storage] Ficha "${saved.name}" salva com sucesso!`, 'success');
+                        btnSave.textContent = '✅ Salvo!';
+                        setTimeout(() => { btnSave.textContent = '💾 Salvar'; }, 2000);
                     } catch (err) {
-                        this.logger(`[Storage Error] Erro ao salvar ficha: ${err.message}`, 'error');
+                        this.logger(`[Storage Error] ${err.message}`, 'error');
                     }
                 }
             });
         }
 
-        const btnManageSaved = document.getElementById('btn-sheet-manage-saved');
-        if (btnManageSaved) {
-            btnManageSaved.addEventListener('click', () => {
-                if (window.characterManagerModal) {
-                    window.characterManagerModal.open();
-                }
-            });
-        }
-
-        // Exportar Ficha para arquivo (.sheetc JSON)
-        const btnExportFile = document.getElementById('btn-sheet-export-file');
-        if (btnExportFile) {
-            btnExportFile.addEventListener('click', () => {
+        // Exportar
+        const btnExport = document.getElementById('btn-sheet-export-file');
+        if (btnExport) {
+            btnExport.addEventListener('click', () => {
                 if (window.CharacterExportService) {
                     try {
                         const { filename } = window.CharacterExportService.exportToFile(this.engine);
-                        this.logger(`[Export] Arquivo "${filename}" gerado e baixado com sucesso.`, 'success');
+                        this.logger(`[Export] Deck exportado para "${filename}".`, 'success');
                     } catch (err) {
-                        this.logger(`[Export Error] Falha ao exportar: ${err.message}`, 'error');
+                        this.logger(`[Export Error] ${err.message}`, 'error');
+                    }
+                } else {
+                    const rawJson = this.engine.exportCardPack(true);
+                    if (rawJson) {
+                        const blob = new Blob([rawJson], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${this.engine.getCharacterName() || 'personagem'}.cardpack`;
+                        if (typeof a.click === 'function') a.click();
+                        URL.revokeObjectURL(url);
+                        this.logger(`[Export] Deck exportado com sucesso.`, 'success');
                     }
                 }
             });
         }
 
-        // Importar Ficha do computador
-        const btnImportFile = document.getElementById('btn-sheet-import-file');
-        if (btnImportFile) {
-            btnImportFile.addEventListener('click', () => {
+        // Importar
+        const btnImport = document.getElementById('btn-sheet-import-file');
+        if (btnImport) {
+            btnImport.addEventListener('click', () => {
                 if (window.CharacterExportService) {
                     window.CharacterExportService.promptImportFile(this.engine, window.characterStorage, (res) => {
                         if (res.success) {
-                            this.logger(`[Import] Ficha de "${res.characterName}" importada com sucesso no motor C!`, 'success');
-                            this.refreshState();
+                            this.logger(`[Import] Ficha importada com sucesso no motor C!`, 'success');
+                            this.render();
                         } else {
-                            this.logger(`[Import Error] Erro ao importar: ${res.error}`, 'error');
-                            alert(`Erro na importação: ${res.error}`);
+                            this.logger(`[Import Error] ${res.error}`, 'error');
                         }
                     });
                 }
             });
         }
 
-        // Imprimir / Salvar como PDF
-        const btnPrintPdf = document.getElementById('btn-sheet-print-pdf');
-        if (btnPrintPdf) {
-            btnPrintPdf.addEventListener('click', () => {
+        // PDF / Imprimir
+        const btnPdf = document.getElementById('btn-sheet-print-pdf');
+        if (btnPdf) {
+            btnPdf.addEventListener('click', () => {
                 if (window.CharacterExportService) {
-                    this.logger('[Print] Preparando layout de impressão / exportação para PDF...', 'info');
                     window.CharacterExportService.printSheet(this.router);
+                } else if (typeof window.print === 'function') {
+                    window.print();
                 }
             });
         }
 
-        // 5. Abrir Wizard a partir da ficha
-        const btnOpenWizard = document.getElementById('btn-sheet-open-wizard');
-        if (btnOpenWizard) {
-            btnOpenWizard.addEventListener('click', () => {
+        // Minhas Fichas Modal
+        const btnManage = document.getElementById('btn-sheet-manage-saved');
+        if (btnManage) {
+            btnManage.addEventListener('click', () => {
+                if (window.characterManagerModal) {
+                    window.characterManagerModal.open();
+                }
+            });
+        }
+
+        // Navegação para Compêndio e Editor
+        const btnCompendium = document.getElementById('btn-sheet-open-compendium');
+        if (btnCompendium) {
+            btnCompendium.addEventListener('click', () => {
                 if (this.router && typeof this.router.navigate === 'function') {
-                    this.router.navigate('creator');
+                    this.router.navigate('compendium');
                 }
             });
         }
 
-        // 5. Botões de ajuste rápido de PV
-        this.container.querySelectorAll('.btn-quick-dmg, .btn-quick-heal').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const delta = parseInt(btn.dataset.delta, 10);
-                this.engine.modifyPv(delta);
-                this.logger(`[C PV] Modificado em ${this.formatMod(delta)}. Atual: ${this.engine.getPvAtual()}/${this.engine.getPvMax()}`);
-                this.refreshState();
+        const btnCreateCard = document.getElementById('btn-sheet-create-card');
+        if (btnCreateCard) {
+            btnCreateCard.addEventListener('click', () => {
+                if (this.router && typeof this.router.navigate === 'function') {
+                    this.router.navigate('editor');
+                }
+            });
+        }
+    }
+
+    /**
+     * Ouvintes do estado vazio
+     */
+    setupEmptyStateEventListeners() {
+        const btnLoad = document.getElementById('btn-load-starter-empty');
+        if (btnLoad) {
+            btnLoad.addEventListener('click', () => {
+                this.loadStarterDeck();
+            });
+        }
+
+        const btnComp = document.getElementById('btn-open-compendium-empty');
+        if (btnComp) {
+            btnComp.addEventListener('click', () => {
+                if (this.router && typeof this.router.navigate === 'function') {
+                    this.router.navigate('compendium');
+                }
+            });
+        }
+
+        const btnCreate = document.getElementById('btn-create-card-empty');
+        if (btnCreate) {
+            btnCreate.addEventListener('click', () => {
+                if (this.router && typeof this.router.navigate === 'function') {
+                    this.router.navigate('editor');
+                }
+            });
+        }
+    }
+
+    /**
+     * Configura todos os eventos de cards e controles da ficha
+     */
+    setupEventListeners() {
+        if (!this.container) return;
+
+        // 1. Recursos Dinâmicos (Edição direta e botões rápidos)
+        this.container.querySelectorAll('.res-cur-input').forEach(inp => {
+            inp.addEventListener('change', (e) => {
+                const key = inp.dataset.resKey;
+                const val = parseInt(e.target.value, 10);
+                if (!isNaN(val) && key) {
+                    this.engine.setCurrentValue(key, val);
+                    this.render();
+                }
             });
         });
 
-        const btnFullHeal = document.getElementById('btn-full-heal');
-        if (btnFullHeal) {
-            btnFullHeal.addEventListener('click', () => {
-                this.engine.setPvAtual(this.engine.getPvMax());
-                this.logger(`[C PV] Personagem totalmente curado (${this.engine.getPvMax()} PV)!`, 'success');
-                this.refreshState();
-            });
-        }
-
-        // 6. Botões de ajuste rápido de PM
-        this.container.querySelectorAll('.btn-quick-mana-sub, .btn-quick-mana-add').forEach(btn => {
+        this.container.querySelectorAll('.btn-res-delta').forEach(btn => {
             btn.addEventListener('click', () => {
+                const key = btn.dataset.resKey;
                 const delta = parseInt(btn.dataset.delta, 10);
-                this.engine.modifyPm(delta);
-                this.logger(`[C PM] Modificado em ${this.formatMod(delta)}. Atual: ${this.engine.getPmAtual()}/${this.engine.getPmMax()}`);
-                this.refreshState();
+                if (key && !isNaN(delta)) {
+                    this.engine.modifyCurrentValue(key, delta);
+                    this.logger(`[C Recurso] ${key.toUpperCase()}: ${this.formatMod(delta)}. Atual: ${this.engine.getCurrentValue(key)}/${this.engine.getMaxValue(key)}`);
+                    this.render();
+                }
             });
         });
 
-        const btnFullPm = document.getElementById('btn-full-pm');
-        if (btnFullPm) {
-            btnFullPm.addEventListener('click', () => {
-                this.engine.setPmAtual(this.engine.getPmMax());
-                this.logger(`[C PM] Mana totalmente recuperada (${this.engine.getPmMax()} PM)!`, 'success');
-                this.refreshState();
-            });
-        }
-
-        // 7. Inputs diretos de PV Atual e PM Atual
-        const pvInput = document.getElementById('sheet-pv-cur-input');
-        if (pvInput) {
-            pvInput.addEventListener('change', (e) => {
-                const val = parseInt(e.target.value, 10);
-                if (!isNaN(val)) {
-                    this.engine.setPvAtual(val);
-                    this.refreshState();
+        this.container.querySelectorAll('.btn-res-full').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.dataset.resKey;
+                const max = parseInt(btn.dataset.max, 10);
+                if (key && !isNaN(max)) {
+                    this.engine.setCurrentValue(key, max);
+                    this.logger(`[C Recurso] ${key.toUpperCase()} totalmente recuperado (${max})!`, 'success');
+                    this.render();
                 }
             });
-        }
+        });
 
-        const pmInput = document.getElementById('sheet-pm-cur-input');
-        if (pmInput) {
-            pmInput.addEventListener('change', (e) => {
-                const val = parseInt(e.target.value, 10);
-                if (!isNaN(val)) {
-                    this.engine.setPmAtual(val);
-                    this.refreshState();
-                }
-            });
-        }
-
-        // 8. Bônus de Armadura e Escudo
-        const armorInput = document.getElementById('sheet-armor-input');
-        if (armorInput) {
-            armorInput.addEventListener('change', (e) => {
-                const val = parseInt(e.target.value, 10) || 0;
-                this.engine.setBonusArmadura(val);
-                this.logger(`[C Defesa] Bônus de Armadura ajustado para ${val}. Nova Defesa: ${this.engine.getDefesa()}`);
-                this.refreshState();
-            });
-        }
-
-        const shieldInput = document.getElementById('sheet-shield-input');
-        if (shieldInput) {
-            shieldInput.addEventListener('change', (e) => {
-                const val = parseInt(e.target.value, 10) || 0;
-                this.engine.setBonusEscudo(val);
-                this.logger(`[C Defesa] Bônus de Escudo ajustado para ${val}. Nova Defesa: ${this.engine.getDefesa()}`);
-                this.refreshState();
-            });
-        }
-
-        // 9. Atributos Básicos (Edição In-Place com steppers e input)
+        // 2. Atributos Básicos (Steppers [-] [+], Input direto, Clique no mod para rolar)
         this.container.querySelectorAll('.btn-attr-minus').forEach(btn => {
             btn.addEventListener('click', () => {
-                const attrId = parseInt(btn.dataset.attrId, 10);
-                const cur = this.engine.getAttribute(attrId);
-                if (cur > 1) {
-                    this.engine.setAttribute(attrId, cur - 1);
-                    this.logger(`[C Atributo] ${this.attrMeta[attrId].abbr} alterado para ${cur - 1}. Recalculando...`);
-                    this.refreshState();
+                const key = btn.dataset.attrKey;
+                const card = this.engine.getCardByKey(key);
+                if (card && card.base > 1) {
+                    this.engine.setBaseValue(key, card.base - 1);
+                    this.logger(`[C Atributo] ${key.toUpperCase()} alterado para ${card.base - 1}. Recalculando...`);
+                    this.render();
                 }
             });
         });
 
         this.container.querySelectorAll('.btn-attr-plus').forEach(btn => {
             btn.addEventListener('click', () => {
-                const attrId = parseInt(btn.dataset.attrId, 10);
-                const cur = this.engine.getAttribute(attrId);
-                if (cur < 40) {
-                    this.engine.setAttribute(attrId, cur + 1);
-                    this.logger(`[C Atributo] ${this.attrMeta[attrId].abbr} alterado para ${cur + 1}. Recalculando...`);
-                    this.refreshState();
+                const key = btn.dataset.attrKey;
+                const card = this.engine.getCardByKey(key);
+                if (card && card.base < 40) {
+                    this.engine.setBaseValue(key, card.base + 1);
+                    this.logger(`[C Atributo] ${key.toUpperCase()} alterado para ${card.base + 1}. Recalculando...`);
+                    this.render();
                 }
             });
         });
 
         this.container.querySelectorAll('.sheet-attr-val-input').forEach(inp => {
             inp.addEventListener('change', (e) => {
-                const attrId = parseInt(inp.dataset.attrId, 10);
+                const key = inp.dataset.attrKey;
                 let val = parseInt(e.target.value, 10);
                 if (isNaN(val)) val = 10;
                 if (val < 1) val = 1;
                 if (val > 40) val = 40;
-                this.engine.setAttribute(attrId, val);
-                this.logger(`[C Atributo] ${this.attrMeta[attrId].abbr} alterado para ${val}. Recalculando...`);
-                this.refreshState();
+                if (key) {
+                    this.engine.setBaseValue(key, val);
+                    this.logger(`[C Atributo] ${key.toUpperCase()} alterado para ${val}. Recalculando...`);
+                    this.render();
+                }
             });
         });
 
-        // Clique no modificador para rolar teste de atributo
-        this.container.querySelectorAll('.sheet-attr-card').forEach(card => {
-            const attrId = parseInt(card.dataset.attrId, 10);
-            const modEl = card.querySelector('.sheet-attr-mod');
-            if (modEl) {
-                modEl.style.cursor = 'pointer';
-                modEl.title = 'Clique para rolar teste de atributo (1d20 + Modificador)';
-                modEl.addEventListener('click', () => {
-                    const mod = this.engine.getModifier(attrId);
-                    const attrName = this.attrMeta[attrId]?.name || 'Atributo';
-                    if (window.diceRoller) {
-                        window.diceRoller.roll(1, 20, mod, `Teste de Atributo: ${attrName}`);
-                        window.diceRoller.openDrawer();
-                    }
-                });
-            }
+        this.container.querySelectorAll('.sheet-attr-mod').forEach(modEl => {
+            modEl.addEventListener('click', () => {
+                const attrName = modEl.dataset.attrName || 'Atributo';
+                const mod = parseInt(modEl.dataset.attrMod, 10) || 0;
+                if (window.diceRoller) {
+                    window.diceRoller.roll(1, 20, mod, `Teste de Atributo: ${attrName}`);
+                    window.diceRoller.openDrawer();
+                } else {
+                    const res = this.engine.rollDice(1, 20, mod);
+                    let tag = res.isCritical ? ' ⭐ CRÍTICO!' : (res.isFumble ? ' 💀 FALHA CRÍTICA!' : '');
+                    this.logger(`[C Roll] Teste de ${attrName}: 1d20 (${res.rolls[0]}) ${this.formatMod(mod)} = ${res.total}${tag}`, res.isCritical ? 'success' : (res.isFumble ? 'warn' : 'info'));
+                }
+            });
         });
 
-        // 10. Filtro de Perícias
+        // 3. Equipar e Desequipar Cards (Equipamentos e Magias/Habilidades)
+        this.container.querySelectorAll('.btn-equip-card').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.dataset.cardKey;
+                if (key) {
+                    this.engine.setEquipped(key, true);
+                    this.logger(`[C Deck] Card "${key}" equipado! Modificadores aplicados no motor C.`, 'success');
+                    this.render();
+                }
+            });
+        });
+
+        this.container.querySelectorAll('.btn-unequip-card').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.dataset.cardKey;
+                if (key) {
+                    this.engine.setEquipped(key, false);
+                    this.logger(`[C Deck] Card "${key}" desequipado! Modificadores removidos no motor C.`, 'info');
+                    this.render();
+                }
+            });
+        });
+
+        this.container.querySelectorAll('.btn-remove-card').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.dataset.cardKey;
+                if (key) {
+                    if (typeof confirm === 'function' && !confirm(`Deseja remover o card "${key}" da ficha?`)) {
+                        return;
+                    }
+                    this.engine.removeCardByKey(key);
+                    this.logger(`[C Deck] Card "${key}" excluído da ficha.`, 'info');
+                    this.render();
+                }
+            });
+        });
+
+        // 4. Rolar / Ativar Card
+        this.container.querySelectorAll('.btn-roll-card').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.dataset.cardKey;
+                const card = this.engine.getCardByKey(key);
+                if (card && card.formula) {
+                    // Se tiver custo em recurso, debita
+                    if (card.costResource && card.costValue > 0) {
+                        const curRes = this.engine.getCurrentValue(card.costResource);
+                        if (curRes < card.costValue) {
+                            this.logger(`[C Custo] ${card.costResource.toUpperCase()} insuficiente (${curRes}/${card.costValue}) para usar ${card.name}!`, 'warn');
+                            return;
+                        }
+                        this.engine.modifyCurrentValue(card.costResource, -card.costValue);
+                    }
+
+                    if (window.diceRoller && typeof window.diceRoller.openRollModal === 'function') {
+                        window.diceRoller.openRollModal({
+                            title: card.name,
+                            formula: card.formula,
+                            modifier: 0
+                        });
+                    } else {
+                        const val = this.engine.evalExpression(card.formula);
+                        this.logger(`[C Formula] ${card.name}: "${card.formula}" = ${val}`, 'info');
+                    }
+                    this.render();
+                }
+            });
+        });
+
+        // 5. Perícias (Treino e Rolagem)
+        this.container.querySelectorAll('.skill-trained-checkbox').forEach(chk => {
+            chk.addEventListener('change', (e) => {
+                const key = chk.dataset.skillKey;
+                const trained = e.target.checked;
+                if (key) {
+                    this.engine.setTrained(key, trained);
+                    this.logger(`[C Perícia] "${key}" marcada como ${trained ? 'Treinada (+2)' : 'Não Treinada'}.`, 'info');
+                    this.render();
+                }
+            });
+        });
+
+        this.container.querySelectorAll('.btn-roll-skill').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const skillName = btn.dataset.skillName || 'Perícia';
+                const bonus = parseInt(btn.dataset.skillBonus, 10) || 0;
+                if (window.diceRoller) {
+                    window.diceRoller.roll(1, 20, bonus, `Perícia: ${skillName}`);
+                    window.diceRoller.openDrawer();
+                } else {
+                    const res = this.engine.rollDice(1, 20, bonus);
+                    let tag = res.isCritical ? ' ⭐ CRÍTICO!' : (res.isFumble ? ' 💀 FALHA CRÍTICA!' : '');
+                    this.logger(`[C Roll] Perícia ${skillName}: 1d20 (${res.rolls[0]}) ${this.formatMod(bonus)} = ${res.total}${tag}`, res.isCritical ? 'success' : (res.isFumble ? 'warn' : 'info'));
+                }
+            });
+        });
+
+        // Filtros de Perícias
         const searchInput = document.getElementById('skills-search-input');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 this.skillFilter = e.target.value;
-                this.renderSkillsTable();
+                const tbody = document.getElementById('skills-table-body');
+                if (tbody) {
+                    const CARD_TYPES = (typeof window !== 'undefined' && window.CARD_TYPES) ? window.CARD_TYPES : { SKILL: 3 };
+                    const skills = this.engine.getAllCards(c => c.type === CARD_TYPES.SKILL);
+                    tbody.innerHTML = this.renderSkillsTableRows(skills);
+                    this.setupSkillTableEvents(tbody);
+                }
             });
         }
 
@@ -680,18 +980,22 @@ class SheetView {
         if (trainedCheck) {
             trainedCheck.addEventListener('change', (e) => {
                 this.skillFilterOnlyTrained = e.target.checked;
-                this.renderSkillsTable();
+                const tbody = document.getElementById('skills-table-body');
+                if (tbody) {
+                    const CARD_TYPES = (typeof window !== 'undefined' && window.CARD_TYPES) ? window.CARD_TYPES : { SKILL: 3 };
+                    const skills = this.engine.getAllCards(c => c.type === CARD_TYPES.SKILL);
+                    tbody.innerHTML = this.renderSkillsTableRows(skills);
+                    this.setupSkillTableEvents(tbody);
+                }
             });
         }
 
-        // 11. Testes Rápidos do Painel Lateral
+        // 6. Testes Rápidos e Kit Inicial
         const btnTestD20 = document.getElementById('btn-test-d20');
         if (btnTestD20) {
             btnTestD20.addEventListener('click', () => {
                 const res = this.engine.rollDice(1, 20, 0);
-                let tag = '';
-                if (res.isCritical) tag = ' (CRÍTICO!)';
-                if (res.isFumble) tag = ' (FALHA CRÍTICA!)';
+                let tag = res.isCritical ? ' (CRÍTICO!)' : (res.isFumble ? ' (FALHA CRÍTICA!)' : '');
                 this.logger(`[C Dice Engine] Rolagem 1d20: Resultado = ${res.total}${tag}`, res.isCritical ? 'success' : (res.isFumble ? 'warn' : 'info'));
             });
         }
@@ -707,22 +1011,214 @@ class SheetView {
         const btnDumpJson = document.getElementById('btn-dump-json');
         if (btnDumpJson) {
             btnDumpJson.addEventListener('click', () => {
-                const json = this.engine.exportJson();
-                this.logger(`[C Serializer] JSON exportado do C:\n${JSON.stringify(json, null, 2)}`, 'info');
+                const pack = this.engine.exportCardPack(false);
+                this.logger(`[C Serializer] Pacote de Cards exportado:\n${JSON.stringify(pack, null, 2)}`, 'info');
+            });
+        }
+
+        const btnReloadStarter = document.getElementById('btn-reload-starter');
+        if (btnReloadStarter) {
+            btnReloadStarter.addEventListener('click', () => {
+                if (typeof confirm === 'function' && !confirm('Deseja recarregar o Kit Inicial padrão? Os cards atuais serão mesclados/atualizados.')) {
+                    return;
+                }
+                this.loadStarterDeck();
+            });
+        }
+
+        const btnOpenCompEquip = this.container.querySelector('.btn-open-compendium-equip');
+        if (btnOpenCompEquip) {
+            btnOpenCompEquip.addEventListener('click', () => {
+                if (this.router && typeof this.router.navigate === 'function') {
+                    this.router.navigate('compendium');
+                }
             });
         }
     }
 
     /**
-     * Atualiza os elementos de status sem reconstruir o DOM inteiro
+     * Reconecta ouvintes das linhas da tabela de perícias após filtro dinâmico
      */
-    refreshState() {
+    setupSkillTableEvents(tbody) {
+        tbody.querySelectorAll('.skill-trained-checkbox').forEach(chk => {
+            chk.addEventListener('change', (e) => {
+                const key = chk.dataset.skillKey;
+                const trained = e.target.checked;
+                if (key) {
+                    this.engine.setTrained(key, trained);
+                    this.render();
+                }
+            });
+        });
+
+        tbody.querySelectorAll('.btn-roll-skill').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const skillName = btn.dataset.skillName || 'Perícia';
+                const bonus = parseInt(btn.dataset.skillBonus, 10) || 0;
+                if (window.diceRoller) {
+                    window.diceRoller.roll(1, 20, bonus, `Perícia: ${skillName}`);
+                    window.diceRoller.openDrawer();
+                } else {
+                    const res = this.engine.rollDice(1, 20, bonus);
+                    let tag = res.isCritical ? ' ⭐ CRÍTICO!' : (res.isFumble ? ' 💀 FALHA CRÍTICA!' : '');
+                    this.logger(`[C Roll] Perícia ${skillName}: 1d20 (${res.rolls[0]}) ${this.formatMod(bonus)} = ${res.total}${tag}`, res.isCritical ? 'success' : (res.isFumble ? 'warn' : 'info'));
+                }
+            });
+        });
+    }
+
+    /**
+     * Carrega um kit inicial clássico de RPG (Guerreiro d20)
+     */
+    loadStarterDeck() {
+        const CARD_TYPES = (typeof window !== 'undefined' && window.CARD_TYPES) ? window.CARD_TYPES : {
+            ATTRIBUTE: 0, RESOURCE: 1, STAT: 2, SKILL: 3, ABILITY: 4, EQUIPMENT: 5, SPELL: 6, TRAIT: 7
+        };
+
+        const charName = this.engine.getCharacterName() || 'Herói';
+        const sysName = this.engine.getSystemName() || 'Tormenta 20';
+
+        this.engine.initDeck(charName, sysName);
+
+        // 6 Atributos d20
+        this.engine.addSimpleCard('for', 'Força', CARD_TYPES.ATTRIBUTE, 16);
+        this.engine.addSimpleCard('des', 'Destreza', CARD_TYPES.ATTRIBUTE, 14);
+        this.engine.addSimpleCard('con', 'Constituição', CARD_TYPES.ATTRIBUTE, 14);
+        this.engine.addSimpleCard('int', 'Inteligência', CARD_TYPES.ATTRIBUTE, 10);
+        this.engine.addSimpleCard('sab', 'Sabedoria', CARD_TYPES.ATTRIBUTE, 12);
+        this.engine.addSimpleCard('car', 'Carisma', CARD_TYPES.ATTRIBUTE, 8);
+
+        // Recursos Dinâmicos
+        this.engine.addCard({
+            key: 'pv',
+            name: 'Pontos de Vida',
+            type: CARD_TYPES.RESOURCE,
+            base: 24,
+            current: 24,
+            max: 24,
+            desc: 'Vitalidade e vigor físico antes de cair inconsciente.'
+        });
+
+        this.engine.addCard({
+            key: 'pm',
+            name: 'Pontos de Mana',
+            type: CARD_TYPES.RESOURCE,
+            base: 6,
+            current: 6,
+            max: 6,
+            desc: 'Energia mágica e fôlego para habilidades especiais.'
+        });
+
+        // Estatística Derivada (Defesa)
+        this.engine.addCard({
+            key: 'defesa',
+            name: 'Defesa',
+            type: CARD_TYPES.STAT,
+            base: 10,
+            desc: 'Dificuldade para acertar ataques contra você.',
+            formula: '10 + (@des - 10) / 2'
+        });
+
+        // Equipamento Inicial Equipado (Armadura Batida +3 Defesa)
+        this.engine.addCard({
+            key: 'armadura_couro',
+            name: 'Armadura Batida',
+            type: CARD_TYPES.EQUIPMENT,
+            desc: 'Couro reforçado com cravos de metal (+3 Defesa).',
+            equipped: true,
+            modifiers: [{ target_key: 'defesa', value: 3 }]
+        });
+
+        // Arma Principal
+        this.engine.addCard({
+            key: 'espada_longa',
+            name: 'Espada Longa',
+            type: CARD_TYPES.EQUIPMENT,
+            desc: 'Lâmina afiada forjada em aço comum.',
+            equipped: true,
+            formula: '1d8 + (@for - 10) / 2'
+        });
+
+        // Equipamento Reserva na Mochila (Escudo Pesado +2 Defesa)
+        this.engine.addCard({
+            key: 'escudo_pesado',
+            name: 'Escudo Pesado',
+            type: CARD_TYPES.EQUIPMENT,
+            desc: 'Escudo de madeira reforçado (+2 Defesa quando equipado).',
+            equipped: false,
+            modifiers: [{ target_key: 'defesa', value: 2 }]
+        });
+
+        // Magia / Habilidade que concede bônus de Defesa quando ativa
+        this.engine.addCard({
+            key: 'escudo_da_fe',
+            name: 'Escudo da Fé',
+            type: CARD_TYPES.SPELL,
+            desc: 'Campo de energia protetora divina que concede +2 na Defesa.',
+            cost_resource: 'pm',
+            cost_value: 1,
+            equipped: false,
+            modifiers: [{ target_key: 'defesa', value: 2 }]
+        });
+
+        // Habilidade de Ataque
+        this.engine.addCard({
+            key: 'golpe_poderoso',
+            name: 'Golpe Poderoso',
+            type: CARD_TYPES.ABILITY,
+            desc: 'Golpe devastador que consome fôlego para causar impacto massivo.',
+            cost_resource: 'pm',
+            cost_value: 1,
+            formula: '2d8 + 4'
+        });
+
+        // Perícias
+        this.engine.addCard({
+            key: 'atletismo',
+            name: 'Atletismo',
+            type: CARD_TYPES.SKILL,
+            desc: 'Saltar, correr, escalar e nadar.',
+            formula: '(@for - 10) / 2',
+            trained: true
+        });
+
+        this.engine.addCard({
+            key: 'luta',
+            name: 'Luta',
+            type: CARD_TYPES.SKILL,
+            desc: 'Ataques corpo a corpo desarmados e com armas brancas.',
+            formula: '(@for - 10) / 2',
+            trained: true
+        });
+
+        this.engine.addCard({
+            key: 'iniciativa',
+            name: 'Iniciativa',
+            type: CARD_TYPES.SKILL,
+            desc: 'Rapidez de reação no início de combates.',
+            formula: '(@des - 10) / 2',
+            trained: false
+        });
+
+        this.engine.addCard({
+            key: 'percepcao',
+            name: 'Percepção',
+            type: CARD_TYPES.SKILL,
+            desc: 'Notar perigos, emboscadas e pistas.',
+            formula: '(@sab - 10) / 2',
+            trained: false
+        });
+
+        this.engine.recalculate();
+        this.logger('[C Deck] Kit Inicial carregado com sucesso na memória C!', 'success');
         this.render();
     }
 }
 
-// Expõe globalmente
+// Expõe globalmente e para Node.js
 if (typeof window !== 'undefined') {
     window.SheetView = SheetView;
 }
-
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { SheetView };
+}
