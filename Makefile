@@ -26,9 +26,9 @@ NATIVE_FLAGS = -Wall -Wextra -pedantic -std=c99 -I$(SRC_DIR)
 
 # Destinos
 WASM_TARGET = $(WEB_DIST)/sheetc_core.wasm
-TEST_TARGET = test_cards_runner.exe
+TEST_TARGET = test_cards_runner_v2.exe
 
-.PHONY: all wasm test clean
+.PHONY: all wasm test test-c test-js test-all clean
 
 all: wasm
 
@@ -41,11 +41,25 @@ wasm: $(WEB_DIST)
 	$(CC_WASM) $(WASM_FLAGS) $(WASM_SRCS) -o $(WASM_TARGET)
 	@echo [OK] WebAssembly compilado com sucesso em $(WASM_TARGET)
 
-
-# Alvo de testes: compila e executa a suite de testes unitarios com GCC nativo
-test: $(WASM_SRCS) $(TEST_DIR)/test_cards.c
+# Alvo de testes unitários C nativo com GCC
+test-c: $(WASM_SRCS) $(TEST_DIR)/test_cards.c
 	$(CC_NATIVE) $(NATIVE_FLAGS) $(WASM_SRCS) $(TEST_DIR)/test_cards.c -o $(TEST_TARGET)
 	@./$(TEST_TARGET)
+
+# Alvo de testes JavaScript e integração (Virtual Scroll, Compendium, Editor, SheetView, PackManager)
+test-js:
+	@node $(TEST_DIR)/test_virtual_scroll.js
+	@node $(TEST_DIR)/test_compendium.js
+	@node $(TEST_DIR)/test_card_editor.js
+	@node $(TEST_DIR)/test_sheet_view.js
+	@node $(TEST_DIR)/test_pack_manager.js
+
+# Alvo padrão de testes: compila e executa a suíte unitária C e o teste de virtual scroll
+test: test-c
+	@node $(TEST_DIR)/test_virtual_scroll.js
+
+# Alvo completo de qualidade: executa todos os testes C e JavaScript
+test-all: test-c test-js
 
 # Limpeza de artefatos temporários e binários compilados
 clean:
