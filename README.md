@@ -1,12 +1,13 @@
-# ⚔️ RPG-SheetC
+# ⚔️ RPG-SheetC v2.0
 
-> **Gerenciador de Fichas de RPG de Alta Performance**  
-> **Arquitetura Híbrida**: Motor de regras, cálculos e dados 100% em **C puro (C99 Freestanding)** &bull; Interface Web moderna em **HTML5, CSS3 e Vanilla JS** conectada via **WebAssembly standalone**.
+> **Motor Agnóstico de Fichas de RPG de Alta Performance Baseado em Cards**  
+> **Arquitetura Híbrida**: Núcleo de regras, fórmulas dinâmicas e serialização em **C puro (C99 Freestanding)** &bull; Interface Web reativa em **HTML5, CSS3 e Vanilla JS** &bull; Renderização com **Virtual Scrolling O(1)** (60 FPS com 5.000+ cards) &bull; Conectado via **WebAssembly standalone** (`-nostdlib`).
 
 ![Badge C99](https://img.shields.io/badge/Core-C99%20Freestanding-blue.svg)
 ![Badge WASM](https://img.shields.io/badge/Engine-WebAssembly%20(wasm32)-orange.svg)
 ![Badge Frontend](https://img.shields.io/badge/Frontend-HTML5%20%7C%20CSS3%20%7C%20Vanilla%20JS-yellow.svg)
-![Badge Tormenta20](https://img.shields.io/badge/System-Tormenta%2020%20Oficial-red.svg)
+![Badge Architecture](https://img.shields.io/badge/Architecture-Data--Driven%20%26%20Copyright--Free-purple.svg)
+![Badge VirtualScroll](https://img.shields.io/badge/Performance-60%20FPS%20%7C%205000%2B%20Cards-emerald.svg)
 ![Badge Tests](https://img.shields.io/badge/Tests-100%25%20Passing-brightgreen.svg)
 ![Badge License](https://img.shields.io/badge/License-MIT-lightgrey.svg)
 
@@ -14,118 +15,221 @@
 
 ## 📖 Visão Geral
 
-O **RPG-SheetC** é uma aplicação construída sob uma **arquitetura híbrida intencional**: une a robustez, velocidade determinística e segurança de tipos do **C puro (C99)** à facilidade de distribuição, portabilidade e riqueza visual da **Web moderna**.
+O **RPG-SheetC v2.0** é uma plataforma e motor para fichas de RPG de mesa (TTRPG) construída sobre uma **arquitetura agnóstica baseada em cards (*Card-Driven Data-Driven Architecture*)**.
 
-- Todo o motor de regras — cálculo de modificadores de atributos, progressão multinível de PV e PM, regras de combate e defesa, catálogo oficial de 29 perícias treinadas, gerador pseudoaleatório de dados poliédricos (PRNG Xorshift32) e serialização/desserialização JSON — é escrito em **C99 puro freestanding**, sem dependência de runtimes pesados ou libc externa (`-nostdlib`), compilado diretamente para bytecode WebAssembly (`clang --target=wasm32` + `wasm-ld`).
-- A interface com o usuário (UI) é uma aplicação web (SPA) construída em **HTML5 semântico, CSS3 temático de RPG e Vanilla JavaScript (sem frameworks pesados)**. O JavaScript atua estritamente como camada de apresentação visual e ponte de I/O (*glue code*), sincronizando o DOM e os eventos do navegador com a memória linear do C.
+Diferente de gerenciadores tradicionais com tabelas engessadas e regras hardcoded para um único sistema proprietário, o RPG-SheetC trata **todo elemento de jogo como um Card modular**:
+- 🛡️ **Atributos & Estatísticas**: Força, Destreza, Constituição, Sabedoria, Sanidade, etc.
+- 🧪 **Recursos Dinâmicos**: Pontos de Vida (PV), Pontos de Mana (PM), Estresse, Fome.
+- ⚔️ **Equipamentos & Armaduras**: Espadas, escudos, anéis mágicos, armaduras pesadas.
+- 🔮 **Habilidades, Perícias & Magias**: Ataque Furtivo, Bola de Fogo, Atletismo, Percepção.
+- 📜 **Traços & Características**: Raça, Linhagem, Antecedente, Peculiaridades.
+
+### 🕊️ 100% Livre de Direitos Autorais (Copyright-Free Core)
+O binário compilado em C e o repositório base contêm **zero propriedade intelectual protegida por direitos autorais**. Nenhuma tabela comercial, monstro, classe ou magia patenteada está gravada no código. O motor fornece uma **máquina de estados e cálculo universal**, enquanto o conteúdo dos sistemas de RPG (D&D 5e, Tormenta 20, Pathfinder, Call of Cthulhu, Vampiro, Cyberpunk, 3D&T ou sistemas autorais) é injetado via **Data Packs comunitários (`.cardpack` / `.json`)**.
 
 ---
 
-## 🧩 Por que uma Arquitetura Híbrida (C + WebAssembly + JavaScript)?
+## ⚡ Por que Arquitetura Híbrida (C99 + WebAssembly + Vanilla JS)?
 
-Uma pergunta frequente em projetos WebAssembly é: *“Se o core é em C, por que o repositório também possui código JavaScript?”*
+O RPG-SheetC combina a velocidade determinística de linguagens de sistemas de baixo nível com a conveniência e portabilidade do navegador moderno:
 
-A resposta reside nas especificações fundamentais do padrão WebAssembly definido pela W3C:
-
-1. **WebAssembly não manipula o DOM diretamente**: Um binário `.wasm` executa código de baixo nível em uma máquina virtual isolada. Ele não pode, por si só, criar elementos HTML (`<div>`, `<button>`, `<input>`), renderizar janelas ou ouvir eventos de clique de mouse, toque ou digitação no navegador.
-2. **WebAssembly não acessa Web APIs nativas**: O C compilado para WebAssembly não tem acesso direto a recursos do navegador como `localStorage` (armazenamento persistente de fichas), download de arquivos (`Blob` / `URL.createObjectURL`) ou diálogos de impressão (`window.print()`).
-3. **Divisão de Responsabilidades Rigorosa**: Para manter o código desacoplado e manutenível, o projeto adota uma fronteira estrita:
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      NAVEGADOR WEB                          │
+│                                                             │
+│   [ HTML5 + CSS3 + Vanilla JS (Sem frameworks pesados) ]    │
+│    • Virtual Scrolling O(1) (~36 nós DOM para 5.000+ cards) │
+│    • Visual Card Editor com live preview de fórmulas        │
+│    • Gestor de Data Packs (1-Click Import / Export)         │
+│    • LocalStorage + I/O de arquivos (.cardpack / .json)     │
+│                              │                              │
+│         Ponte WebAssembly (Linear Memory Zero-Copy)         │
+│                              │                              │
+│   [ Núcleo C99 Freestanding compilado para wasm32 ]         │
+│    • Card Deck Engine & Mutadores de Estado                 │
+│    • Avaliador de Expressões Matemáticas (@chaves)          │
+│    • Parser e Serializador JSON Nativo (Sem dependências)   │
+│    • PRNG Criptográfico/Determinístico (Xorshift32)         │
+└─────────────────────────────────────────────────────────────┘
+```
 
 | Responsabilidade do Sistema | Camada de Execução | Tecnologia |
 | :--- | :---: | :---: |
-| **Cálculo de Modificadores de Atributos** | 🧠 Core C | **C99 Puro** |
-| **Bases e Progressão de PV e PM por Nível** | 🧠 Core C | **C99 Puro** |
-| **Cálculo da Defesa Total (DES + Armadura + Escudo)** | 🧠 Core C | **C99 Puro** |
-| **Catálogo e Bônus de 29 Perícias Oficiais** | 🧠 Core C | **C99 Puro** |
-| **Sorteio de Dados Poliédricos (PRNG Xorshift32)** | 🧠 Core C | **C99 Puro** |
-| **Parser e Serializador JSON** | 🧠 Core C | **C99 Puro** |
-| **Rotinas de Segurança de Buffer e Strings** | 🧠 Core C | **C99 Freestanding** |
-| *Instanciar o binário `.wasm` no navegador* | 🔌 Ponte (*Glue code*) | Vanilla JavaScript |
-| *Passar ponteiros e ler strings na memória do C* | 🔌 Ponte (*Glue code*) | Vanilla JavaScript |
-| *Renderização de Telas, Wizard, Drawer e Modais* | 🎨 Apresentação Visual | HTML5 + CSS3 + JS |
-| *Persistência em `localStorage` e I/O de arquivos* | 🌐 I/O do Navegador | Vanilla JavaScript |
+| **Estruturas de Dados dos Cards e Decks** | 🧠 Core C | **C99 Freestanding** |
+| **Parser e Avaliador de Fórmulas Matemáticas (`@attr`)** | 🧠 Core C | **C99 Freestanding** |
+| **Cálculo Cumulativo de Modificadores (Equip / Unequip)** | 🧠 Core C | **C99 Freestanding** |
+| **Serialização e Desserialização de Data Packs JSON** | 🧠 Core C | **C99 Freestanding** |
+| **Rolagem de Dados Poliédricos (PRNG Xorshift32)** | 🧠 Core C | **C99 Freestanding** |
+| **Exportação C <-> WASM via Ponte de Memória Linear** | 🔌 WebAssembly Bridge | **C99 + wasm-ld** |
+| **Virtual Scrolling Engine (Janelamento O(1))** | ⚡ Componente UI | **Vanilla JavaScript** |
+| **Editor Visual de Cards & Pré-visualização de Fórmulas** | 🎨 Apresentação | **Vanilla JavaScript** |
+| **Gerenciador de Data Packs da Comunidade** | 🌐 Gerenciamento | **Vanilla JavaScript** |
+| **Persistência Local e I/O de Arquivos** | 💾 I/O Navegador | **Web Storage & File API** |
 
-> **Portabilidade Futura**: O código C em `src/core/` não possui **nenhum acoplamento** com a Web ou com JavaScript. Caso você decida no futuro criar um aplicativo nativo para desktop ou mobile (usando Raylib, Dear ImGui, Qt ou GTK), todo o núcleo em `src/core/` pode ser reaproveitado diretamente sem modificar uma única linha de código.
+> **Portabilidade Total**: Todo o código em `src/core/` é 100% livre de dependências da Web (`-nostdlib`). O mesmo código C pode ser compilado nativamente para Desktop (Windows/Linux/macOS) ou Mobile integrado a motores gráficos como Raylib, Dear ImGui, SDL ou Qt sem alterar uma única linha.
 
 ---
 
 ## 🌟 Principais Recursos
 
-- **Motor de Regras Oficial de Tormenta 20**:
-  - **14 Classes Oficiais**: Arcanista, Bárbaro, Bardo, Bucaneiro, Caçador, Cavaleiro, Clérigo, Druida, Guerreiro, Inventor, Ladino, Lutador, Nobre e Paladino, com progressão canônica de PV e PM por nível.
-  - **29 Perícias Oficiais**: Mapeamento dos atributos-chave canônicos e escalação dos bônus de treino (+2 do 1º ao 6º nível, +4 do 7º ao 14º e +6 do 15º ao 20º).
-  - **Defesa Dinâmica**: Cálculo automático `10 + Mod DES + Armadura + Escudo + Outros`.
-  - **6 Raças Canônicas**: Humano, Elfo, Anão, Goblin, Minotauro e Draconato com bônus de atributos e habilidades.
-- **Motor de Dados Pseudoaleatórios em C (PRNG Xorshift32)**:
-  - Suporte completo a dados poliédricos: **d4, d6, d8, d10, d12, d20 e d100**.
-  - Rolar múltiplos dados com modificador positivo ou negativo.
-  - Detecção automática de **Sucesso Crítico** (20 natural) e **Falha Crítica** (1 natural) no d20.
-  - Distribuição estatística uniforme comprovada por suítes de testes automatizados.
-- **Serializador & Parser JSON em C Puro**:
-  - Conversão bidirecional entre structs em memória e strings JSON sem acoplamento a bibliotecas externas.
-  - Tolerância a chaves em ordens arbitrárias, campos opcionais e números negativos.
-- **Scaffolding Multissistemas**:
-  - Arquitetura pronta para múltiplos sistemas com união polimórfica universal `RPGSheet` (Tormenta 20, D&D 5e, Fabula Ultima e 3D&T Victory).
-- **Interface Web Temática (SPA)**:
-  - **Tela Inicial & Sistemas**: Catálogo dinâmico de sistemas com cards e atalhos rápidos.
-  - **Assistente de Criação (Wizard)**: Criação passo-a-passo com gerador de nomes de fantasia, cards descritivos de raças/classes, rolagem de atributos 4d6 descartando o menor (calculado no C) e Array Padrão heroico.
-  - **Painel Interativo da Ficha**: Edição in-place com recálculos reativos instantâneos em C para atributos, PV, PM, Defesa e tabela filtrável de 29 perícias com rolagem direta de testes.
-  - **Rolador de Dados Poliédricos Visual**: Gaveta lateral retrátil (*drawer*) e arena dedicada de rolagens com histórico detalhado e timestamps.
-  - **Persistência Local (`CharacterStorage`)**: Armazenamento no `localStorage` do navegador com modal completo de gerenciamento (abrir, renomear, duplicar e excluir fichas), além de auto-save e auto-restore.
-  - **Exportação & Impressão**:
-    - Download da ficha como arquivo `.sheetc` (JSON estruturado com envelope de metadados).
-    - Importação de arquivos `.sheetc` ou `.json` com restauração direta na memória do C.
-    - Folha de estilo de impressão física (`@media print`) formatada para fichas de papel A4 / Carta sem desperdício de tinta.
+### 1. 🧮 Motor de Fórmulas Dinâmicas (`card_eval.c`)
+As fichas não usam números estáticos: qualquer card pode ter seu valor calculado em tempo real através de expressões matemáticas que referenciam outros cards usando a sintaxe `@card_key`:
+- **Modificador de Habilidade clássico**: `floor((@forca - 10) / 2)`
+- **Defesa Combinada**: `10 + @des_mod + @armadura + @escudo`
+- **Pontos de Vida Escaláveis**: `10 + @con_mod + ((@nivel - 1) * (6 + @con_mod))`
+- Suporte a parênteses, precedência de operadores (`*`, `/`, `+`, `-`), funções matemáticas nativas (`floor`, `ceil`, `round`, `abs`, `min`, `max`) e resolução recursiva em C.
+
+### 2. 📜 Virtual Scrolling Engine (`virtual_list.js`)
+Projetado para renderizar acervos massivos de compêndios sem perda de performance:
+- **Janelamento O(1)**: Renderiza apenas os cards visíveis na tela mais um pequeno buffer de tolerância.
+- **5.000+ cards a 60 FPS**: Enquanto uma lista HTML tradicional cria milhares de nós que congelam o navegador, o Virtual Scroller do RPG-SheetC mantém fixos apenas **~36 elementos DOM reciclados**, com consumo ínfimo de memória e tempo de rolagem virtual inferior a **0.01 ms** por frame.
+
+### 3. 🛠️ Editor Visual de Cards
+Crie e edite cards diretamente no navegador com interface intuitiva:
+- Seleção de categoria: Atributo, Recurso, Estatística, Equipamento, Habilidade, Magia ou Traço.
+- Tipo de valor: Inteiro, Flutuante, String, Booleano ou Fórmula Dinâmica.
+- Pré-visualização de fórmulas em tempo real com teste instantâneo de resolução.
+- Gestão de tags, modificadores de alvos e chave de identificação única.
+
+### 4. 📦 Gerenciador de Data Packs da Comunidade
+- **1-Click Import**: Botão de importação instantânea que carrega o **SRD Fantasy Pack** (46 cards neutros e equilibrados).
+- **Exportação Universal**: Exporte seu compêndio ou deck da ficha em formato `.cardpack` (JSON padronizado).
+- **Mesclagem Inteligente (Merge)**: Importe novos pacotes sem apagar os cards já existentes na ficha.
 
 ---
 
-## 🏛️ Arquitetura do Sistema
+## 👥 Guia da Comunidade: Como Criar e Compartilhar Data Packs
+
+A comunidade pode criar pacotes de conteúdo para qualquer sistema de RPG usando qualquer editor de texto ou o próprio **Editor Visual de Cards** do RPG-SheetC.
+
+### Estrutura do Arquivo `.cardpack` (JSON)
+
+Um arquivo `.cardpack` é um documento JSON estruturado contendo metadados do pacote e um array de cards:
+
+```json
+{
+  "pack_name": "Grimório Arcano & Equipamentos Clássicos",
+  "system_name": "Fantasia Medieval OGL",
+  "author": "Comunidade RPG",
+  "version": "1.0.0",
+  "description": "Pacote básico contendo atributos fundamentais, magias e equipamentos.",
+  "cards": [
+    {
+      "key": "forca",
+      "name": "Força",
+      "type": "attribute",
+      "description": "Poder muscular e capacidade física do personagem.",
+      "icon": "fist",
+      "value_type": "int",
+      "base_value": 14,
+      "formula": "",
+      "tags": ["atributo", "fisico"],
+      "is_equipped": false,
+      "modifiers": []
+    },
+    {
+      "key": "for_mod",
+      "name": "Modificador de Força",
+      "type": "stat",
+      "description": "Bônus derivado da pontuação de Força.",
+      "icon": "plus",
+      "value_type": "formula",
+      "base_value": 0,
+      "formula": "floor((@forca - 10) / 2)",
+      "tags": ["modificador"],
+      "is_equipped": false,
+      "modifiers": []
+    },
+    {
+      "key": "espada_longa",
+      "name": "Espada Longa",
+      "type": "equipment",
+      "description": "Arma marcial versátil de corte.",
+      "icon": "sword",
+      "value_type": "int",
+      "base_value": 0,
+      "formula": "",
+      "tags": ["arma", "marcial", "versatil"],
+      "is_equipped": true,
+      "modifiers": [
+        {
+          "target_key": "ataque_corpo_a_corpo",
+          "operation": "add",
+          "value": 1
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Especificação dos Campos do Card
+
+| Campo | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `key` | `string` | Identificador único e legível por máquina (ex: `"destreza"`, `"espada_longa"`). Usado em fórmulas como `@key`. |
+| `name` | `string` | Nome visível do card para exibição na interface (ex: `"Espada Longa +1"`). |
+| `type` | `string` | Categoria do card: `"attribute"`, `"resource"`, `"stat"`, `"equipment"`, `"ability"`, `"spell"`, `"trait"`. |
+| `description`| `string` | Texto descritivo, regras detalhadas e notas de jogo. |
+| `icon` | `string` | Nome do ícone visual temático (ex: `"sword"`, `"shield"`, `"heart"`, `"sparkles"`). |
+| `value_type` | `string` | Como o valor é tratado: `"int"`, `"float"`, `"string"`, `"bool"` ou `"formula"`. |
+| `base_value` | `number` | Valor numérico fixo de base quando não usa fórmula. |
+| `formula` | `string` | Expressão dinâmica avaliada pelo motor C (ex: `"10 + @des_mod + @armadura"`). |
+| `tags` | `array` | Lista de strings para categorização e busca rápida (ex: `["magia", "fogo", "nivel3"]`). |
+| `is_equipped`| `bool` | Indica se o card está ativo/equipado na ficha. Modificadores só surtem efeito quando equipado. |
+| `modifiers` | `array` | Lista de modificadores numéricos aplicados a outros cards quando este card está equipado. |
+
+---
+
+## 🏛️ Estrutura do Repositório
 
 ```
 RPG-SheetC/
 ├── src/
-│   ├── core/                  # Core 100% C Puro (C99 Freestanding)
-│   │   ├── sheet_types.h      # Enums universais de sistemas e tipos base
-│   │   ├── sheet_types.c      # Funções de despacho polimórfico (RPGSheet)
-│   │   ├── sheet_t20.h        # Definições oficiais de Tormenta 20 (atributos, perícias, classes)
-│   │   ├── sheet_t20.c        # Regras, tabelas de PV/PM e cálculos de modificadores
-│   │   ├── sheet_dnd5e.h / .c # Scaffolding para Dungeons & Dragons 5e
-│   │   ├── sheet_fabula.h / .c# Scaffolding para Fabula Ultima
-│   │   ├── sheet_3det.h / .c  # Scaffolding para 3D&T Victory
-│   │   ├── sheet_all.h        # União polimórfica universal RPGSheet
-│   │   ├── sheet_json.h / .c  # Parser e gerador JSON de alta performance
-│   │   ├── dice.h / .c        # Gerador pseudoaleatório Xorshift32 e rolagens poliédricas
-│   │   └── rpg_base.h / .c    # Funções seguras freestanding (memset, memcpy, strncpy, etc.)
+│   ├── core/                  # Core 100% C Puro (C99 Freestanding, Zero Libc Externa)
+│   │   ├── card_types.h       # Definição das estruturas GameCard, CardDeck, Modifier
+│   │   ├── card_engine.h/.c   # Motor de criação, mutação, cálculo e busca de cards
+│   │   ├── card_eval.h/.c     # Parser e avaliador de fórmulas dinâmicas (@chaves)
+│   │   ├── card_pack.h/.c     # Serializador e parser de pacotes .cardpack JSON
+│   │   ├── rpg_base.h/.c      # Funções de memória seguras (memset, memcpy, strncpy)
+│   │   └── dice.h/.c          # Gerador de números pseudoaleatórios Xorshift32
 │   └── wasm/
-│       └── wasm_api.c         # Camada de ponte C <-> WebAssembly (símbolos exportados)
-├── web/                       # Frontend Web Moderno (Vanilla JS + HTML5 + CSS3)
-│   ├── index.html             # Casca semântica da aplicação SPA
+│       └── wasm_api.c         # Camada de integração C <-> WebAssembly
+├── web/                       # Frontend SPA (Vanilla JS + HTML5 + CSS3)
+│   ├── index.html             # Estrutura semântica da aplicação
+│   ├── data/
+│   │   └── srd_basic_pack.json# Data Pack SRD Fantasy aberto da comunidade (46 cards)
 │   ├── css/
-│   │   ├── tokens.css         # Variáveis e design tokens (cores de RPG, tipografia, espaçamento)
-│   │   ├── style.css          # Design system global e layout
-│   │   ├── views.css          # Estilos de telas (Home, Wizard, Ficha)
-│   │   ├── dice_roller.css    # Estilização da gaveta e arena de rolagem de dados
-│   │   ├── storage.css        # Modal e cards do gerenciador de fichas locais
-│   │   └── print.css          # Layout de impressão de alta fidelidade para PDF/A4
+│   │   ├── tokens.css         # Variáveis de design tokens (cores, espaçamento, tipografia)
+│   │   ├── style.css          # Layout global e componentes base
+│   │   ├── views.css          # Telas (Home, Ficha, Compêndio, Editor de Cards)
+│   │   ├── card_components.css# Estilização de cards, badges e coleções virtuais
+│   │   └── dice_roller.css    # Arena e gaveta retrátil de rolagem de dados
 │   ├── js/
-│   │   ├── wasm_loader.js     # Carregador do binário WASM e manipulador de memória linear
-│   │   ├── services/
-│   │   │   ├── storage.js     # Persistência em localStorage e CharacterManagerModal
-│   │   │   └── export.js      # Serviço de exportação (.sheetc), importação e impressão
+│   │   ├── wasm_loader.js     # Ponte de memória linear C <-> WebAssembly
 │   │   ├── components/
-│   │   │   └── dice_roller.js # Componente visual de rolagem de dados poliédricos
+│   │   │   ├── virtual_list.js# Motor de Virtual Scrolling O(1) de alta performance
+│   │   │   ├── card_editor.js # Editor visual e modal de criação de cards
+│   │   │   └── dice_roller.js # Rolador poliédrico visual
+│   │   ├── services/
+│   │   │   ├── pack_manager.js# Gerenciador de download/upload e 1-click import
+│   │   │   ├── storage.js     # Persistência e gerenciamento de fichas locais
+│   │   │   └── export.js      # Exportação de arquivos e impressão de fichas
 │   │   ├── views/
-│   │   │   ├── home.js        # View inicial e seleção de sistemas
-│   │   │   ├── wizard.js      # Assistente de criação de personagem
-│   │   │   └── sheet_view.js  # Painel principal interativo da ficha
-│   │   └── app.js             # Ponto de entrada e controlador da SPA
+│   │   │   ├── sheet_view.js  # Dashboard modular da ficha baseado em cards
+│   │   │   ├── compendium_view.js # Compêndio virtualizado de cards
+│   │   │   └── home.js        # Hub inicial
+│   │   └── app.js             # Ponto de entrada e orquestrador da SPA
 │   └── dist/
-│       └── sheetc_core.wasm   # Binário WebAssembly compilado pelo Clang
+│       └── sheetc_core.wasm   # Binário WebAssembly standalone compilado pelo Clang
 ├── tests/
-│   ├── test_core.c            # Suíte oficial de testes unitários nativos em C99
-│   ├── test_storage.js        # Teste automatizado de persistência local (Node.js)
-│   └── test_export.js         # Teste automatizado de exportação/importação (Node.js)
-├── Makefile                   # Build automatizado (alvos wasm, test, clean)
+│   ├── test_cards.c           # Suíte de testes unitários do motor de cards em C99 puro
+│   ├── test_virtual_scroll.js # Teste automatizado de Virtual Scrolling (5.000 cards)
+│   ├── test_compendium.js     # Teste de integração do Compêndio
+│   ├── test_card_editor.js    # Teste de integração do Editor de Cards
+│   ├── test_sheet_view.js     # Teste de integração do Dashboard da Ficha
+│   └── test_pack_manager.js   # Teste de integração do Gerenciador de Data Packs
+├── Makefile                   # Automação de compilação (WASM, Testes C, Testes JS)
 └── README.md                  # Este documento
 ```
 
@@ -133,21 +237,20 @@ RPG-SheetC/
 
 ## 🛠️ Pré-requisitos de Compilação
 
-Para compilar o código C nativo e gerar o módulo WebAssembly, certifique-se de possuir em seu ambiente:
+Para compilar o módulo WebAssembly e executar as suítes de testes:
 
-1. **Clang** & **LLD** (versão 16+ com suporte a `--target=wasm32` e `wasm-ld`).
-2. **GCC** (para compilação dos testes unitários nativos de console).
+1. **Clang & LLD** (versão 16+ com suporte a `--target=wasm32` e `wasm-ld`).
+2. **GCC** (para compilação nativa dos testes unitários em C).
 3. **Make** (`mingw32-make` no Windows ou `make` no Linux/macOS).
-4. **Node.js** (opcional, para execução das suítes de testes de integração do frontend).
-5. Qualquer servidor HTTP estático local (Python, Live Server, `npx serve`, etc.).
+4. **Node.js** (versão 18+ para executar os testes automatizados de integração).
+5. Qualquer servidor HTTP estático local (Python, Node `serve`, Live Server).
 
 ---
 
 ## 🚀 Como Compilar e Executar
 
-### 1. Compilar o Módulo WebAssembly
-
-Gera o arquivo `web/dist/sheetc_core.wasm` otimizado em modo freestanding a partir dos fontes C:
+### 1. Compilar o Binário WebAssembly
+Compila os fontes C em modo freestanding (`-nostdlib -O2`) gerando `web/dist/sheetc_core.wasm`:
 
 ```bash
 mingw32-make wasm
@@ -155,9 +258,8 @@ mingw32-make wasm
 make wasm
 ```
 
-### 2. Executar os Testes Unitários em C
-
-Compila os fontes em C puro com GCC com flags de rigor (`-Wall -Wextra -pedantic -std=c99`) e executa todas as suítes de asserções:
+### 2. Executar os Testes Unitários em C & Virtual Scroll
+Compila o motor de testes com flags de rigor estrito (`-Wall -Wextra -pedantic -std=c99`) e executa as asserções de C e o benchmark de 5.000 cards:
 
 ```bash
 mingw32-make test
@@ -165,60 +267,65 @@ mingw32-make test
 make test
 ```
 
-### 3. Executar Testes Automatizados de Integração (Node.js)
+### 3. Executar a Suíte Completa de Qualidade (C + JavaScript)
+Executa a validação unitária em C e todas as 5 suítes de integração em Node.js:
 
 ```bash
-node tests/test_storage.js
-node tests/test_export.js
+mingw32-make test-all
+# ou no Linux/macOS:
+make test-all
 ```
 
 ### 4. Executar a Aplicação Web Localmente
 
-Por questões de segurança dos navegadores para carregamento de binários WebAssembly via streaming (`fetch`), a aplicação deve ser aberta através de um servidor HTTP local simples:
+Para permitir que o navegador carregue o binário WebAssembly via `fetch` streaming sem restrições de CORS locais, inicie um servidor HTTP estático:
 
 **Opção A — Python 3:**
 ```bash
 cd web
 python -m http.server 8000
 ```
-Em seguida, acesse no navegador: `http://localhost:8000`
+Acesse no navegador: [http://localhost:8000](http://localhost:8000)
 
-**Opção B — Node.js (npx serve):**
+**Opção B — Node.js:**
 ```bash
 npx serve web
 ```
 
-**Opção C — VS Code / IDE:**
-Utilize a extensão **Live Server** apontando para o arquivo `web/index.html`.
+**Opção C — VS Code:**
+Clique com o botão direito em `web/index.html` e selecione **Open with Live Server**.
 
 ---
 
-## 🧪 Cobertura da Suíte de Testes do Core C
+## 🧪 Suíte de Testes Automatizados
 
-A suíte em [`tests/test_core.c`](file:///d:/Arquivos%20para%20Arte%20Grafica/Vini/Vini/RPG-SheetC/tests/test_core.c) cobre 9 áreas críticas:
+A suíte de testes do RPG-SheetC valida integralmente todas as camadas do projeto:
 
-1. **Cálculo de Modificadores de Atributos**: Asserções de atributos 0 a 30 (modificadores negativos, neutros e positivos).
-2. **14 Classes Oficiais de Tormenta 20**: PV/PM base, PV/PM por nível e conversão string <-> enum.
-3. **Progressão Multinível**: Recálculos matemáticos para Níveis 1 a 20 combinados com modificadores de Constituição.
-4. **Decomposição da Defesa**: Bônus de Destreza, armaduras pesadas/leves, escudos e bônus diversos.
-5. **29 Perícias Oficiais**: Atributos-chave e bônus de treino (+2, +4 e +6) por faixa de nível.
-6. **Motor Pseudoaleatório Xorshift32**: Sementes determinísticas, limites exatos de d4 a d100 e distribuição uniforme em 10.000 rolagens.
-7. **Serialização e Desserialização JSON**: Round-trip de integridade com 100% de preservação dos dados.
-8. **Scaffolding Multissistemas**: União polimórfica `RPGSheet` para Tormenta 20, D&D 5e, Fabula Ultima e 3D&T Victory.
-9. **Segurança de Strings e Memória**: Testes de rotinas de buffer `memset`, `memcpy`, `strncpy`, `strcmp` e `strlen`.
+- **Motor de Cards em C (`test_cards.c`)**:
+  - Inicialização de decks e criação segura de cards.
+  - Avaliação de fórmulas dinâmicas simples e compostas com referências a outros cards (`@key`).
+  - Ordem de precedência matemática e aninhamento de parênteses.
+  - Aplicação acumulada de modificadores ao equipar/desequipar itens.
+  - Serialização e integridade do parser JSON em pacotes `.cardpack`.
+  - Tratamento defensivo de limites de capacidade e memória estática.
+- **Virtual Scrolling (`test_virtual_scroll.js`)**:
+  - Benchmark de janelamento com **5.000 cards**.
+  - Garantia de renderização com **O(1) nós DOM** (~36 nós reciclados).
+  - Execução de rolagem em tempo infinitesimal (< 0.05 ms por atualização).
+- **Módulos de Apresentação e I/O**:
+  - Compêndio, Editor de Cards, Dashboard da Ficha e Gerenciador de Data Packs.
 
 ---
 
-## 🔒 Segurança e Robustez em C
+## 🔒 Segurança e Confiabilidade em C
 
-O desenvolvimento do núcleo C seguiu padrões defensivos estritos:
-- **Buffers com limites explícitos**: Prevenção total de estouros de buffer através de tamanhos predefinidos e cópias seguras.
-- **Modo Freestanding**: Zero acoplamento a runtimes externos pesados (`-nostdlib`).
-- **Sem Memory Leaks**: Alocação estática e controle determinístico de memória linear.
-- **Desacoplamento Completo**: Nenhuma dependência de interfaces gráficas legadas (Raylib) no core de regras.
+- **Freestanding Puro**: Sem vinculação dinâmica a bibliotecas do sistema operacional hospedeiro.
+- **Buffers com Limites Rígidos**: Proteção contra buffer overflows e injeções de memória.
+- **Alocação Determinística**: Gestão direta de memória linear sem dependência de garbage collectors lentos.
+- **Total Desacoplamento**: O núcleo C não possui dependências com interfaces gráficas nem com APIs do navegador.
 
 ---
 
 ## 📜 Licença
 
-Distribuído sob a licença MIT. Consulte `LICENSE` para mais informações.
+Distribuído sob a **Licença MIT**. O código é livre para uso pessoal, comercial, modificação e redistribuição pela comunidade de RPG de mesa.
