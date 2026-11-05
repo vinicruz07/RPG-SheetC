@@ -1107,7 +1107,7 @@ class SheetView {
         };
 
         const charName = this.engine.getCharacterName() || 'Herói';
-        const sysName = this.engine.getSystemName() || 'Tormenta 20';
+        const sysName = this.engine.getSystemName() || 'Agnóstico v2.0';
 
         this.engine.initDeck(charName, sysName);
 

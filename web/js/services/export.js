@@ -21,12 +21,12 @@ class CharacterExportService {
         }
 
         const charName = sheetData.nome || engine.getCharacterName() || 'heroi';
-        const systemName = (sheetData.sistema_id === 1) ? 'Tormenta20' : 'RPG';
+        const systemName = (sheetData.sistema_id === 1) ? 'Agnostico_v2' : 'RPG';
 
         // Prepara envelope completo com metadados de exportação
         const payload = {
             format: 'RPG-SheetC',
-            version: '1.0.0',
+            version: '2.0.0',
             exportedAt: new Date().toISOString(),
             engine: 'C99 Freestanding WebAssembly',
             system: systemName,
@@ -39,7 +39,7 @@ class CharacterExportService {
 
         // Gera nome de arquivo amigável e higienizado
         const sanitizedName = charName.toLowerCase().replace(/[^a-z0-9_-]/gi, '_');
-        const filename = customFilename || `${sanitizedName}_${systemName.toLowerCase()}.sheetc`;
+        const filename = customFilename || `${sanitizedName}.sheetc`;
 
         // Dispara o download no navegador
         if (typeof window !== 'undefined' && typeof document !== 'undefined') {

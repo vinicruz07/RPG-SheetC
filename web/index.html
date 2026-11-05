@@ -36,16 +36,16 @@
 
         <!-- Navegação da Aplicação (SPA Tabs) -->
         <nav class="nav-tabs">
-            <button class="tab-button active" data-view="home">Início & Sistemas</button>
-            <button class="tab-button" data-view="creator">Criador de Personagem</button>
+            <button class="tab-button active" data-view="home">Início</button>
             <button class="tab-button" data-view="sheet">Ficha do Personagem</button>
             <button class="tab-button" data-view="compendium">🎴 Compêndio de Cards</button>
             <button class="tab-button" data-view="editor">✨ Criador de Cards</button>
+            <button class="tab-button" data-view="creator">Assistente Clássico</button>
             <button class="tab-button" data-view="roller">Rolador de Dados</button>
         </nav>
 
         <!-- ===================================================================
-             VIEW: Início & Seleção de Sistemas
+             VIEW: Início & Visão Geral
              =================================================================== -->
         <div id="view-home" class="view-section active">
             <div class="home-container">
@@ -53,39 +53,39 @@
                 <section class="home-banner">
                     <div class="home-banner-content">
                         <div class="home-tagline">
-                            <span>🛡️</span> Pure C Engine + Modern Web Frontend
+                            <span>🛡️</span> Pure C Engine (C99 Freestanding) + Modern Web Frontend
                         </div>
-                        <h2 class="home-heading">Gerenciador de Fichas de RPG de Alta Performance</h2>
+                        <h2 class="home-heading">Motor Agnóstico de Fichas de RPG de Alta Performance</h2>
                         <p class="home-desc">
-                            O <strong>RPG-SheetC</strong> combina a segurança, velocidade e determinismo da programação em C puro
-                            com a riqueza visual da Web moderna. O motor compilado em WebAssembly gerencia todos os cálculos de atributos,
-                            modificadores, progressão de nível, rolagens aleatórias com Xorshift32 e serialização JSON diretamente na memória do navegador.
+                            O <strong>RPG-SheetC v2.0</strong> adota uma <strong>arquitetura baseada em cards (Card-Driven Data-Driven)</strong>, 
+                            100% agnóstica e livre de regras proprietárias. O motor compilado em WebAssembly gerencia todos os cálculos de atributos,
+                            modificadores dinâmicos, avaliação de fórmulas matemáticas recursivas e serialização JSON diretamente na memória linear do navegador.
                         </p>
                         <div class="home-actions-bar">
-                            <button id="btn-home-new-sheet" class="btn btn-primary">⚔️ Nova Ficha com Sistema Selecionado</button>
+                            <button id="btn-home-new-sheet" class="btn btn-primary">⚔️ Acessar Ficha Modular</button>
                             <button id="btn-home-manage-sheets" class="btn">📜 Minhas Fichas Salvas</button>
-                            <button id="btn-home-load-sheet" class="btn">📂 Carregar Ficha (JSON)</button>
-                            <button id="btn-home-view-active" class="btn">📜 Acessar Ficha Ativa</button>
+                            <button id="btn-home-load-sheet" class="btn">📂 Carregar Ficha (.sheetc / JSON)</button>
+                            <button id="btn-home-view-active" class="btn">🎴 Abrir Compêndio de Cards</button>
                         </div>
                     </div>
                 </section>
 
-                <!-- Seção de Seleção de Sistemas -->
+                <!-- Seção de Módulos da Plataforma -->
                 <section>
                     <div class="systems-section-header">
                         <div>
-                            <h2 class="systems-section-title">🎲 Sistemas de RPG Suportados</h2>
-                            <p class="systems-section-subtitle">Escolha um sistema para gerenciar atributos e regras de personagem:</p>
+                            <h2 class="systems-section-title">🎴 Recursos & Módulos da Plataforma</h2>
+                            <p class="systems-section-subtitle">Arquitetura neutra orientada a cards, extensível a qualquer sistema de RPG:</p>
                         </div>
                         <div class="system-selected-banner">
                             <div class="system-selected-info">
-                                <span style="font-size: 0.85rem; color: var(--color-text-muted);">Sistema Selecionado:</span>
-                                <span id="selected-system-title" class="system-selected-name">⚔️ Tormenta 20</span>
+                                <span style="font-size: 0.85rem; color: var(--color-text-muted);">Módulo em Destaque:</span>
+                                <span id="selected-system-title" class="system-selected-name">🎴 Motor Baseado em Cards</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Grid de Cards de Sistemas -->
+                    <!-- Grid de Cards de Módulos Neutros -->
                     <div id="systems-grid-container" class="systems-grid">
                         <!-- Renderizado dinamicamente via home.js -->
                     </div>

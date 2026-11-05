@@ -145,7 +145,7 @@ class CharacterStorage {
                 race: race,
                 class: cls,
                 level: level,
-                system: 'Tormenta 20',
+                system: 'Agnóstico v2.0',
                 systemId: 1,
                 pvCur: pvCur,
                 pvMax: pvMax,
@@ -586,7 +586,7 @@ class CharacterManagerModal {
                         <span class="sheet-pill pill-lvl">Nível ${sheet.level || 1}</span>
                         <span class="sheet-pill pill-race">🧬 ${sheet.race || 'Humano'}</span>
                         <span class="sheet-pill pill-class">⚔️ ${sheet.class || 'Guerreiro'}</span>
-                        <span class="sheet-pill pill-sys">📜 ${sheet.system || 'Tormenta 20'}</span>
+                        <span class="sheet-pill pill-sys">📜 ${sheet.system || 'Agnóstico v2.0'}</span>
                     </div>
 
                     <div class="sheet-card-stats-preview">
@@ -643,14 +643,14 @@ class CharacterManagerModal {
                 try {
                     const charName = sheet.name || 'heroi';
                     const sanitized = charName.toLowerCase().replace(/[^a-z0-9_-]/gi, '_');
-                    const filename = `${sanitized}_tormenta20.sheetc`;
+                    const filename = `${sanitized}.sheetc`;
 
                     const payload = {
                         format: 'RPG-SheetC',
-                        version: '1.0.0',
+                        version: '2.0.0',
                         exportedAt: new Date().toISOString(),
                         engine: 'C99 Freestanding WebAssembly',
-                        system: sheet.system || 'Tormenta 20',
+                        system: sheet.system || 'Agnóstico v2.0',
                         systemId: sheet.systemId || 1,
                         sheet: sheet.data
                     };

@@ -1,68 +1,68 @@
 /**
- * home.js — Visualização Inicial e Seleção de Sistemas de RPG
+ * home.js — Visualização Inicial e Apresentação dos Módulos do RPG-SheetC v2.0
  */
 
 class HomeView {
     constructor(engine, appRouter) {
         this.engine = engine;
         this.router = appRouter;
-        this.selectedSystemId = 1; // 1: Tormenta 20 (padrão ativo)
+        this.selectedSystemId = 1; // 1: Motor Baseado em Cards (padrão ativo)
 
         this.systems = [
             {
                 id: 1,
-                name: 'Tormenta 20',
-                sigil: '⚔️',
+                name: 'Motor Baseado em Cards',
+                sigil: '🎴',
                 status: 'ready',
                 statusLabel: 'Motor C Ativo',
-                desc: 'O maior RPG do Brasil. 14 classes oficiais, 29 perícias treinadas, pontos de vida e mana calculados automaticamente.',
+                desc: 'Arquitetura universal orientada a dados. Atributos, recursos, equipamentos, magias e perícias modelados como cards modulares.',
                 features: [
-                    'Rolagens com d20 oficial no C',
-                    'Fórmula canônica de modificadores e PV/PM',
-                    'Cálculo de Defesa com armaduras e escudos',
-                    'Serialização JSON de alta velocidade'
+                    'Cálculos e modificadores em C puro',
+                    'Totalmente livre de direitos autorais',
+                    'Compatível com qualquer cenário ou sistema',
+                    'Serialização JSON de alta performance'
                 ]
             },
             {
                 id: 2,
-                name: 'Dungeons & Dragons 5e',
-                sigil: '🐉',
-                status: 'scaffolding',
-                statusLabel: 'Scaffolding C Pronto',
-                desc: 'O RPG mais jogado do mundo. Atributos clássicos, bônus de proficiência por nível, Armor Class e Hit Points.',
+                name: 'Fórmulas Dinâmicas & Expressões',
+                sigil: '🧮',
+                status: 'ready',
+                statusLabel: 'Parser C Ativo',
+                desc: 'Parser matemático recursivo em C com suporte a expressões aritméticas completas, precedência e referências @chave.',
                 features: [
-                    'Struct DnD5eSheet compilada em C',
-                    'Bônus de proficiência (+2 a +6)',
-                    'Iniciativa e Classe de Armadura',
-                    'União polimórfica RPGSheet'
+                    'Expressões dinâmicas (ex: @for_mod, @defesa)',
+                    'Parênteses, floor, ceil, round e abs',
+                    'Recálculo instantâneo na memória linear',
+                    'Avaliação determinística em tempo real'
                 ]
             },
             {
                 id: 3,
-                name: 'Fabula Ultima',
-                sigil: '✨',
-                status: 'scaffolding',
-                statusLabel: 'Scaffolding C Pronto',
-                desc: 'Inspirado nos clássicos JRPGs de mesa. Atributos baseados no tamanho dos dados (d6-d12), Pontos de Fabula e Inventário.',
+                name: 'Virtual Scrolling O(1)',
+                sigil: '⚡',
+                status: 'ready',
+                statusLabel: '60 FPS Estável',
+                desc: 'Renderização ultra-otimizada com reciclagem contínua de nós do DOM para navegar em acervos massivos sem travamentos.',
                 features: [
-                    'Struct FabulaSheet compilada em C',
-                    'Atributos como dados (d6, d8, d10, d12)',
-                    'HP e MP derivados de Vigor e Vontade',
-                    'Defesa Física e Mágica automáticas'
+                    'Janelamento O(1) de alta performance',
+                    'Estável a 60 FPS com 5.000+ cards',
+                    'Apenas ~36 nós instanciados no DOM',
+                    'Filtros instantâneos por tipo e busca rápida'
                 ]
             },
             {
                 id: 4,
-                name: '3D&T Victory',
-                sigil: '💥',
-                status: 'scaffolding',
-                statusLabel: 'Scaffolding C Pronto',
-                desc: 'Regras ágeis de anime e mangá. Características Poder, Habilidade e Resistência com escalas Ningen a Kami.',
+                name: 'Data Packs & Editor Visual',
+                sigil: '📦',
+                status: 'ready',
+                statusLabel: 'Comunidade Aberta',
+                desc: 'Crie, edite, exporte e importe pacotes de cards completos (.cardpack) no formato aberto universal JSON.',
                 features: [
-                    'Struct ThreeDetSheet compilada em C',
-                    'Características P, H e R',
-                    'Cálculo de PV e PM baseados em R * 5',
-                    'Pontos de Ação e Defesa passiva (H+R)'
+                    '1-Click Import do pacote SRD Fantasy',
+                    'Editor visual de cards com live preview',
+                    'Mesclagem inteligente (merge) de pacotes',
+                    'Exportação e compartilhamento comunitário'
                 ]
             }
         ];
@@ -152,19 +152,9 @@ class HomeView {
      * Conecta os botões de ação da Home
      */
     setupActions() {
-        // Criar Nova Ficha
+        // Acessar Ficha Modular
         if (this.btnStartNew) {
             this.btnStartNew.addEventListener('click', () => {
-                if (this.selectedSystemId === 1) {
-                    // Tormenta 20: abre o assistente passo-a-passo de criação
-                    if (window.wizardView) {
-                        window.wizardView.reset(0, 8);
-                    }
-                    if (this.router && typeof this.router.navigate === 'function') {
-                        this.router.navigate('creator');
-                        return;
-                    }
-                }
                 if (this.router && typeof this.router.navigate === 'function') {
                     this.router.navigate('sheet');
                 }
@@ -201,11 +191,11 @@ class HomeView {
             });
         }
 
-        // Ver Ficha Ativa
+        // Abrir Compêndio de Cards
         if (this.btnViewActive) {
             this.btnViewActive.addEventListener('click', () => {
                 if (this.router && typeof this.router.navigate === 'function') {
-                    this.router.navigate('sheet');
+                    this.router.navigate('compendium');
                 }
             });
         }

@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             statusText.textContent = 'Motor C Conectado';
         }
 
-        logToConsole('Motor C (Clang 16 wasm32) conectado com sucesso! Sistema padrão: Tormenta 20.', 'success');
+        logToConsole('Motor C (Clang wasm32) conectado com sucesso! Motor agnóstico v2.0 ativo.', 'success');
 
         // Tenta restaurar automaticamente a última ficha ativa salva no localStorage
         if (storage.autoRestore(engine)) {
