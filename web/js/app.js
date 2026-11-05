@@ -154,6 +154,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.compendiumView = compendiumView;
     }
 
+    // Inicializa o Gerenciador de Data Packs Comunitários
+    let packManager = null;
+    if (typeof window.PackManager === 'function') {
+        packManager = new window.PackManager(engine, logToConsole);
+        window.packManager = packManager;
+    }
+
     // Inicializa o Editor e Criador Visual de Cards Personalizados
     let cardEditorView = null;
     if (typeof window.CardEditorView === 'function') {

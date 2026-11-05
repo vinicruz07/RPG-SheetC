@@ -63,6 +63,9 @@ class CompendiumView {
                         <button type="button" id="btn-compendium-new-card" class="btn btn-primary" title="Criar um novo card personalizado">
                             ➕ Novo Card
                         </button>
+                        <button type="button" id="btn-compendium-packs" class="btn btn-accent" title="Explorar e importar Data Packs comunitários com 1 clique">
+                            🌐 Data Packs
+                        </button>
                         <button type="button" id="btn-compendium-import" class="btn" title="Importar arquivo .cardpack JSON">
                             📦 Importar Pacote
                         </button>
@@ -206,6 +209,19 @@ class CompendiumView {
                 if (this.router && typeof this.router.navigate === 'function') {
                     window.cardEditorTargetKey = null;
                     this.router.navigate('editor');
+                }
+            });
+        }
+
+        // Modal de Data Packs Comunitários
+        const btnPacks = document.getElementById('btn-compendium-packs');
+        if (btnPacks) {
+            btnPacks.addEventListener('click', () => {
+                if (window.packManager && typeof window.packManager.openPackModal === 'function') {
+                    window.packManager.openPackModal(() => this.updateCardsList());
+                } else if (typeof window.PackManager === 'function') {
+                    const pm = new window.PackManager(this.engine, this.log);
+                    pm.openPackModal(() => this.updateCardsList());
                 }
             });
         }

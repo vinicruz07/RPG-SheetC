@@ -109,6 +109,9 @@ class SheetView {
                         </div>
 
                         <div class="sheet-header-actions">
+                            <button type="button" id="btn-sheet-community-packs" class="btn btn-accent" title="Explorar e importar Data Packs comunitários com 1 clique">
+                                📦 Data Packs
+                            </button>
                             <button type="button" id="btn-sheet-save" class="btn btn-primary" title="Salvar no Navegador">
                                 💾 Salvar
                             </button>
@@ -569,6 +572,9 @@ class SheetView {
                         <button type="button" id="btn-load-starter-empty" class="btn btn-primary" style="padding: 10px 20px; font-weight: 700;">
                             ✨ Carregar Kit Inicial Padrão
                         </button>
+                        <button type="button" id="btn-load-srd-empty" class="btn btn-accent" style="padding: 10px 20px; font-weight: 700;">
+                            📦 Data Packs (1 Clique)
+                        </button>
                         <button type="button" id="btn-open-compendium-empty" class="btn" style="padding: 10px 20px;">
                             🗂️ Abrir Compêndio de Cards
                         </button>
@@ -718,6 +724,19 @@ class SheetView {
             });
         }
 
+        // Data Packs Comunitários
+        const btnPacks = document.getElementById('btn-sheet-community-packs');
+        if (btnPacks) {
+            btnPacks.addEventListener('click', () => {
+                if (window.packManager && typeof window.packManager.openPackModal === 'function') {
+                    window.packManager.openPackModal(() => this.render());
+                } else if (typeof window.PackManager === 'function') {
+                    const pm = new window.PackManager(this.engine, this.logger);
+                    pm.openPackModal(() => this.render());
+                }
+            });
+        }
+
         // Navegação para Compêndio e Editor
         const btnCompendium = document.getElementById('btn-sheet-open-compendium');
         if (btnCompendium) {
@@ -746,6 +765,18 @@ class SheetView {
         if (btnLoad) {
             btnLoad.addEventListener('click', () => {
                 this.loadStarterDeck();
+            });
+        }
+
+        const btnSrd = document.getElementById('btn-load-srd-empty');
+        if (btnSrd) {
+            btnSrd.addEventListener('click', () => {
+                if (window.packManager && typeof window.packManager.openPackModal === 'function') {
+                    window.packManager.openPackModal(() => this.render());
+                } else if (typeof window.PackManager === 'function') {
+                    const pm = new window.PackManager(this.engine, this.logger);
+                    pm.openPackModal(() => this.render());
+                }
             });
         }
 
