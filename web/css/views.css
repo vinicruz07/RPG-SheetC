@@ -1502,5 +1502,133 @@
     font-size: 0.78rem;
 }
 
+/* =========================================================================
+   Modos de Ficha: In-Game (Jogar) vs Editar (Construir) - Passo 10.3
+   ========================================================================= */
+
+.sheet-top-navigation-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: 10px 16px;
+    margin-bottom: var(--space-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.sheet-mode-switcher {
+    display: flex;
+    background: var(--color-surface-inset);
+    padding: 3px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border-subtle);
+    gap: 4px;
+}
+
+.sheet-mode-switcher .btn {
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 6px 14px;
+    transition: all var(--transition-fast);
+}
+
+.sheet-mode-switcher .btn.active-mode {
+    background: var(--color-gold-primary);
+    color: #11141a;
+    box-shadow: 0 2px 8px rgba(212, 163, 115, 0.4);
+    border-color: var(--color-gold-light);
+}
+
+.sheet-active-status-tag {
+    font-size: 0.85rem;
+    color: var(--color-gold-light);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Modo In-Game: Cartões Compactos e Focados em Ação */
+.sheet-mode-play .sheet-attr-card.sheet-attr-play-card {
+    padding: var(--space-md) var(--space-sm);
+    background: linear-gradient(180deg, var(--color-surface-card) 0%, var(--color-surface-inset) 100%);
+    border-color: rgba(212, 163, 115, 0.25);
+    cursor: default;
+}
+
+.sheet-mode-play .sheet-attr-card.sheet-attr-play-card:hover {
+    border-color: var(--color-gold-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.sheet-mode-play .sheet-attr-mod {
+    font-size: 1.6rem;
+    padding: 6px 16px;
+    border: 1px solid rgba(212, 163, 115, 0.4);
+    background: rgba(212, 163, 115, 0.08);
+    transition: transform 0.15s ease, background 0.15s ease;
+    border-radius: var(--radius-md);
+}
+
+.sheet-mode-play .sheet-attr-mod:hover {
+    transform: scale(1.08);
+    background: rgba(212, 163, 115, 0.22);
+}
+
+.sheet-play-mini-card {
+    border: 1px solid rgba(212, 163, 115, 0.25);
+    background: linear-gradient(145deg, rgba(26, 30, 39, 0.95) 0%, rgba(20, 23, 30, 0.9) 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.sheet-play-mini-card:hover {
+    border-color: var(--color-gold-primary);
+}
+
+.in-game-backpack-details {
+    background: var(--color-surface-inset);
+    border: 1px dashed var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    margin-top: 10px;
+    font-size: 0.85rem;
+}
+
+.in-game-backpack-details summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    user-select: none;
+}
+
+.in-game-backpack-details summary:hover {
+    color: var(--color-gold-light);
+}
+
+.btn-quick-dice {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.82rem;
+    background: var(--color-surface-inset);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 6px 4px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn-quick-dice:hover {
+    border-color: var(--color-gold-primary);
+    color: var(--color-gold-primary);
+    background: rgba(212, 163, 115, 0.1);
+}
+
+
 
 

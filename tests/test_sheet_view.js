@@ -188,6 +188,22 @@ async function runTests() {
     assert.strictEqual(defInitial, 13, `Defesa inicial deve ser 13, obtido: ${defInitial}`);
     console.log(`  [OK] Defesa inicial calculada em C: ${defInitial} (10 base + 3 armadura)`);
 
+    // 3.1. Verificação do Passo 10.3: Modos In-Game e Editar
+    assert.strictEqual(sheetView.sheetMode, 'play', 'Modo inicial deve ser In-Game (play)');
+    assert(sheetView.container.innerHTML.includes('Modo In-Game'), 'Deve conter botão do Modo In-Game');
+    assert(sheetView.container.innerHTML.includes('Modo Editar'), 'Deve conter botão do Modo Editar');
+    // No modo In-Game, controles de edição (como steppers de atributo) não aparecem
+    assert.strictEqual(sheetView.container.querySelectorAll('.btn-attr-minus').length, 0, 'Modo In-Game não deve exibir steppers de atributo');
+    console.log('  [OK] Passo 10.3: Modo In-Game limpo validado (sem steppers de edição acidental)');
+
+    // Alterna para o Modo Editar para construir e equipar a ficha
+    const btnModeEdit = sheetView.container.querySelector('#btn-mode-edit');
+    assert(btnModeEdit, 'Botão #btn-mode-edit deve estar presente no cabeçalho');
+    btnModeEdit.trigger('click');
+    assert.strictEqual(sheetView.sheetMode, 'edit', 'Modo deve ter mudado para Editar (edit)');
+    assert(sheetView.container.querySelectorAll('.btn-attr-minus').length > 0, 'Modo Editar deve exibir steppers de atributo');
+    console.log('  [OK] Passo 10.3: Alternância para Modo Editar acionada com sucesso');
+
     // 4. Critério de Aceite: Equipar Escudo Pesado altera dinamicamente a Defesa via Motor C
     const shieldBefore = engine.getCardByKey('escudo_pesado');
     assert.strictEqual(shieldBefore.equipped, false, 'Escudo deve estar desequipado inicialmente');

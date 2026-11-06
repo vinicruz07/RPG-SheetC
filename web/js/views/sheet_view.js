@@ -13,6 +13,7 @@ class SheetView {
         this.skillFilter = '';
         this.skillFilterOnlyTrained = false;
         this.showingRoster = false; // Controle de exibição da galeria vs ficha ativa
+        this.sheetMode = 'play'; // 'play' (In-Game / Jogar) | 'edit' (Editar / Construir)
 
         // Inscrição reativa para atualizar a ficha sempre que o deck no C for modificado
         if (this.engine && typeof this.engine.onChange === 'function') {
@@ -42,6 +43,16 @@ class SheetView {
      */
     formatMod(mod) {
         return mod >= 0 ? `+${mod}` : `${mod}`;
+    }
+
+    /**
+     * Alterna entre o modo In-Game ('play') e o modo Editar ('edit')
+     */
+    setMode(mode) {
+        if (mode === 'play' || mode === 'edit') {
+            this.sheetMode = mode;
+            this.render();
+        }
     }
 
     /**
@@ -75,76 +86,123 @@ class SheetView {
         const activeSpellsAbilities = this.engine.getAllCards(c => (c.type === CARD_TYPES.SPELL || c.type === CARD_TYPES.ABILITY || c.type === CARD_TYPES.TRAIT) && c.equipped);
         const availableSpellsAbilities = this.engine.getAllCards(c => (c.type === CARD_TYPES.SPELL || c.type === CARD_TYPES.ABILITY || c.type === CARD_TYPES.TRAIT) && !c.equipped);
         const skillCards = this.engine.getAllCards(c => c.type === CARD_TYPES.SKILL);
+        const isPlayMode = this.sheetMode === 'play';
 
         this.container.innerHTML = `
-            <div class="sheet-main-layout">
-                <!-- Barra Superior de Navegação / Retorno à Galeria -->
+            <div class="sheet-main-layout ${isPlayMode ? 'sheet-mode-play' : 'sheet-mode-edit'}">
+                <!-- Barra Superior de Navegação / Modos / Retorno à Galeria -->
                 <div class="sheet-top-navigation-bar">
                     <button type="button" id="btn-sheet-back-to-roster" class="btn btn-secondary" title="Voltar à Galeria de Personagens">
                         ⬅️ Trocar / Ver Todos os Personagens
                     </button>
-                    <span style="font-size: 0.85rem; color: var(--color-gold-light); font-weight: 600;">
-                        ⚔️ Ficha Ativa no Motor C (${name})
+
+                    <div class="sheet-mode-switcher" role="group" aria-label="Modo de Visualização">
+                        <button type="button" id="btn-mode-play" class="btn btn-sm ${isPlayMode ? 'btn-primary active-mode' : 'btn-secondary'}" title="Modo focado em jogar: rolagens rápidas, PV/PM e combate ágil">
+                            🎮 Modo In-Game
+                        </button>
+                        <button type="button" id="btn-mode-edit" class="btn btn-sm ${!isPlayMode ? 'btn-primary active-mode' : 'btn-secondary'}" title="Modo focado em construção: equipar itens, steppers, fórmulas e gerenciar cards">
+                            🛠️ Modo Editar
+                        </button>
+                    </div>
+
+                    <span class="sheet-active-status-tag">
+                        ⚔️ ${name} &bull; <strong style="color: ${isPlayMode ? '#4ade80' : 'var(--color-gold-primary)'};">${isPlayMode ? '🎮 Em Jogo' : '🛠️ Editando'}</strong>
                     </span>
                 </div>
 
                 <!-- Cabeçalho Principal da Ficha -->
-                <section class="card sheet-header-card">
-                    <div class="sheet-header-top">
-                        <div class="sheet-identity-group">
-                            <label class="sheet-field-label">Nome do Personagem (Edição In-Place)</label>
-                            <input type="text" id="sheet-name-input" class="sheet-name-field" value="${name}" maxlength="30" placeholder="Nome do Herói">
-                        </div>
-                        <div class="sheet-badges-group">
-                            <span class="sheet-meta-pill race-pill">🃏 ${cardCount} Cards Ativos</span>
-                            <span class="sheet-meta-pill class-pill">⚔️ ${equippedEquipment.length} Equipados</span>
-                            <span class="sheet-meta-pill system-pill">📜 ${system}</span>
-                        </div>
-                    </div>
-
-                    <div class="sheet-level-xp-row">
-                        <div class="sheet-stepper-control">
-                            <span class="sheet-field-label">Nível</span>
-                            <div class="stepper-box">
-                                <button type="button" id="btn-lvl-down" class="btn-stepper" title="Diminuir Nível">-</button>
-                                <span class="stepper-value" id="sheet-level-val">${level}</span>
-                                <button type="button" id="btn-lvl-up" class="btn-stepper" title="Aumentar Nível">+</button>
+                ${isPlayMode ? `
+                    <section class="card sheet-header-card sheet-header-play">
+                        <div class="sheet-header-top">
+                            <div class="sheet-identity-group">
+                                <h2 style="font-family: var(--font-heading); font-size: 1.6rem; color: var(--color-gold-light); margin: 0; display: flex; align-items: center; gap: 8px;">
+                                    ⚔️ ${name}
+                                </h2>
+                                <div style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 2px;">
+                                    Nível ${level} &bull; ${xp} XP &bull; 📜 ${system}
+                                </div>
+                            </div>
+                            <div class="sheet-badges-group">
+                                <span class="sheet-meta-pill race-pill">🃏 ${cardCount} Cards Ativos</span>
+                                <span class="sheet-meta-pill class-pill">⚔️ ${equippedEquipment.length} Equipados</span>
+                                <button type="button" id="btn-switch-to-edit-quick" class="btn btn-sm" style="font-size: 0.78rem;" title="Mudar para Modo Editar">
+                                    ✏️ Editar Ficha
+                                </button>
                             </div>
                         </div>
 
-                        <div class="sheet-xp-control">
-                            <label class="sheet-field-label" for="sheet-xp-input">Experiência (XP)</label>
-                            <input type="number" id="sheet-xp-input" class="sheet-number-field" value="${xp}" min="0" step="100">
+                        <div class="sheet-level-xp-row" style="justify-content: flex-end;">
+                            <div class="sheet-header-actions">
+                                <button type="button" id="btn-sheet-save" class="btn btn-primary" title="Salvar no Navegador">
+                                    💾 Salvar Ficha
+                                </button>
+                                <button type="button" id="btn-sheet-print-pdf" class="btn" title="Imprimir / Salvar como PDF">
+                                    🖨️ PDF
+                                </button>
+                                <button type="button" id="btn-sheet-open-dice" class="btn btn-accent" title="Abrir Rolador de Dados Rápido">
+                                    🎲 Rolar Dados
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+                ` : `
+                    <section class="card sheet-header-card sheet-header-edit">
+                        <div class="sheet-header-top">
+                            <div class="sheet-identity-group">
+                                <label class="sheet-field-label">Nome do Personagem (Edição In-Place)</label>
+                                <input type="text" id="sheet-name-input" class="sheet-name-field" value="${name}" maxlength="30" placeholder="Nome do Herói">
+                            </div>
+                            <div class="sheet-badges-group">
+                                <span class="sheet-meta-pill race-pill">🃏 ${cardCount} Cards Ativos</span>
+                                <span class="sheet-meta-pill class-pill">⚔️ ${equippedEquipment.length} Equipados</span>
+                                <span class="sheet-meta-pill system-pill">📜 ${system}</span>
+                            </div>
                         </div>
 
-                        <div class="sheet-header-actions">
-                            <button type="button" id="btn-sheet-community-packs" class="btn btn-accent" title="Explorar e importar Data Packs comunitários com 1 clique">
-                                📦 Data Packs
-                            </button>
-                            <button type="button" id="btn-sheet-save" class="btn btn-primary" title="Salvar no Navegador">
-                                💾 Salvar
-                            </button>
-                            <button type="button" id="btn-sheet-export-file" class="btn" title="Exportar Deck (.cardpack JSON)">
-                                📥 Exportar
-                            </button>
-                            <button type="button" id="btn-sheet-import-file" class="btn" title="Importar Pacote (.cardpack JSON)">
-                                📤 Importar
-                            </button>
-                            <button type="button" id="btn-sheet-print-pdf" class="btn" title="Imprimir / Salvar como PDF">
-                                🖨️ PDF
-                            </button>
-                            <button type="button" id="btn-sheet-manage-saved" class="btn" title="Gerenciar Fichas">
-                                📜 Fichas
-                            </button>
-                            <button type="button" id="btn-sheet-open-compendium" class="btn btn-accent" title="Abrir Compêndio e Adicionar Novos Cards">
-                                🗂️ Compêndio
-                            </button>
-                            <button type="button" id="btn-sheet-create-card" class="btn" title="Criar Novo Card Personalizado">
-                                ➕ Criar Card
-                            </button>
+                        <div class="sheet-level-xp-row">
+                            <div class="sheet-stepper-control">
+                                <span class="sheet-field-label">Nível</span>
+                                <div class="stepper-box">
+                                    <button type="button" id="btn-lvl-down" class="btn-stepper" title="Diminuir Nível">-</button>
+                                    <span class="stepper-value" id="sheet-level-val">${level}</span>
+                                    <button type="button" id="btn-lvl-up" class="btn-stepper" title="Aumentar Nível">+</button>
+                                </div>
+                            </div>
+
+                            <div class="sheet-xp-control">
+                                <label class="sheet-field-label" for="sheet-xp-input">Experiência (XP)</label>
+                                <input type="number" id="sheet-xp-input" class="sheet-number-field" value="${xp}" min="0" step="100">
+                            </div>
+
+                            <div class="sheet-header-actions">
+                                <button type="button" id="btn-sheet-community-packs" class="btn btn-accent" title="Explorar e importar Data Packs comunitários com 1 clique">
+                                    📦 Data Packs
+                                </button>
+                                <button type="button" id="btn-sheet-save" class="btn btn-primary" title="Salvar no Navegador">
+                                    💾 Salvar
+                                </button>
+                                <button type="button" id="btn-sheet-export-file" class="btn" title="Exportar Deck (.cardpack JSON)">
+                                    📥 Exportar
+                                </button>
+                                <button type="button" id="btn-sheet-import-file" class="btn" title="Importar Pacote (.cardpack JSON)">
+                                    📤 Importar
+                                </button>
+                                <button type="button" id="btn-sheet-print-pdf" class="btn" title="Imprimir / Salvar como PDF">
+                                    🖨️ PDF
+                                </button>
+                                <button type="button" id="btn-sheet-manage-saved" class="btn" title="Gerenciar Fichas">
+                                    📜 Fichas
+                                </button>
+                                <button type="button" id="btn-sheet-open-compendium" class="btn btn-accent" title="Abrir Compêndio e Adicionar Novos Cards">
+                                    🗂️ Compêndio
+                                </button>
+                                <button type="button" id="btn-sheet-create-card" class="btn" title="Criar Novo Card Personalizado">
+                                    ➕ Criar Card
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                </section>
+                    </section>
+                `}
 
                 <div class="dashboard-grid sheet-grid-columns">
                     <!-- Coluna Principal (Recursos, Stats, Atributos, Equipamentos, Habilidades, Perícias) -->
@@ -229,21 +287,21 @@ class SheetView {
                             ` : ''}
                         </section>
 
-                        <!-- 2. Atributos Básicos com Edição In-Place -->
+                        <!-- 2. Atributos Básicos com Edição In-Place ou Rolagem Direta -->
                         ${attributeCards.length > 0 ? `
                             <section class="card sheet-attributes-card">
                                 <div class="card-header">
                                     <span class="card-title">Atributos Básicos</span>
-                                    <span class="card-subtitle-small">Modifique a base ou clique no modificador para rolar d20</span>
+                                    <span class="card-subtitle-small">${isPlayMode ? 'Clique no modificador para rolar 1d20 no combate' : 'Modifique a base ou clique no modificador para rolar d20'}</span>
                                 </div>
 
-                                <div class="sheet-attributes-grid">
+                                <div class="sheet-attributes-grid ${isPlayMode ? 'sheet-attributes-play' : ''}">
                                     ${attributeCards.map(attr => {
                                         const eff = attr.effective;
                                         const mod = Math.floor((eff - 10) / 2);
                                         const hasBonus = eff !== attr.base;
                                         return `
-                                            <div class="sheet-attr-card" data-attr-key="${attr.key}">
+                                            <div class="sheet-attr-card ${isPlayMode ? 'sheet-attr-play-card' : ''}" data-attr-key="${attr.key}">
                                                 <div class="sheet-attr-header">
                                                     <span class="attr-abbr-tag">${attr.key.toUpperCase()}</span>
                                                     <span class="attr-title-text">${attr.name}</span>
@@ -256,12 +314,18 @@ class SheetView {
                                                      style="cursor: pointer;">
                                                     ${this.formatMod(mod)}
                                                 </div>
-                                                <div class="sheet-attr-input-row">
-                                                    <button type="button" class="btn-attr-stepper btn-attr-minus" data-attr-key="${attr.key}">-</button>
-                                                    <input type="number" class="sheet-attr-val-input" data-attr-key="${attr.key}" value="${attr.base}" min="1" max="40">
-                                                    <button type="button" class="btn-attr-stepper btn-attr-plus" data-attr-key="${attr.key}">+</button>
-                                                </div>
-                                                ${hasBonus ? `
+                                                ${!isPlayMode ? `
+                                                    <div class="sheet-attr-input-row">
+                                                        <button type="button" class="btn-attr-stepper btn-attr-minus" data-attr-key="${attr.key}">-</button>
+                                                        <input type="number" class="sheet-attr-val-input" data-attr-key="${attr.key}" value="${attr.base}" min="1" max="40">
+                                                        <button type="button" class="btn-attr-stepper btn-attr-plus" data-attr-key="${attr.key}">+</button>
+                                                    </div>
+                                                ` : `
+                                                    <span style="font-size: 0.8rem; color: var(--color-text-muted); font-weight: 700;">
+                                                        Valor: <strong style="color: ${hasBonus ? '#4ade80' : 'var(--color-text-main)'}; font-family: var(--font-heading);">${eff}</strong>
+                                                    </span>
+                                                `}
+                                                ${(!isPlayMode && hasBonus) ? `
                                                     <span style="font-size: 0.68rem; color: #4ade80; font-weight: 700;">Efetivo: ${eff}</span>
                                                 ` : ''}
                                             </div>
@@ -275,12 +339,14 @@ class SheetView {
                         <section class="card sheet-equipment-card">
                             <div class="card-header">
                                 <div>
-                                    <span class="card-title">Equipamento & Itens Ativos</span>
-                                    <span class="card-subtitle-small">Itens em uso afetam dinamicamente os valores da ficha</span>
+                                    <span class="card-title">Equipamento & Armas</span>
+                                    <span class="card-subtitle-small">${isPlayMode ? 'Apenas itens em uso (clique em Rolar para atacar ou causar dano)' : 'Itens em uso afetam dinamicamente os valores da ficha'}</span>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-open-compendium-equip" style="font-size: 0.8rem;">
-                                    + Adicionar do Compêndio
-                                </button>
+                                ${!isPlayMode ? `
+                                    <button type="button" class="btn btn-sm btn-open-compendium-equip" style="font-size: 0.8rem;">
+                                        + Adicionar do Compêndio
+                                    </button>
+                                ` : ''}
                             </div>
 
                             <!-- Equipamentos Atualmente Equipados -->
@@ -290,38 +356,52 @@ class SheetView {
                                 </h4>
                                 ${equippedEquipment.length > 0 ? `
                                     <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
-                                        ${equippedEquipment.map(eq => this.renderMiniCard(eq, true)).join('')}
+                                        ${equippedEquipment.map(eq => this.renderMiniCard(eq, true, isPlayMode)).join('')}
                                     </div>
                                 ` : `
                                     <p style="font-size: 0.85rem; color: var(--color-text-dim); margin: 0; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 6px;">
-                                        Nenhum equipamento equipado no momento. Equipe um item do inventário abaixo para aplicar seus bônus.
+                                        Nenhum equipamento equipado no momento. ${isPlayMode ? 'Alterne para o Modo Editar para equipar armas ou armaduras.' : 'Equipe um item do inventário abaixo para aplicar seus bônus.'}
                                     </p>
                                 `}
                             </div>
 
                             <!-- Mochila / Inventário Disponível -->
-                            <div>
-                                <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted); margin-bottom: var(--space-xs);">
-                                    🎒 Mochila / Inventário (${inventoryEquipment.length})
-                                </h4>
-                                ${inventoryEquipment.length > 0 ? `
-                                    <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
-                                        ${inventoryEquipment.map(eq => this.renderMiniCard(eq, false)).join('')}
+                            ${!isPlayMode ? `
+                                <div>
+                                    <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted); margin-bottom: var(--space-xs);">
+                                        🎒 Mochila / Inventário (${inventoryEquipment.length})
+                                    </h4>
+                                    ${inventoryEquipment.length > 0 ? `
+                                        <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
+                                            ${inventoryEquipment.map(eq => this.renderMiniCard(eq, false, false)).join('')}
+                                        </div>
+                                    ` : `
+                                        <p style="font-size: 0.82rem; color: var(--color-text-dim); margin: 0;">
+                                            Mochila vazia. Adicione novos equipamentos no Compêndio ou crie novos cards.
+                                        </p>
+                                    `}
+                                </div>
+                            ` : (inventoryEquipment.length > 0 ? `
+                                <details class="in-game-backpack-details">
+                                    <summary>🎒 Mochila (${inventoryEquipment.length} itens guardados)</summary>
+                                    <div style="padding-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px;">
+                                        ${inventoryEquipment.map(eq => `
+                                            <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
+                                                <span>⚔️ ${eq.name}</span>
+                                                <span style="color: var(--color-text-dim); font-size: 0.75rem;">Guardado</span>
+                                            </div>
+                                        `).join('')}
                                     </div>
-                                ` : `
-                                    <p style="font-size: 0.82rem; color: var(--color-text-dim); margin: 0;">
-                                        Mochila vazia. Adicione novos equipamentos no Compêndio ou crie novos cards.
-                                    </p>
-                                `}
-                            </div>
+                                </details>
+                            ` : '')}
                         </section>
 
                         <!-- 4. Magias, Habilidades & Características -->
                         <section class="card sheet-spells-abilities-card">
                             <div class="card-header">
                                 <div>
-                                    <span class="card-title">Habilidades, Magias & Poderes</span>
-                                    <span class="card-subtitle-small">Cards ativos aplicam bônus ou executam rolagens com custo</span>
+                                    <span class="card-title">Habilidades & Magias</span>
+                                    <span class="card-subtitle-small">${isPlayMode ? 'Poderes ativos em combate (custo debitado automaticamente)' : 'Cards ativos aplicam bônus ou executam rolagens com custo'}</span>
                                 </div>
                             </div>
 
@@ -332,26 +412,44 @@ class SheetView {
                                         ⚡ Ativos / Sustentados (${activeSpellsAbilities.length})
                                     </h4>
                                     <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
-                                        ${activeSpellsAbilities.map(sp => this.renderMiniCard(sp, true)).join('')}
+                                        ${activeSpellsAbilities.map(sp => this.renderMiniCard(sp, true, isPlayMode)).join('')}
                                     </div>
                                 </div>
-                            ` : ''}
+                            ` : (isPlayMode ? `
+                                <p style="font-size: 0.82rem; color: var(--color-text-dim); margin-bottom: var(--space-md);">
+                                    Nenhuma magia ou habilidade ativa no momento.
+                                </p>
+                            ` : '')}
 
                             <!-- Grimório / Habilidades Disponíveis -->
-                            <div>
-                                <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: var(--space-xs);">
-                                    ✨ Grimório e Talentos (${availableSpellsAbilities.length})
-                                </h4>
-                                ${availableSpellsAbilities.length > 0 ? `
-                                    <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
-                                        ${availableSpellsAbilities.map(sp => this.renderMiniCard(sp, false)).join('')}
+                            ${!isPlayMode ? `
+                                <div>
+                                    <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: var(--space-xs);">
+                                        ✨ Grimório e Talentos (${availableSpellsAbilities.length})
+                                    </h4>
+                                    ${availableSpellsAbilities.length > 0 ? `
+                                        <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
+                                            ${availableSpellsAbilities.map(sp => this.renderMiniCard(sp, false, false)).join('')}
+                                        </div>
+                                    ` : `
+                                        <p style="font-size: 0.82rem; color: var(--color-text-dim); margin: 0;">
+                                            Nenhuma magia ou habilidade cadastrada.
+                                        </p>
+                                    `}
+                                </div>
+                            ` : (availableSpellsAbilities.length > 0 ? `
+                                <details class="in-game-backpack-details">
+                                    <summary>✨ Grimório (${availableSpellsAbilities.length} magias/talentos não preparados)</summary>
+                                    <div style="padding-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px;">
+                                        ${availableSpellsAbilities.map(sp => `
+                                            <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
+                                                <span>✨ ${sp.name}</span>
+                                                <span style="color: var(--color-text-dim); font-size: 0.75rem;">Não preparado</span>
+                                            </div>
+                                        `).join('')}
                                     </div>
-                                ` : `
-                                    <p style="font-size: 0.82rem; color: var(--color-text-dim); margin: 0;">
-                                        Nenhuma magia ou habilidade cadastrada.
-                                    </p>
-                                `}
-                            </div>
+                                </details>
+                            ` : '')}
                         </section>
 
                         <!-- 5. Perícias Baseadas em Cards -->
@@ -379,7 +477,7 @@ class SheetView {
                                         </tr>
                                     </thead>
                                     <tbody id="skills-table-body">
-                                        ${this.renderSkillsTableRows(skillCards)}
+                                        ${this.renderSkillsTableRows(skillCards, isPlayMode)}
                                     </tbody>
                                 </table>
                             </div>
@@ -388,19 +486,40 @@ class SheetView {
 
                     <!-- Coluna Lateral (Logs e Testes do Motor C) -->
                     <aside class="sheet-column-side">
-                        <section class="card">
-                            <div class="card-header">
-                                <span class="card-title">Ações Rápidas de Teste</span>
-                            </div>
-                            <div class="action-group">
-                                <button id="btn-test-d20" class="btn btn-primary">🎲 Rolar 1d20</button>
-                                <button id="btn-test-complex" class="btn">🎲 Rolar 3d6+5</button>
-                                <button id="btn-dump-json" class="btn">📄 Visualizar JSON do C</button>
-                                <button id="btn-reload-starter" class="btn" title="Carrega um kit inicial com atributos, equipamentos e perícias">
-                                    ✨ Kit Inicial
-                                </button>
-                            </div>
-                        </section>
+                        ${isPlayMode ? `
+                            <section class="card">
+                                <div class="card-header">
+                                    <span class="card-title">🎲 Rolagem Rápida de Dados</span>
+                                </div>
+                                <div class="action-group" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                                    <button class="btn btn-sm btn-quick-dice" data-d="4">1d4</button>
+                                    <button class="btn btn-sm btn-quick-dice" data-d="6">1d6</button>
+                                    <button class="btn btn-sm btn-quick-dice" data-d="8">1d8</button>
+                                    <button class="btn btn-sm btn-quick-dice" data-d="10">1d10</button>
+                                    <button class="btn btn-sm btn-quick-dice" data-d="12">1d12</button>
+                                    <button class="btn btn-sm btn-quick-dice" data-d="100">1d100</button>
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <button id="btn-test-d20" class="btn btn-primary" style="width: 100%; font-weight: 800;">
+                                        🎲 Rolar 1d20 Puro
+                                    </button>
+                                </div>
+                            </section>
+                        ` : `
+                            <section class="card">
+                                <div class="card-header">
+                                    <span class="card-title">Ações Rápidas de Teste</span>
+                                </div>
+                                <div class="action-group">
+                                    <button id="btn-test-d20" class="btn btn-primary">🎲 Rolar 1d20</button>
+                                    <button id="btn-test-complex" class="btn">🎲 Rolar 3d6+5</button>
+                                    <button id="btn-dump-json" class="btn">📄 Visualizar JSON do C</button>
+                                    <button id="btn-reload-starter" class="btn" title="Carrega um kit inicial com atributos, equipamentos e perícias">
+                                        ✨ Kit Inicial
+                                    </button>
+                                </div>
+                            </section>
+                        `}
 
                         <section class="card">
                             <div class="card-header">
@@ -422,7 +541,7 @@ class SheetView {
     /**
      * Renderiza o HTML de um mini card para as listas de equipamento/magia/habilidade
      */
-    renderMiniCard(card, isEquippedSection) {
+    renderMiniCard(card, isEquippedSection, isPlayMode = false) {
         const CARD_TYPES = (typeof window !== 'undefined' && window.CARD_TYPES) ? window.CARD_TYPES : {
             ATTRIBUTE: 0, RESOURCE: 1, STAT: 2, SKILL: 3, ABILITY: 4, EQUIPMENT: 5, SPELL: 6, TRAIT: 7
         };
@@ -450,7 +569,7 @@ class SheetView {
         ` : '';
 
         return `
-            <div class="rpg-card sheet-mini-card ${card.equipped ? 'is-equipped' : ''}" data-card-key="${card.key}" style="min-height: 120px;">
+            <div class="rpg-card sheet-mini-card ${isPlayMode ? 'sheet-play-mini-card' : ''} ${card.equipped ? 'is-equipped' : ''}" data-card-key="${card.key}" style="min-height: 110px;">
                 <div class="rpg-card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <span style="font-size: 1.1rem;">${icon}</span>
@@ -470,24 +589,26 @@ class SheetView {
 
                 <div class="sheet-mini-card-actions" style="display: flex; justify-content: flex-end; gap: 6px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px;">
                     ${card.formula ? `
-                        <button type="button" class="btn btn-sm btn-roll-card" data-card-key="${card.key}" data-card-name="${card.name}" title="Rolar fórmula">
-                            🎲 Rolar
+                        <button type="button" class="btn btn-sm btn-roll-card ${isPlayMode ? 'btn-primary' : ''}" data-card-key="${card.key}" data-card-name="${card.name}" title="Rolar fórmula ou ação" style="${isPlayMode ? 'font-weight: 800; padding: 4px 12px;' : ''}">
+                            🎲 ${isPlayMode ? 'Rolar / Usar' : 'Rolar'}
                         </button>
                     ` : ''}
 
-                    ${isEquippedSection ? `
-                        <button type="button" class="btn btn-sm btn-unequip-card" data-card-key="${card.key}" style="color: #f87171; border-color: rgba(239, 68, 68, 0.4);" title="Desequipar este item e recalcular">
-                            ❌ Desequipar
-                        </button>
-                    ` : `
-                        <button type="button" class="btn btn-sm btn-primary btn-equip-card" data-card-key="${card.key}" title="Equipar este item e aplicar bônus no motor C">
-                            ⚔️ Equipar
-                        </button>
-                    `}
+                    ${!isPlayMode ? `
+                        ${isEquippedSection ? `
+                            <button type="button" class="btn btn-sm btn-unequip-card" data-card-key="${card.key}" style="color: #f87171; border-color: rgba(239, 68, 68, 0.4);" title="Desequipar este item e recalcular">
+                                ❌ Desequipar
+                            </button>
+                        ` : `
+                            <button type="button" class="btn btn-sm btn-primary btn-equip-card" data-card-key="${card.key}" title="Equipar este item e aplicar bônus no motor C">
+                                ⚔️ Equipar
+                            </button>
+                        `}
 
-                    <button type="button" class="btn btn-sm btn-remove-card" data-card-key="${card.key}" title="Excluir card da ficha" style="color: var(--color-text-dim);">
-                        🗑️
-                    </button>
+                        <button type="button" class="btn btn-sm btn-remove-card" data-card-key="${card.key}" title="Excluir card da ficha" style="color: var(--color-text-dim);">
+                            🗑️
+                        </button>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -496,7 +617,7 @@ class SheetView {
     /**
      * Renderiza as linhas da tabela de perícias
      */
-    renderSkillsTableRows(skillCards) {
+    renderSkillsTableRows(skillCards, isPlayMode = false) {
         const search = (this.skillFilter || '').toLowerCase().trim();
         const onlyTrained = this.skillFilterOnlyTrained;
 
@@ -527,7 +648,11 @@ class SheetView {
             return `
                 <tr class="skill-row ${s.trained ? 'skill-trained' : ''}" data-skill-key="${s.key}">
                     <td class="td-train">
-                        <input type="checkbox" class="skill-trained-checkbox" data-skill-key="${s.key}" ${s.trained ? 'checked' : ''} title="Marcar/Desmarcar Treinada (+2 no motor C)">
+                        ${isPlayMode ? `
+                            ${s.trained ? '<span title="Treinada (+2)" style="color: #4ade80; font-size: 1.1rem;">⭐</span>' : '<span style="color: var(--color-text-dim);">—</span>'}
+                        ` : `
+                            <input type="checkbox" class="skill-trained-checkbox" data-skill-key="${s.key}" ${s.trained ? 'checked' : ''} title="Marcar/Desmarcar Treinada (+2 no motor C)">
+                        `}
                     </td>
                     <td class="td-name">
                         <strong>${s.name}</strong>
@@ -633,6 +758,33 @@ class SheetView {
      * Configura ouvintes de cabeçalho
      */
     setupHeaderEventListeners() {
+        // Alternador de Modos (In-Game vs Editar)
+        const btnModePlay = document.getElementById('btn-mode-play');
+        if (btnModePlay) {
+            btnModePlay.addEventListener('click', () => this.setMode('play'));
+        }
+
+        const btnModeEdit = document.getElementById('btn-mode-edit');
+        if (btnModeEdit) {
+            btnModeEdit.addEventListener('click', () => this.setMode('edit'));
+        }
+
+        const btnQuickEdit = document.getElementById('btn-switch-to-edit-quick');
+        if (btnQuickEdit) {
+            btnQuickEdit.addEventListener('click', () => this.setMode('edit'));
+        }
+
+        const btnOpenDice = document.getElementById('btn-sheet-open-dice');
+        if (btnOpenDice) {
+            btnOpenDice.addEventListener('click', () => {
+                if (window.diceRoller && typeof window.diceRoller.openDrawer === 'function') {
+                    window.diceRoller.openDrawer();
+                } else if (this.router && typeof this.router.navigate === 'function') {
+                    this.router.navigate('dice');
+                }
+            });
+        }
+
         // Voltar à Galeria de Personagens
         const btnBackRoster = document.getElementById('btn-sheet-back-to-roster');
         if (btnBackRoster) {
@@ -1047,6 +1199,7 @@ class SheetView {
         });
 
         // Filtros de Perícias
+        const isPlayMode = this.sheetMode === 'play';
         const searchInput = document.getElementById('skills-search-input');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
@@ -1055,7 +1208,7 @@ class SheetView {
                 if (tbody) {
                     const CARD_TYPES = (typeof window !== 'undefined' && window.CARD_TYPES) ? window.CARD_TYPES : { SKILL: 3 };
                     const skills = this.engine.getAllCards(c => c.type === CARD_TYPES.SKILL);
-                    tbody.innerHTML = this.renderSkillsTableRows(skills);
+                    tbody.innerHTML = this.renderSkillsTableRows(skills, isPlayMode);
                     this.setupSkillTableEvents(tbody);
                 }
             });
@@ -1069,11 +1222,25 @@ class SheetView {
                 if (tbody) {
                     const CARD_TYPES = (typeof window !== 'undefined' && window.CARD_TYPES) ? window.CARD_TYPES : { SKILL: 3 };
                     const skills = this.engine.getAllCards(c => c.type === CARD_TYPES.SKILL);
-                    tbody.innerHTML = this.renderSkillsTableRows(skills);
+                    tbody.innerHTML = this.renderSkillsTableRows(skills, isPlayMode);
                     this.setupSkillTableEvents(tbody);
                 }
             });
         }
+
+        // Dados Rápidos no Modo In-Game
+        this.container.querySelectorAll('.btn-quick-dice').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const sides = parseInt(btn.dataset.d, 10) || 6;
+                if (window.diceRoller) {
+                    window.diceRoller.roll(1, sides, 0, `Rolagem Rápida: 1d${sides}`);
+                    window.diceRoller.openDrawer();
+                } else {
+                    const res = this.engine.rollDice(1, sides, 0);
+                    this.logger(`[C Dice Engine] Rolagem 1d${sides}: Resultado = ${res.total}`, 'info');
+                }
+            });
+        });
 
         // 6. Testes Rápidos e Kit Inicial
         const btnTestD20 = document.getElementById('btn-test-d20');
