@@ -15,6 +15,12 @@ class SheetView {
         this.showingRoster = false; // Controle de exibição da galeria vs ficha ativa
         this.sheetMode = 'play'; // 'play' (In-Game / Jogar) | 'edit' (Editar / Construir)
 
+        // Estado do Modal de Busca e Adição de Cards à Ficha (Mochila / Grimório)
+        this.pickerTargetMode = 'equipment'; // 'equipment' ou 'spells'
+        this.pickerSearchQuery = '';
+        this.pickerCategoryFilter = null;
+        this.pickerSelectedPackId = 'all';
+
         // Inscrição reativa para atualizar a ficha sempre que o deck no C for modificado
         if (this.engine && typeof this.engine.onChange === 'function') {
             this.engine.onChange((reason) => {
@@ -343,8 +349,8 @@ class SheetView {
                                     <span class="card-subtitle-small">${isPlayMode ? 'Apenas itens em uso (clique em Rolar para atacar ou causar dano)' : 'Itens em uso afetam dinamicamente os valores da ficha'}</span>
                                 </div>
                                 ${!isPlayMode ? `
-                                    <button type="button" class="btn btn-sm btn-open-compendium-equip" style="font-size: 0.8rem;">
-                                        + Adicionar do Compêndio
+                                    <button type="button" id="btn-add-item-modal" class="btn btn-sm btn-primary" title="Buscar e adicionar item/equipamento do CardPack à mochila" style="font-size: 0.8rem; font-weight: 700;">
+                                        ➕ Adicionar Item / Equipamento
                                     </button>
                                 ` : ''}
                             </div>
@@ -376,9 +382,14 @@ class SheetView {
                                             ${inventoryEquipment.map(eq => this.renderMiniCard(eq, false, false)).join('')}
                                         </div>
                                     ` : `
-                                        <p style="font-size: 0.82rem; color: var(--color-text-dim); margin: 0;">
-                                            Mochila vazia. Adicione novos equipamentos no Compêndio ou crie novos cards.
-                                        </p>
+                                        <div class="sheet-empty-backpack-box" style="padding: 16px; text-align: center; background: rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.12); border-radius: 8px;">
+                                            <p style="font-size: 0.85rem; color: var(--color-text-dim); margin: 0 0 10px 0;">
+                                                Mochila vazia. Adicione armas, armaduras ou itens para equipar ou guardar.
+                                            </p>
+                                            <button type="button" class="btn btn-sm btn-secondary btn-trigger-add-item" style="font-weight: 600;">
+                                                ➕ Adicionar Item à Mochila
+                                            </button>
+                                        </div>
                                     `}
                                 </div>
                             ` : (inventoryEquipment.length > 0 ? `
@@ -403,6 +414,11 @@ class SheetView {
                                     <span class="card-title">Habilidades & Magias</span>
                                     <span class="card-subtitle-small">${isPlayMode ? 'Poderes ativos em combate (custo debitado automaticamente)' : 'Cards ativos aplicam bônus ou executam rolagens com custo'}</span>
                                 </div>
+                                ${!isPlayMode ? `
+                                    <button type="button" id="btn-add-spell-modal" class="btn btn-sm btn-accent" title="Buscar e adicionar magia ou poder do CardPack ao grimório" style="font-size: 0.8rem; font-weight: 700;">
+                                        ➕ Adicionar Magia / Poder
+                                    </button>
+                                ` : ''}
                             </div>
 
                             <!-- Cards de Habilidade / Magia Ativos / Sustentados -->
@@ -432,9 +448,14 @@ class SheetView {
                                             ${availableSpellsAbilities.map(sp => this.renderMiniCard(sp, false, false)).join('')}
                                         </div>
                                     ` : `
-                                        <p style="font-size: 0.82rem; color: var(--color-text-dim); margin: 0;">
-                                            Nenhuma magia ou habilidade cadastrada.
-                                        </p>
+                                        <div class="sheet-empty-spells-box" style="padding: 16px; text-align: center; background: rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.12); border-radius: 8px;">
+                                            <p style="font-size: 0.85rem; color: var(--color-text-dim); margin: 0 0 10px 0;">
+                                                Nenhuma magia ou talento cadastrado no seu grimório.
+                                            </p>
+                                            <button type="button" class="btn btn-sm btn-secondary btn-trigger-add-spell" style="font-weight: 600;">
+                                                ➕ Adicionar Magia ao Grimório
+                                            </button>
+                                        </div>
                                     `}
                                 </div>
                             ` : (availableSpellsAbilities.length > 0 ? `
@@ -531,6 +552,9 @@ class SheetView {
                         </section>
                     </aside>
                 </div>
+
+                <!-- Modal de Busca e Adição de Cards à Ficha (Mochila / Grimório) -->
+                ${!isPlayMode ? this.renderCardPickerModal() : ''}
             </div>
         `;
 
@@ -1299,6 +1323,25 @@ class SheetView {
                 }
             });
         }
+
+        // Ouvintes do Modal de Busca e Adição de Cards à Ficha (Mochila / Grimório)
+        const btnAddItem = document.getElementById('btn-add-item-modal');
+        if (btnAddItem) {
+            btnAddItem.addEventListener('click', () => this.openCardPicker('equipment'));
+        }
+        this.container.querySelectorAll('.btn-trigger-add-item').forEach(btn => {
+            btn.addEventListener('click', () => this.openCardPicker('equipment'));
+        });
+
+        const btnAddSpell = document.getElementById('btn-add-spell-modal');
+        if (btnAddSpell) {
+            btnAddSpell.addEventListener('click', () => this.openCardPicker('spells'));
+        }
+        this.container.querySelectorAll('.btn-trigger-add-spell').forEach(btn => {
+            btn.addEventListener('click', () => this.openCardPicker('spells'));
+        });
+
+        this.setupCardPickerListeners();
     }
 
     /**
@@ -1478,6 +1521,449 @@ class SheetView {
         this.logger('[C Deck] Kit Inicial carregado com sucesso na memória C!', 'success');
         this.showingRoster = false;
         this.render();
+    }
+
+    /* =========================================================================
+     * Modal de Busca e Adição de Cards à Ficha (Mochila / Grimório) - Passo 11.2
+     * ========================================================================= */
+
+    renderCardPickerModal() {
+        return `
+            <div id="modal-sheet-add-card-overlay" class="sheet-card-picker-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 16px;">
+                <div class="card sheet-card-picker-modal" style="max-width: 760px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; background: var(--color-surface-card); border: 1px solid var(--color-border-subtle); box-shadow: var(--shadow-lg); border-radius: var(--radius-lg); overflow: hidden;">
+                    <!-- Modal Header -->
+                    <div class="sheet-picker-header" style="padding: 16px 20px; border-bottom: 1px solid var(--color-border-subtle); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2);">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span id="sheet-picker-icon" style="font-size: 1.4rem;">🎒</span>
+                            <div>
+                                <h3 id="sheet-picker-title" style="margin: 0; font-family: var(--font-heading); color: var(--color-gold-primary); font-size: 1.15rem;">
+                                    Adicionar Equipamento / Item à Mochila
+                                </h3>
+                                <p id="sheet-picker-subtitle" style="margin: 2px 0 0 0; font-size: 0.78rem; color: var(--color-text-muted);">
+                                    Selecione cards do compêndio para adicionar à sua posse e equipar quando quiser.
+                                </p>
+                            </div>
+                        </div>
+                        <button type="button" id="btn-close-sheet-picker" class="btn btn-sm" style="font-size: 1.1rem; padding: 4px 10px;" title="Fechar">✕</button>
+                    </div>
+
+                    <!-- Toolbar: Busca e Filtros -->
+                    <div class="sheet-picker-toolbar" style="padding: 12px 20px; background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--color-border-subtle); display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="text" id="input-sheet-picker-search" class="search-input" placeholder="🔍 Digite para buscar por nome, bônus ou fórmula..." style="flex: 1; padding: 8px 14px; font-size: 0.88rem;">
+                            <select id="select-sheet-picker-source" class="filter-select" style="max-width: 220px; font-size: 0.82rem; padding: 8px 12px;">
+                                <option value="all">📦 Todos os CardPacks</option>
+                            </select>
+                        </div>
+                        <div id="sheet-picker-category-filters" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <!-- Categorias dinâmicas -->
+                        </div>
+                    </div>
+
+                    <!-- Lista de Cards Disponíveis -->
+                    <div id="sheet-picker-results-container" style="flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="text-align: center; color: var(--color-text-dim); padding: 30px;">
+                            Carregando compêndio...
+                        </div>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="sheet-picker-footer" style="padding: 12px 20px; border-top: 1px solid var(--color-border-subtle); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2);">
+                        <span id="sheet-picker-count-label" style="font-size: 0.8rem; color: var(--color-text-muted);">
+                            0 cards encontrados
+                        </span>
+                        <button type="button" id="btn-done-sheet-picker" class="btn btn-primary btn-sm" style="padding: 6px 18px; font-weight: 700;">
+                            Concluir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    openCardPicker(targetMode = 'equipment') {
+        this.pickerTargetMode = targetMode;
+        this.pickerSearchQuery = '';
+        this.pickerCategoryFilter = null;
+
+        const overlay = document.getElementById('modal-sheet-add-card-overlay');
+        if (!overlay) return;
+
+        overlay.style.display = 'flex';
+
+        // Atualiza textos do cabeçalho
+        const iconEl = document.getElementById('sheet-picker-icon');
+        const titleEl = document.getElementById('sheet-picker-title');
+        const subtitleEl = document.getElementById('sheet-picker-subtitle');
+
+        if (targetMode === 'equipment') {
+            if (iconEl) iconEl.textContent = '🎒';
+            if (titleEl) titleEl.textContent = 'Adicionar Equipamento / Item à Mochila';
+            if (subtitleEl) subtitleEl.textContent = 'Escolha armas, armaduras, escudos e itens do seu CardPack para guardar ou equipar.';
+        } else {
+            if (iconEl) iconEl.textContent = '✨';
+            if (titleEl) titleEl.textContent = 'Adicionar Magia ou Poder ao Grimório';
+            if (subtitleEl) subtitleEl.textContent = 'Escolha magias arcanas, divinas ou habilidades para incorporar ao seu grimório.';
+        }
+
+        // Popula select de CardPacks
+        this.populatePickerSources();
+
+        // Popula botões de filtros rápidos de categoria
+        this.renderPickerCategoryFilters();
+
+        // Atualiza lista de cards
+        this.updateCardPickerResults();
+
+        // Foca no input de busca
+        const searchInput = document.getElementById('input-sheet-picker-search');
+        if (searchInput) {
+            searchInput.value = '';
+            if (typeof searchInput.focus === 'function') {
+                searchInput.focus();
+            }
+        }
+    }
+
+    closeCardPicker() {
+        const overlay = document.getElementById('modal-sheet-add-card-overlay');
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
+        this.render();
+    }
+
+    populatePickerSources() {
+        const select = document.getElementById('select-sheet-picker-source');
+        if (!select) return;
+
+        let packs = [];
+        if (window.compendiumView && typeof window.compendiumView.getInstalledPacks === 'function') {
+            packs = window.compendiumView.getInstalledPacks();
+        } else if (typeof localStorage !== 'undefined') {
+            try {
+                const raw = localStorage.getItem('compendium_packs_v2');
+                if (raw) packs = JSON.parse(raw);
+            } catch (e) {}
+        }
+
+        select.innerHTML = `<option value="all">📦 Todos os CardPacks (${packs.length || 1})</option>`;
+        packs.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `📜 ${p.name} (${p.cards ? p.cards.length : 0})`;
+            if (this.pickerSelectedPackId === p.id) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+
+    renderPickerCategoryFilters() {
+        const container = document.getElementById('sheet-picker-category-filters');
+        if (!container) return;
+
+        let categories = [];
+        if (this.pickerTargetMode === 'equipment') {
+            categories = [
+                { id: null, label: 'Todos os Itens' },
+                { id: 'weapons', label: '⚔️ Armas & Ataques' },
+                { id: 'armors', label: '🛡️ Armaduras & Escudos' },
+                { id: 'items', label: '🧪 Itens & Consumíveis' }
+            ];
+        } else {
+            categories = [
+                { id: null, label: 'Todos os Poderes' },
+                { id: 6, label: '✨ Magias' },
+                { id: 4, label: '⚡ Habilidades & Ações' },
+                { id: 7, label: '🌟 Talentos & Passivas' }
+            ];
+        }
+
+        container.innerHTML = categories.map(cat => {
+            const isActive = this.pickerCategoryFilter === cat.id;
+            return `
+                <button type="button" class="sheet-picker-category-pill ${isActive ? 'active' : ''}" data-cat-id="${cat.id === null ? '' : cat.id}">
+                    ${cat.label}
+                </button>
+            `;
+        }).join('');
+
+        container.querySelectorAll('.sheet-picker-category-pill').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const catId = btn.dataset.catId;
+                this.pickerCategoryFilter = catId === '' ? null : (isNaN(Number(catId)) ? catId : Number(catId));
+                this.renderPickerCategoryFilters();
+                this.updateCardPickerResults();
+            });
+        });
+    }
+
+    getAvailableCompendiumCards() {
+        let packs = [];
+        if (window.compendiumView && typeof window.compendiumView.getInstalledPacks === 'function') {
+            packs = window.compendiumView.getInstalledPacks();
+        } else if (typeof localStorage !== 'undefined') {
+            try {
+                const raw = localStorage.getItem('compendium_packs_v2');
+                if (raw) packs = JSON.parse(raw);
+            } catch (e) {}
+        }
+
+        let allCards = [];
+        if (packs && packs.length > 0) {
+            if (this.pickerSelectedPackId && this.pickerSelectedPackId !== 'all') {
+                const p = packs.find(pk => pk.id === this.pickerSelectedPackId);
+                if (p && Array.isArray(p.cards)) {
+                    allCards = [...p.cards];
+                }
+            } else {
+                packs.forEach(p => {
+                    if (Array.isArray(p.cards)) {
+                        allCards.push(...p.cards);
+                    }
+                });
+            }
+        }
+
+        // Se a lista estiver vazia (nenhum cardpack salvo no compêndio ainda), usa os cards do catálogo padrão
+        if (allCards.length === 0) {
+            allCards = this.getDefaultFallbackCards();
+        }
+
+        // Deduplica cards pela chave
+        const seen = new Set();
+        return allCards.filter(c => {
+            if (!c || !c.key) return false;
+            if (seen.has(c.key)) return false;
+            seen.add(c.key);
+            return true;
+        });
+    }
+
+    getDefaultFallbackCards() {
+        const CARD_TYPES = (typeof window !== 'undefined' && window.CARD_TYPES) ? window.CARD_TYPES : {
+            ATTRIBUTE: 0, RESOURCE: 1, STAT: 2, SKILL: 3, ABILITY: 4, EQUIPMENT: 5, SPELL: 6, TRAIT: 7
+        };
+        return [
+            // Armas & Equipamentos
+            { key: 'espada_longa', name: 'Espada Longa', type: CARD_TYPES.EQUIPMENT, desc: 'Lâmina versátil e equilibrada de aço forjado.', formula: '1d8 + (@for - 10) / 2' },
+            { key: 'machado_batalha', name: 'Machado de Batalha', type: CARD_TYPES.EQUIPMENT, desc: 'Arma pesada de corte com grande poder de impacto.', formula: '1d10 + (@for - 10) / 2' },
+            { key: 'adaga_furtiva', name: 'Adaga Furtiva', type: CARD_TYPES.EQUIPMENT, desc: 'Lâmina leve perfeita para ataques precisos e furtivos.', formula: '1d4 + (@des - 10) / 2' },
+            { key: 'arco_longo', name: 'Arco Longo', type: CARD_TYPES.EQUIPMENT, desc: 'Arma de disparo à distância com excelente alcance.', formula: '1d8 + (@des - 10) / 2' },
+            { key: 'armadura_couro', name: 'Armadura de Couro', type: CARD_TYPES.EQUIPMENT, desc: 'Proteção flexível feita de couro curtido (+3 Defesa).', modifiers: [{ target_key: 'defesa', value: 3 }] },
+            { key: 'cota_malha', name: 'Cota de Malha Élfica', type: CARD_TYPES.EQUIPMENT, desc: 'Armadura articulada de anéis metálicos (+6 Defesa).', modifiers: [{ target_key: 'defesa', value: 6 }] },
+            { key: 'escudo_pesado', name: 'Escudo Pesado', type: CARD_TYPES.EQUIPMENT, desc: 'Grande escudo reforçado com aço (+2 Defesa).', modifiers: [{ target_key: 'defesa', value: 2 }] },
+            { key: 'pocao_cura', name: 'Poção de Cura Menor', type: CARD_TYPES.EQUIPMENT, desc: 'Elixir revitalizante que restaura vida instantaneamente.', formula: '2d4 + 2' },
+            // Magias & Habilidades
+            { key: 'bola_fogo', name: 'Bola de Fogo Arcana', type: CARD_TYPES.SPELL, desc: 'Explosão incandescente que consome mana e queima inimigos.', cost_resource: 'pm', cost_value: 3, formula: '(@int - 10) / 2 + 20' },
+            { key: 'escudo_da_fe', name: 'Escudo da Fé', type: CARD_TYPES.SPELL, desc: 'Barreira divina de força mágica que concede +2 na Defesa.', cost_resource: 'pm', cost_value: 1, modifiers: [{ target_key: 'defesa', value: 2 }] },
+            { key: 'curar_ferimentos', name: 'Curar Ferimentos', type: CARD_TYPES.SPELL, desc: 'Canalização de energia positiva restaurando PV de aliados.', cost_resource: 'pm', cost_value: 1, formula: '2d8 + 2' },
+            { key: 'furia_barbara', name: 'Fúria Bárbara', type: CARD_TYPES.ABILITY, desc: 'Ira primal que aumenta a Força do combatente (+4 FOR).', cost_resource: 'pm', cost_value: 2, modifiers: [{ target_key: 'for', value: 4 }] },
+            { key: 'ataque_poderoso', name: 'Ataque Poderoso', type: CARD_TYPES.ABILITY, desc: 'Investida com peso corporal sacrificando precisão por dano massivo.', cost_resource: 'pm', cost_value: 1, formula: '2d8 + 4' },
+            { key: 'inspirar_coragem', name: 'Inspirar Coragem', type: CARD_TYPES.ABILITY, desc: 'Palavras de alento e canções heroicas elevando a moral.', cost_resource: 'pm', cost_value: 1 }
+        ];
+    }
+
+    updateCardPickerResults() {
+        const container = document.getElementById('sheet-picker-results-container');
+        const countLabel = document.getElementById('sheet-picker-count-label');
+        if (!container) return;
+
+        const CARD_TYPES = (typeof window !== 'undefined' && window.CARD_TYPES) ? window.CARD_TYPES : {
+            ATTRIBUTE: 0, RESOURCE: 1, STAT: 2, SKILL: 3, ABILITY: 4, EQUIPMENT: 5, SPELL: 6, TRAIT: 7
+        };
+
+        const allCards = this.getAvailableCompendiumCards();
+        const search = (this.pickerSearchQuery || '').toLowerCase().trim();
+
+        const filtered = allCards.filter(card => {
+            if (!card || !card.name) return false;
+
+            // Filtro por Target Mode (equipment vs spells)
+            if (this.pickerTargetMode === 'equipment') {
+                if (card.type !== CARD_TYPES.EQUIPMENT) return false;
+                if (this.pickerCategoryFilter === 'weapons') {
+                    const isWeapon = card.formula || (card.name && /espada|machado|adaga|arco|martelo|lança|adaga|clava|katana|pistola|mosquete/i.test(card.name));
+                    if (!isWeapon) return false;
+                } else if (this.pickerCategoryFilter === 'armors') {
+                    const hasDef = (card.modifiers || card.mods || []).some(m => (m.target_key || m.target) === 'defesa') || /escudo|couro|malha|armadura|brunea|placas/i.test(card.name);
+                    if (!hasDef) return false;
+                } else if (this.pickerCategoryFilter === 'items') {
+                    const isOther = !(card.formula) && !((card.modifiers || card.mods || []).some(m => (m.target_key || m.target) === 'defesa'));
+                    if (!isOther) return false;
+                }
+            } else {
+                // Modo spells/habilidades
+                const isSpellLike = (card.type === CARD_TYPES.SPELL || card.type === CARD_TYPES.ABILITY || card.type === CARD_TYPES.TRAIT);
+                if (!isSpellLike) return false;
+                if (this.pickerCategoryFilter !== null && card.type !== this.pickerCategoryFilter) return false;
+            }
+
+            // Filtro por texto de busca
+            if (search) {
+                const matchName = card.name.toLowerCase().includes(search);
+                const matchDesc = (card.desc || '').toLowerCase().includes(search);
+                const matchKey = (card.key || '').toLowerCase().includes(search);
+                const matchFormula = (card.formula || '').toLowerCase().includes(search);
+                if (!matchName && !matchDesc && !matchKey && !matchFormula) return false;
+            }
+
+            return true;
+        });
+
+        if (countLabel) {
+            countLabel.textContent = `${filtered.length} card(s) disponível(is)`;
+        }
+
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; color: var(--color-text-dim); padding: 36px 16px;">
+                    <div style="font-size: 2rem; margin-bottom: 8px;">🔍</div>
+                    <p style="margin: 0; font-size: 0.9rem;">Nenhum card encontrado correspondente à busca.</p>
+                    <p style="margin: 4px 0 0 0; font-size: 0.78rem;">Tente pesquisar por outros termos ou verifique se o CardPack foi carregado no Compêndio.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = filtered.map(card => {
+            const inDeck = this.engine && this.engine.getCardByKey(card.key) !== null;
+            const isEquip = card.type === CARD_TYPES.EQUIPMENT;
+            const icon = card.type === CARD_TYPES.EQUIPMENT ? '⚔️' : (card.type === CARD_TYPES.SPELL ? '✨' : '⚡');
+            
+            // Badges formatadas
+            const mods = card.modifiers || card.mods || [];
+            const modsHtml = mods.map(m => `
+                <span class="card-mod-badge" style="background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 0.72rem; padding: 2px 6px; border-radius: 4px;">
+                    ${this.formatMod(m.value || m.val)} ${(m.target_key || m.target || '').toUpperCase()}
+                </span>
+            `).join(' ');
+
+            const costHtml = (card.cost_resource || card.cost_res) ? `
+                <span style="font-size: 0.72rem; color: #a78bfa; background: rgba(167, 139, 250, 0.15); border: 1px solid rgba(167, 139, 250, 0.3); padding: 2px 6px; border-radius: 4px;">
+                    ⚡ ${card.cost_value || card.cost_val || 0} ${(card.cost_resource || card.cost_res).toUpperCase()}
+                </span>
+            ` : '';
+
+            const formulaHtml = card.formula ? `
+                <span style="font-size: 0.72rem; color: #67e8f9; background: rgba(103, 232, 249, 0.15); border: 1px solid rgba(103, 232, 249, 0.3); padding: 2px 6px; border-radius: 4px;">
+                    🎲 ${card.formula}
+                </span>
+            ` : '';
+
+            return `
+                <div class="sheet-picker-item-row" data-card-key="${card.key}">
+                    <div class="sheet-picker-item-info">
+                        <div class="sheet-picker-item-title">
+                            <span>${icon}</span>
+                            <span>${card.name}</span>
+                            ${inDeck ? `
+                                <span style="font-size: 0.7rem; color: #4ade80; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); padding: 2px 6px; border-radius: 4px; font-weight: 600;">
+                                    ✓ Já na Ficha
+                                </span>
+                            ` : ''}
+                        </div>
+                        <div class="sheet-picker-item-desc">
+                            ${card.desc || 'Sem descrição.'}
+                        </div>
+                        <div style="display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap;">
+                            ${costHtml}
+                            ${formulaHtml}
+                            ${modsHtml}
+                        </div>
+                    </div>
+                    <div class="sheet-picker-item-action">
+                        <button type="button" class="btn btn-sm ${inDeck ? 'btn-secondary' : 'btn-primary'} btn-picker-add-card" data-card-key="${card.key}" style="font-weight: 700; padding: 6px 14px; white-space: nowrap;">
+                            ${inDeck ? '➕ Adicionar Outro' : (isEquip ? '➕ Adicionar à Mochila' : '➕ Adicionar ao Grimório')}
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Conecta ouvintes dos botões de adicionar
+        container.querySelectorAll('.btn-picker-add-card').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const cardKey = btn.dataset.cardKey;
+                const card = allCards.find(c => c.key === cardKey);
+                if (card) {
+                    this.addCardFromPicker(card);
+                }
+            });
+        });
+    }
+
+    addCardFromPicker(card) {
+        if (!this.engine || !this.engine.isLoaded) return;
+
+        const CARD_TYPES = (typeof window !== 'undefined' && window.CARD_TYPES) ? window.CARD_TYPES : {
+            ATTRIBUTE: 0, RESOURCE: 1, STAT: 2, SKILL: 3, ABILITY: 4, EQUIPMENT: 5, SPELL: 6, TRAIT: 7
+        };
+
+        const isEquip = card.type === CARD_TYPES.EQUIPMENT;
+        let cardKey = card.key;
+
+        // Se já existe um card com essa chave no deck, gera chave única para permitir múltiplos itens
+        if (this.engine.getCardByKey(cardKey)) {
+            cardKey = `${cardKey}_${Date.now() % 10000}`;
+        }
+
+        const cardObj = {
+            key: cardKey,
+            name: card.name,
+            type: card.type,
+            desc: card.desc || '',
+            base: card.base || 0,
+            current: card.current || card.curr || 0,
+            max: card.max || 0,
+            cost_resource: card.cost_resource || card.cost_res || '',
+            cost_value: card.cost_value || card.cost_val || 0,
+            formula: card.formula || '',
+            equipped: false,
+            modifiers: card.modifiers || card.mods || []
+        };
+
+        const added = this.engine.addCard(cardObj);
+        if (added) {
+            this.engine.recalculate();
+            this.logger(`[Ficha] "${card.name}" adicionado à ${isEquip ? 'mochila' : 'grimório'}!`, 'success');
+            if (window.characterStorage) {
+                window.characterStorage.saveCurrent(this.engine, this.engine.getCharacterName());
+            }
+            this.updateCardPickerResults();
+        }
+    }
+
+    setupCardPickerListeners() {
+        const overlay = document.getElementById('modal-sheet-add-card-overlay');
+        const btnClose = document.getElementById('btn-close-sheet-picker');
+        const btnDone = document.getElementById('btn-done-sheet-picker');
+
+        if (btnClose) btnClose.addEventListener('click', () => this.closeCardPicker());
+        if (btnDone) btnDone.addEventListener('click', () => this.closeCardPicker());
+
+        if (overlay) {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    this.closeCardPicker();
+                }
+            });
+        }
+
+        const searchInput = document.getElementById('input-sheet-picker-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.pickerSearchQuery = e.target.value;
+                this.updateCardPickerResults();
+            });
+        }
+
+        const sourceSelect = document.getElementById('select-sheet-picker-source');
+        if (sourceSelect) {
+            sourceSelect.addEventListener('change', (e) => {
+                this.pickerSelectedPackId = e.target.value;
+                this.updateCardPickerResults();
+            });
+        }
     }
 }
 

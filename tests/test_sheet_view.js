@@ -91,6 +91,11 @@ function parseMockTree(html) {
                 el.value = attrVal;
             } else if (attrName === 'checked') {
                 el.checked = true;
+            } else if (attrName === 'style') {
+                attrVal.split(';').forEach(rule => {
+                    const [k, v] = rule.split(':').map(s => s && s.trim());
+                    if (k && v) el.style[k] = v;
+                });
             }
         }
         list.push(el);
@@ -305,6 +310,69 @@ async function runTests() {
     assert.strictEqual(sheetView.showingRoster, false);
     assert(sheetView.container.innerHTML.includes('Kallan Ironfist'), 'Deve restaurar ficha ativa no DOM');
     console.log('  [OK] Reabertura da Ficha Ativa a partir da Galeria validada');
+
+    // 13. Passo 11.2: Presença dos botões de adicionar cards no Modo Editar
+    sheetView.setMode('edit');
+    assert.strictEqual(sheetView.sheetMode, 'edit');
+    const btnAddItem = sheetView.container.querySelector('#btn-add-item-modal');
+    const btnAddSpell = sheetView.container.querySelector('#btn-add-spell-modal');
+    assert(btnAddItem, 'Botão #btn-add-item-modal deve estar visível no Modo Editar');
+    assert(btnAddSpell, 'Botão #btn-add-spell-modal deve estar visível no Modo Editar');
+    console.log('  [OK] Passo 11.2: Botões de adicionar Item e Magia validados no Modo Editar');
+
+    // 14. Passo 11.2: Abertura do Modal de Busca para Equipamentos
+    sheetView.openCardPicker('equipment');
+    assert.strictEqual(sheetView.pickerTargetMode, 'equipment');
+    const pickerOverlay = global.document.getElementById('modal-sheet-add-card-overlay');
+    assert(pickerOverlay, 'Overlay do picker deve existir no DOM');
+    assert.strictEqual(pickerOverlay.style.display, 'flex', 'Overlay do picker deve estar visível');
+    console.log('  [OK] Passo 11.2: Abertura do Modal de Busca para Equipamentos validada');
+
+    // 15. Passo 11.2: Adição de Card de Equipamento à Mochila via Picker
+    const cardCountBeforeEquip = engine.getCardCount();
+    const mockWeapon = {
+        key: 'machado_guerra',
+        name: 'Machado de Guerra Anão',
+        type: CARD_TYPES.EQUIPMENT,
+        desc: 'Poderosa arma de duas mãos de forja anã.',
+        formula: '1d12 + (@for - 10) / 2',
+        modifiers: []
+    };
+    sheetView.addCardFromPicker(mockWeapon);
+    assert.strictEqual(engine.getCardCount(), cardCountBeforeEquip + 1, 'Card deve ter sido adicionado à memória C');
+    const addedWeapon = engine.getCardByKey('machado_guerra');
+    assert(addedWeapon, 'Card machado_guerra deve ser recuperável no C');
+    assert.strictEqual(addedWeapon.equipped, false, 'Card adicionado deve iniciar desequipado na mochila');
+    console.log('  [OK] Passo 11.2: Card adicionado à mochila desequipado e recalculado no C');
+
+    // 16. Passo 11.2: Abertura do Modal de Busca para Magias e Adição ao Grimório
+    sheetView.openCardPicker('spells');
+    assert.strictEqual(sheetView.pickerTargetMode, 'spells');
+    const cardCountBeforeSpell = engine.getCardCount();
+    const mockSpell = {
+        key: 'toque_chocante',
+        name: 'Toque Chocante',
+        type: CARD_TYPES.SPELL,
+        desc: 'Descarga elétrica de contato.',
+        cost_resource: 'pm',
+        cost_value: 1,
+        formula: '2d8 + 2'
+    };
+    sheetView.addCardFromPicker(mockSpell);
+    assert.strictEqual(engine.getCardCount(), cardCountBeforeSpell + 1);
+    const addedSpell = engine.getCardByKey('toque_chocante');
+    assert(addedSpell, 'Card de magia deve existir no motor C');
+    assert.strictEqual(addedSpell.equipped, false, 'Magia adicionada deve iniciar no grimório não preparada');
+    console.log('  [OK] Passo 11.2: Magia adicionada ao grimório e sincronizada no C');
+
+    // 17. Passo 11.2: Fechamento do Modal e Re-renderização da Ficha
+    sheetView.closeCardPicker();
+    const currentOverlay = global.document.getElementById('modal-sheet-add-card-overlay');
+    assert(currentOverlay, 'Overlay do picker deve existir no DOM');
+    assert.strictEqual(currentOverlay.style.display, 'none', 'Overlay deve estar oculto após fechar');
+    assert(sheetView.container.innerHTML.includes('Machado de Guerra Anão'), 'Mochila deve exibir novo item na ficha');
+    assert(sheetView.container.innerHTML.includes('Toque Chocante'), 'Grimório deve exibir nova magia na ficha');
+    console.log('  [OK] Passo 11.2: Fechamento do modal e re-renderização com novos cards validados');
 
     console.log('\n=== Todos os testes do SheetView passaram com 100% de sucesso! ===');
 }

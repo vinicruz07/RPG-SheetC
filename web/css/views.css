@@ -1754,3 +1754,74 @@
     border-color: var(--color-gold-primary) !important;
     box-shadow: 0 0 0 1px var(--color-gold-primary), 0 4px 14px rgba(212, 163, 115, 0.25);
 }
+
+/* =========================================================================
+   Modal de Busca e Adição de Cards à Ficha (Passo 11.2)
+   ========================================================================= */
+
+.sheet-card-picker-overlay {
+    animation: fadeIn 0.2s ease-out;
+}
+
+.sheet-card-picker-modal {
+    animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sheet-picker-item-row {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    transition: all var(--transition-fast);
+}
+
+.sheet-picker-item-row:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--color-gold-hover);
+}
+
+.sheet-picker-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.sheet-picker-item-title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--color-parchment-light);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sheet-picker-item-desc {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    line-height: 1.3;
+}
+
+.sheet-picker-category-pill {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--color-border-subtle);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.sheet-picker-category-pill:hover,
+.sheet-picker-category-pill.active {
+    background: var(--color-gold-primary);
+    color: #111;
+    border-color: var(--color-gold-primary);
+    font-weight: 700;
+}
+
