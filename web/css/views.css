@@ -1629,6 +1629,36 @@
     background: rgba(212, 163, 115, 0.1);
 }
 
+/* =========================================================================
+   Compêndio Hierárquico de CardPacks - Passo 10.4
+   ========================================================================= */
+
+.cardpacks-collection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-md, 16px);
+}
+
+.cardpack-card {
+    background: linear-gradient(145deg, rgba(26, 30, 39, 0.95) 0%, rgba(20, 23, 30, 0.9) 100%);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    transition: all var(--transition-fast);
+}
+
+.cardpack-card:hover {
+    border-color: var(--color-gold-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.cardpacks-empty-state {
+    border: 2px dashed rgba(212, 163, 115, 0.25);
+    border-radius: var(--radius-lg);
+}
+
+
 
 
 

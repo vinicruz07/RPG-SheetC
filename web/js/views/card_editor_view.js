@@ -11,6 +11,7 @@ class CardEditorView {
 
         this.containerId = 'editor-container';
         this.isEditingExisting = false;
+        this.targetPackId = null;
 
         this.cardState = this.getDefaultCardState();
     }
@@ -39,25 +40,43 @@ class CardEditorView {
      * Inicializa o editor no container DOM
      * @param {string} containerId
      * @param {string|null} targetKey Chave de card existente para edição, ou null para novo
+     * @param {string|null} targetPackId ID do CardPack pai, caso aninhado
      */
-    init(containerId = 'editor-container', targetKey = null) {
+    init(containerId = 'editor-container', targetKey = null, targetPackId = null) {
         this.containerId = containerId;
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
         const keyToLoad = targetKey || window.cardEditorTargetKey || null;
+        this.targetPackId = targetPackId || window.cardEditorTargetPackId || null;
         window.cardEditorTargetKey = null; // consome o alvo
 
+        let cardLoaded = false;
+
+        // 1. Tenta carregar do motor C
         if (keyToLoad && this.engine) {
             const existing = this.engine.getCardByKey(keyToLoad);
             if (existing) {
                 this.loadCardFromEngine(existing);
                 this.isEditingExisting = true;
-            } else {
-                this.cardState = this.getDefaultCardState();
-                this.isEditingExisting = false;
+                cardLoaded = true;
             }
-        } else {
+        }
+
+        // 2. Se não encontrou no C, tenta carregar do CardPack ativo
+        if (!cardLoaded && keyToLoad && this.targetPackId && window.compendiumView) {
+            const pack = window.compendiumView.getPackById(this.targetPackId);
+            if (pack && pack.cards) {
+                const existingInPack = pack.cards.find(c => c.key === keyToLoad);
+                if (existingInPack) {
+                    this.loadCardFromEngine(existingInPack);
+                    this.isEditingExisting = true;
+                    cardLoaded = true;
+                }
+            }
+        }
+
+        if (!cardLoaded) {
             this.cardState = this.getDefaultCardState();
             this.isEditingExisting = false;
         }
@@ -104,17 +123,30 @@ class CardEditorView {
             typeOptionsHtml += `<option value="${tId}" ${selected}>${m.icon || ''} ${m.label}</option>`;
         }
 
+        let targetPackName = '';
+        if (this.targetPackId && window.compendiumView) {
+            const pack = window.compendiumView.getPackById(this.targetPackId);
+            if (pack) targetPackName = pack.name;
+        }
+
         container.innerHTML = `
             <div class="card-editor-container">
                 <!-- Cabeçalho do Editor -->
                 <div class="card-editor-header">
                     <div class="compendium-title-group">
-                        <h2>${this.isEditingExisting ? '✏️ Editar Card de RPG' : '✨ Criador de Cards Personalizados'}</h2>
-                        <p>${this.isEditingExisting ? 'Atualize atributos, fórmulas e bônus deste card em tempo real no motor C.' : 'Crie armas, magias, itens ou atributos e integre-os diretamente às regras do sistema.'}</p>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <h2>${this.isEditingExisting ? '✏️ Editar Card de RPG' : '✨ Criador de Cards Personalizados'}</h2>
+                            ${targetPackName ? `
+                                <span class="badge" style="background: rgba(212, 163, 115, 0.15); color: var(--color-gold-primary); border: 1px solid rgba(212, 163, 115, 0.3); font-size: 0.8rem; padding: 4px 10px;">
+                                    📦 Pacote: ${targetPackName}
+                                </span>
+                            ` : ''}
+                        </div>
+                        <p>${this.isEditingExisting ? 'Atualize atributos, fórmulas e bônus deste card em tempo real.' : 'Crie armas, magias, itens ou atributos e integre-os diretamente ao seu CardPack.'}</p>
                     </div>
                     <div class="card-editor-actions">
                         <button type="button" id="btn-editor-cancel" class="btn">
-                            ← Voltar ao Compêndio
+                            ← ${targetPackName ? 'Voltar ao Pacote' : 'Voltar ao Compêndio'}
                         </button>
                         ${this.isEditingExisting ? `
                             <button type="button" id="btn-editor-delete" class="btn" style="color: #ef4444; border-color: rgba(239,68,68,0.4);">
@@ -122,7 +154,7 @@ class CardEditorView {
                             </button>
                         ` : ''}
                         <button type="button" id="btn-editor-save" class="btn btn-primary">
-                            💾 Salvar no Motor C
+                            💾 ${targetPackName ? 'Salvar no Pacote' : 'Salvar no Motor C'}
                         </button>
                     </div>
                 </div>
@@ -616,8 +648,27 @@ class CardEditorView {
             this.engine.recalculate();
             this.log(`[Editor] Card "${cardPayload.name}" (@${cardPayload.key}) salvo com sucesso no motor C!`, 'success');
 
+            // Se pertencer a um CardPack, sincroniza o pacote
+            if (this.targetPackId && window.compendiumView) {
+                const pack = window.compendiumView.getPackById(this.targetPackId);
+                if (pack) {
+                    if (!pack.cards) pack.cards = [];
+                    const idx = pack.cards.findIndex(c => c.key === cardPayload.key);
+                    if (idx >= 0) {
+                        pack.cards[idx] = cardPayload;
+                    } else {
+                        pack.cards.push(cardPayload);
+                    }
+                    window.compendiumView.addOrUpdatePack(pack);
+                    this.log(`[Editor] Card salvo no CardPack "${pack.name}".`, 'info');
+                }
+            }
+
             if (this.router && typeof this.router.navigate === 'function') {
                 this.router.navigate('compendium');
+                if (this.targetPackId && window.compendiumView) {
+                    window.compendiumView.openPack(this.targetPackId);
+                }
             }
         } else {
             this.log('[Editor Erro] Falha ao injetar card na memória C.', 'error');
@@ -633,8 +684,20 @@ class CardEditorView {
             if (ok) {
                 this.engine.recalculate();
                 this.log(`[Editor] Card "@${this.cardState.key}" removido do motor C.`, 'info');
+
+                if (this.targetPackId && window.compendiumView) {
+                    const pack = window.compendiumView.getPackById(this.targetPackId);
+                    if (pack && pack.cards) {
+                        pack.cards = pack.cards.filter(c => c.key !== this.cardState.key);
+                        window.compendiumView.addOrUpdatePack(pack);
+                    }
+                }
+
                 if (this.router && typeof this.router.navigate === 'function') {
                     this.router.navigate('compendium');
+                    if (this.targetPackId && window.compendiumView) {
+                        window.compendiumView.openPack(this.targetPackId);
+                    }
                 }
             } else {
                 alert('Erro ao excluir card no motor C.');

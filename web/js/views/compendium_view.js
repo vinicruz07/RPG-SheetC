@@ -1,6 +1,6 @@
 /**
- * compendium_view.js — Navegador e Gerenciador de Compêndio de Cards (RPG-SheetC v2.0)
- * Integrado com Virtual Scrolling a 60 FPS e Motor de Cards C99 em WebAssembly.
+ * compendium_view.js — Navegador e Gerenciador Hierárquico de CardPacks e Cards (RPG-SheetC v2.0)
+ * Centrado em CardPacks carregados pelo usuário, com criação aninhada e integração ao Motor C99.
  */
 
 class CompendiumView {
@@ -12,83 +12,433 @@ class CompendiumView {
         this.containerId = 'compendium-container';
         this.virtualList = null;
 
+        // Controle de estado hierárquico
+        this.currentViewMode = 'packs'; // 'packs' (Coleção de CardPacks) | 'cards' (Cards do Pacote Selecionado)
+        this.activePackId = null;
+
         this.currentFilterType = null; // null = Todos
         this.searchQuery = '';
         this.onlyEquipped = false;
+
+        this.inMemoryPacks = [];
+        this.STORAGE_KEY = 'rpg_sheetc_cardpacks_v1';
 
         // Assina alterações no motor C
         if (this.engine && typeof this.engine.onChange === 'function') {
             this.engine.onChange((reason) => {
                 if (reason !== 'virtual_scroll_internal') {
-                    this.updateCardsList();
+                    if (this.currentViewMode === 'cards') {
+                        this.updateCardsList();
+                    }
                 }
             });
         }
     }
 
-    /**
-     * Inicializa a view no container DOM
-     * @param {string} containerId
-     * @param {boolean} autoSeed - se deve semear cards de amostra (padrão false: aplicação totalmente limpa)
-     */
+    /* =========================================================================
+     * 1. Persistência e Gerenciamento de CardPacks
+     * ========================================================================= */
+
+    getInstalledPacks() {
+        if (typeof window !== 'undefined' && window.localStorage) {
+            try {
+                const raw = window.localStorage.getItem(this.STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed)) return parsed;
+                }
+            } catch (err) {
+                console.warn('[Compendium] Falha ao ler CardPacks do storage:', err);
+            }
+        }
+        return this.inMemoryPacks;
+    }
+
+    saveInstalledPacks(packs) {
+        this.inMemoryPacks = packs;
+        if (typeof window !== 'undefined' && window.localStorage) {
+            try {
+                window.localStorage.setItem(this.STORAGE_KEY, JSON.stringify(packs));
+            } catch (err) {
+                console.warn('[Compendium] Falha ao salvar CardPacks:', err);
+            }
+        }
+    }
+
+    getPackById(packId) {
+        const packs = this.getInstalledPacks();
+        return packs.find(p => p.id === packId) || null;
+    }
+
+    addOrUpdatePack(pack) {
+        const packs = this.getInstalledPacks();
+        const idx = packs.findIndex(p => p.id === pack.id);
+        if (idx >= 0) {
+            packs[idx] = pack;
+        } else {
+            packs.push(pack);
+        }
+        this.saveInstalledPacks(packs);
+        return pack;
+    }
+
+    deletePack(packId) {
+        const packs = this.getInstalledPacks().filter(p => p.id !== packId);
+        this.saveInstalledPacks(packs);
+        if (this.activePackId === packId) {
+            this.activePackId = null;
+            this.currentViewMode = 'packs';
+        }
+    }
+
+    createPack({ name, system = 'Sistema Aberto', author = 'Criador', version = '1.0.0', desc = '' }) {
+        const id = 'pack_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+        const newPack = {
+            id,
+            name: (name || '').trim() || 'Novo CardPack',
+            system: (system || '').trim() || 'Sistema Aberto',
+            author: (author || '').trim() || 'Criador',
+            version: (version || '').trim() || '1.0.0',
+            desc: (desc || '').trim() || 'Pacote de cards customizado.',
+            cards: [],
+            createdAt: Date.now()
+        };
+        this.addOrUpdatePack(newPack);
+        return newPack;
+    }
+
+    /* =========================================================================
+     * 2. Inicialização e Renderização da View
+     * ========================================================================= */
+
     init(containerId = 'compendium-container', autoSeed = false) {
         this.containerId = containerId;
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
-        // Se explicitamente solicitado (ex: testes legados), semeia cards
-        if (autoSeed && this.engine && this.engine.getCardCount() === 0) {
+        // Se explicitamente solicitado (ex: testes legados), cria o pacote inicial e o abre
+        if (autoSeed) {
             this.seedStarterCards();
         }
 
-        this.renderStructure(container);
-        this.initVirtualList();
-        this.setupEventListeners();
-        this.updateCardsList();
+        this.render();
+    }
+
+    render() {
+        const container = document.getElementById(this.containerId);
+        if (!container) return;
+
+        if (this.currentViewMode === 'cards' && this.activePackId) {
+            this.renderPackDetails(container);
+        } else {
+            this.renderPacksList(container);
+        }
     }
 
     /* =========================================================================
-     * 1. Renderização da Estrutura Visual
+     * 3. Visualização Principal: Grade de CardPacks Carregados
      * ========================================================================= */
 
-    renderStructure(container) {
+    renderPacksList(container) {
+        const packs = this.getInstalledPacks();
+
         container.innerHTML = `
             <div class="compendium-view-container">
-                <!-- Barra de Cabeçalho do Compêndio -->
+                <!-- Cabeçalho Principal do Compêndio -->
                 <div class="compendium-header-bar">
                     <div class="compendium-title-group">
-                        <h2>🎴 Compêndio de Cards & Regras</h2>
-                        <p>Navegue, pesquise e equipe cards de atributos, perícias, itens e magias gerenciados pelo motor C.</p>
+                        <h2>🎴 Compêndio de CardPacks & Regras</h2>
+                        <p>Gerencie seus pacotes de regras, arsenais e magias. Cada ficha utiliza regras definidas por seu CardPack principal.</p>
                     </div>
                     <div class="compendium-header-actions">
-                        <button type="button" id="btn-compendium-new-card" class="btn btn-primary" title="Criar um novo card personalizado">
-                            ➕ Novo Card
+                        <button type="button" id="btn-compendium-create-pack" class="btn btn-accent" title="Criar um novo CardPack vazio">
+                            ➕ Criar CardPack
                         </button>
-                        <button type="button" id="btn-compendium-packs" class="btn btn-accent" title="Explorar e importar Data Packs comunitários com 1 clique">
+                        <button type="button" id="btn-compendium-import-pack" class="btn btn-primary" title="Importar arquivo .cardpack do computador">
+                            📦 Importar CardPack
+                        </button>
+                        <button type="button" id="btn-compendium-community" class="btn" title="Explorar Data Packs abertos da comunidade">
                             🌐 Data Packs
                         </button>
-                        <button type="button" id="btn-compendium-import" class="btn" title="Importar arquivo .cardpack JSON">
-                            📦 Importar Pacote
-                        </button>
-                        <button type="button" id="btn-compendium-export" class="btn" title="Exportar compêndio completo como .cardpack">
-                            📥 Exportar (.cardpack)
-                        </button>
-                        <button type="button" id="btn-compendium-clear-all" class="btn" style="color: var(--color-danger, #ef4444); border-color: rgba(239, 68, 68, 0.4);" title="Limpa todos os cards da memória do motor C">
-                            🗑️ Limpar Tudo
-                        </button>
-                        <button type="button" id="btn-compendium-benchmark" class="btn" title="Gera 1.000 cards para testar a rolagem a 60 FPS">
-                            ⚡ Testar 1.000 Cards
-                        </button>
-                        <input type="file" id="compendium-file-input" accept=".cardpack,.json,.sheetc" style="display: none;">
+                        <input type="file" id="compendium-pack-file-input" accept=".cardpack,.json" style="display: none;">
                     </div>
                 </div>
 
-                <!-- Barra de Ferramentas de Busca e Filtros -->
+                <!-- Conteúdo dos CardPacks -->
+                ${packs.length === 0 ? `
+                    <div class="card cardpacks-empty-state" style="text-align: center; padding: 48px 24px; background: var(--color-surface-card);">
+                        <div style="font-size: 3.5rem; margin-bottom: 12px;">📭</div>
+                        <h3 style="font-family: var(--font-heading); color: var(--color-gold-primary); margin-bottom: 8px;">
+                            Nenhum CardPack Carregado
+                        </h3>
+                        <p style="color: var(--color-text-muted); max-width: 600px; margin: 0 auto 24px auto; line-height: 1.6;">
+                            O Compêndio está completamente limpo. Importe um arquivo <code>.cardpack</code> (como o Tormenta 20 ou SRD Fantasia), crie seu próprio pacote de regras personalizado ou explore os Data Packs abertos.
+                        </p>
+                        <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+                            <button type="button" id="btn-empty-import" class="btn btn-primary" style="padding: 10px 22px; font-weight: 700;">
+                                📦 Importar CardPack (.cardpack)
+                            </button>
+                            <button type="button" id="btn-empty-create" class="btn btn-accent" style="padding: 10px 22px; font-weight: 700;">
+                                ➕ Criar Novo CardPack
+                            </button>
+                            <button type="button" id="btn-empty-community" class="btn" style="padding: 10px 20px;">
+                                🌐 Explorar Data Packs
+                            </button>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="cardpacks-collection-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-md, 16px);">
+                        ${packs.map(p => this.renderPackCard(p)).join('')}
+                    </div>
+                `}
+
+                <!-- Modal Flutuante para Criação de CardPack -->
+                <div id="modal-create-cardpack-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 16px;">
+                    <div class="card modal-create-cardpack-box" style="max-width: 520px; width: 100%; background: var(--color-surface-card); border: 1px solid var(--color-border-subtle); box-shadow: var(--shadow-lg); padding: 24px; border-radius: var(--radius-lg);">
+                        <h3 style="font-family: var(--font-heading); color: var(--color-gold-primary); margin-top: 0; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                            ➕ Criar Novo CardPack
+                        </h3>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <div>
+                                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted); margin-bottom: 4px;">Nome do Pacote *</label>
+                                <input type="text" id="input-new-pack-name" class="sheet-number-field" style="width: 100%; text-align: left; padding: 8px;" placeholder="Ex: Tormenta 20 - Magias & Poderes">
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted); margin-bottom: 4px;">Sistema de Regras *</label>
+                                    <input type="text" id="input-new-pack-system" class="sheet-number-field" style="width: 100%; text-align: left; padding: 8px;" placeholder="Ex: Tormenta 20, D&D 5e...">
+                                </div>
+                                <div>
+                                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted); margin-bottom: 4px;">Versão</label>
+                                    <input type="text" id="input-new-pack-version" class="sheet-number-field" style="width: 100%; text-align: left; padding: 8px;" value="1.0.0">
+                                </div>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted); margin-bottom: 4px;">Autor</label>
+                                <input type="text" id="input-new-pack-author" class="sheet-number-field" style="width: 100%; text-align: left; padding: 8px;" placeholder="Seu nome ou comunidade">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted); margin-bottom: 4px;">Descrição Breve</label>
+                                <textarea id="input-new-pack-desc" class="sheet-number-field" style="width: 100%; text-align: left; padding: 8px; height: 70px; resize: vertical;" placeholder="Descreva os cards, regras ou suplemento contido neste pacote..."></textarea>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                            <button type="button" id="btn-cancel-create-pack" class="btn btn-secondary">Cancelar</button>
+                            <button type="button" id="btn-confirm-create-pack" class="btn btn-primary">Salvar e Abrir Pacote</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.setupPacksListEvents();
+    }
+
+    renderPackCard(pack) {
+        const count = pack.cards ? pack.cards.length : 0;
+        return `
+            <div class="card cardpack-card" data-pack-id="${pack.id}" style="display: flex; flex-direction: column; justify-content: space-between; padding: 18px; border: 1px solid var(--color-border-subtle); transition: all 0.2s ease;">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.6rem;">📦</span>
+                            <h3 style="margin: 0; font-family: var(--font-heading); font-size: 1.15rem; color: var(--color-gold-light);">
+                                ${pack.name}
+                            </h3>
+                        </div>
+                        <span class="badge" style="font-size: 0.72rem; background: rgba(212, 163, 115, 0.15); color: var(--color-gold-primary); border: 1px solid rgba(212, 163, 115, 0.3);">
+                            🃏 ${count} Cards
+                        </span>
+                    </div>
+
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <span class="sheet-meta-pill system-pill" style="font-size: 0.7rem; padding: 2px 8px;">📜 ${pack.system}</span>
+                        <span class="sheet-meta-pill race-pill" style="font-size: 0.7rem; padding: 2px 8px;">🔖 v${pack.version || '1.0'}</span>
+                        ${pack.author ? `<span class="sheet-meta-pill class-pill" style="font-size: 0.7rem; padding: 2px 8px;">👤 ${pack.author}</span>` : ''}
+                    </div>
+
+                    <p style="font-size: 0.82rem; color: var(--color-text-muted); line-height: 1.4; margin: 0 0 16px 0;">
+                        ${pack.desc || 'Pacote de regras e cards configurados.'}
+                    </p>
+                </div>
+
+                <div style="display: flex; gap: 6px; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-sm btn-primary btn-open-pack" data-pack-id="${pack.id}" title="Explorar cards e criar novos cards neste pacote">
+                        📂 Abrir Pacote
+                    </button>
+                    <button type="button" class="btn btn-sm btn-accent btn-load-pack-engine" data-pack-id="${pack.id}" title="Carregar todos os cards deste pacote na memória do motor C">
+                        ⚡ Carregar na Ficha
+                    </button>
+                    <button type="button" class="btn btn-sm btn-export-pack" data-pack-id="${pack.id}" title="Baixar arquivo .cardpack JSON">
+                        📥
+                    </button>
+                    <button type="button" class="btn btn-sm btn-delete-pack" data-pack-id="${pack.id}" style="color: #ef4444;" title="Excluir este pacote">
+                        🗑️
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    setupPacksListEvents() {
+        const container = document.getElementById(this.containerId);
+        if (!container) return;
+
+        // Abrir modal de criação
+        const btnCreate = document.getElementById('btn-compendium-create-pack') || document.getElementById('btn-empty-create');
+        const overlay = document.getElementById('modal-create-cardpack-overlay');
+        if (btnCreate && overlay) {
+            btnCreate.addEventListener('click', () => {
+                overlay.style.display = 'flex';
+                const nameInp = document.getElementById('input-new-pack-name');
+                if (nameInp) nameInp.focus();
+            });
+        }
+
+        const btnCancelCreate = document.getElementById('btn-cancel-create-pack');
+        if (btnCancelCreate && overlay) {
+            btnCancelCreate.addEventListener('click', () => {
+                overlay.style.display = 'none';
+            });
+        }
+
+        const btnConfirmCreate = document.getElementById('btn-confirm-create-pack');
+        if (btnConfirmCreate && overlay) {
+            btnConfirmCreate.addEventListener('click', () => {
+                const name = document.getElementById('input-new-pack-name')?.value || '';
+                const system = document.getElementById('input-new-pack-system')?.value || '';
+                const version = document.getElementById('input-new-pack-version')?.value || '1.0.0';
+                const author = document.getElementById('input-new-pack-author')?.value || 'Criador';
+                const desc = document.getElementById('input-new-pack-desc')?.value || '';
+
+                if (!name.trim()) {
+                    alert('Por favor, informe um nome para o CardPack.');
+                    return;
+                }
+
+                const newPack = this.createPack({ name, system, version, author, desc });
+                overlay.style.display = 'none';
+                this.log(`[CardPack] Pacote "${newPack.name}" criado com sucesso!`, 'success');
+                this.openPack(newPack.id);
+            });
+        }
+
+        // Importação de arquivo .cardpack
+        const btnImport = document.getElementById('btn-compendium-import-pack') || document.getElementById('btn-empty-import');
+        const fileInput = document.getElementById('compendium-pack-file-input');
+        if (btnImport && fileInput) {
+            btnImport.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => this.handlePackFileImport(e));
+        }
+
+        // Data Packs Comunitários
+        const btnCommunity = document.getElementById('btn-compendium-community') || document.getElementById('btn-empty-community');
+        if (btnCommunity) {
+            btnCommunity.addEventListener('click', () => {
+                if (window.packManager && typeof window.packManager.openPackModal === 'function') {
+                    window.packManager.openPackModal(() => {
+                        this.render();
+                    });
+                }
+            });
+        }
+
+        // Cliques nos cartões de CardPacks
+        container.querySelectorAll('.btn-open-pack').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const packId = btn.dataset.packId;
+                if (packId) this.openPack(packId);
+            });
+        });
+
+        container.querySelectorAll('.btn-load-pack-engine').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const packId = btn.dataset.packId;
+                if (packId) this.loadPackIntoEngine(packId);
+            });
+        });
+
+        container.querySelectorAll('.btn-export-pack').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const packId = btn.dataset.packId;
+                if (packId) this.exportPackToFile(packId);
+            });
+        });
+
+        container.querySelectorAll('.btn-delete-pack').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const packId = btn.dataset.packId;
+                const pack = this.getPackById(packId);
+                if (pack) {
+                    if (confirm(`Deseja realmente excluir o CardPack "${pack.name}"?`)) {
+                        this.deletePack(packId);
+                        this.log(`[CardPack] Pacote "${pack.name}" excluído.`, 'info');
+                        this.render();
+                    }
+                }
+            });
+        });
+    }
+
+    openPack(packId) {
+        this.activePackId = packId;
+        this.currentViewMode = 'cards';
+        this.searchQuery = '';
+        this.currentFilterType = null;
+        this.render();
+    }
+
+    /* =========================================================================
+     * 4. Visualização Interna do CardPack (Cards do Pacote Selecionado)
+     * ========================================================================= */
+
+    renderPackDetails(container) {
+        const pack = this.getPackById(this.activePackId);
+        if (!pack) {
+            this.currentViewMode = 'packs';
+            this.render();
+            return;
+        }
+
+        const cards = pack.cards || [];
+
+        container.innerHTML = `
+            <div class="compendium-view-container">
+                <!-- Barra de Navegação Interna do Pacote -->
+                <div class="compendium-header-bar" style="border-left: 4px solid var(--color-gold-primary);">
+                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <button type="button" id="btn-pack-back" class="btn btn-secondary" title="Retornar à lista de todos os CardPacks">
+                            ⬅️ Voltar aos CardPacks
+                        </button>
+                        <div>
+                            <h2 style="margin: 0; font-family: var(--font-heading); font-size: 1.3rem; color: var(--color-gold-light); display: flex; align-items: center; gap: 8px;">
+                                📦 ${pack.name}
+                            </h2>
+                            <span style="font-size: 0.8rem; color: var(--color-text-muted);">
+                                📜 ${pack.system} &bull; v${pack.version || '1.0'} &bull; 🃏 ${cards.length} cards cadastrados
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="compendium-header-actions">
+                        <button type="button" id="btn-pack-new-card" class="btn btn-primary" title="Criar um novo card e aninhá-lo neste CardPack">
+                            ➕ Novo Card Neste Pacote
+                        </button>
+                        <button type="button" id="btn-pack-apply-engine" class="btn btn-accent" title="Carregar todos os cards deste pacote na memória do motor C">
+                            ⚡ Carregar na Ficha
+                        </button>
+                        <button type="button" id="btn-pack-export-current" class="btn" title="Exportar este CardPack como arquivo .cardpack JSON">
+                            📥 Exportar (.cardpack)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Barra de Busca e Filtros Dentro do Pacote -->
                 <div class="compendium-toolbar">
                     <div class="compendium-search-row">
                         <div class="compendium-search-box">
                             <span class="compendium-search-icon">🔍</span>
-                            <input type="text" id="compendium-search-input" class="compendium-search-input" placeholder="Buscar por nome, @chave ou efeito..." value="${this.searchQuery}">
+                            <input type="text" id="compendium-search-input" class="compendium-search-input" placeholder="Buscar cards neste pacote por nome, @chave ou fórmula..." value="${this.searchQuery}">
                         </div>
 
                         <label class="compendium-status-toggle">
@@ -97,29 +447,31 @@ class CompendiumView {
                         </label>
 
                         <div id="compendium-counter-badge" class="badge" style="font-size: 0.8rem; background: rgba(255,255,255,0.06); padding: 6px 12px; border-radius: 9999px;">
-                            Carregando cards...
+                            ${cards.length} cards no pacote
                         </div>
                     </div>
 
-                    <!-- Pílulas de Filtro por Categoria de Card -->
+                    <!-- Pílulas de Filtro por Categoria -->
                     <div class="compendium-filters-row" id="compendium-type-filters">
                         <!-- Renderizado dinamicamente -->
                     </div>
                 </div>
 
-                <!-- Container do Virtual Scroll -->
-                <div id="compendium-virtual-scroll-target" style="height: 540px; width: 100%;"></div>
+                <!-- Alvo da Lista Virtual ou Grade dos Cards do Pacote -->
+                <div id="compendium-virtual-scroll-target" style="height: 520px; width: 100%;"></div>
             </div>
         `;
 
-        this.renderFilterPills();
+        this.renderFilterPillsForPack(cards);
+        this.initVirtualListForPack();
+        this.setupPackDetailsEvents();
+        this.updateCardsList();
     }
 
-    renderFilterPills() {
+    renderFilterPillsForPack(cards) {
         const filtersRow = document.getElementById('compendium-type-filters');
-        if (!filtersRow || !this.engine) return;
+        if (!filtersRow) return;
 
-        const allCount = this.engine.getCardCount();
         const types = window.CARD_TYPES || {
             ATTRIBUTE: 0, RESOURCE: 1, STAT: 2, SKILL: 3, ABILITY: 4, EQUIPMENT: 5, SPELL: 6, TRAIT: 7
         };
@@ -128,12 +480,12 @@ class CompendiumView {
         let pillsHtml = `
             <button type="button" class="compendium-filter-pill ${this.currentFilterType === null ? 'active' : ''}" data-filter-type="all">
                 <span>🌟 Todos</span>
-                <span class="compendium-count-tag">${allCount}</span>
+                <span class="compendium-count-tag">${cards.length}</span>
             </button>
         `;
 
         for (const [typeKey, typeId] of Object.entries(types)) {
-            const count = this.engine.getCardCountByType(typeId);
+            const count = cards.filter(c => c.type === typeId).length;
             const itemMeta = meta[typeId] || { label: typeKey, icon: '🎴' };
             const isActive = this.currentFilterType === typeId;
 
@@ -148,33 +500,64 @@ class CompendiumView {
         filtersRow.innerHTML = pillsHtml;
     }
 
-    /* =========================================================================
-     * 2. Inicialização do Virtual Scroll
-     * ========================================================================= */
-
-    initVirtualList() {
+    initVirtualListForPack() {
         const target = document.getElementById('compendium-virtual-scroll-target');
         if (!target) return;
 
-        this.virtualList = new window.VirtualList(target, {
-            itemHeight: 180,
-            itemMinWidth: 280,
-            gap: 14,
-            bufferRows: 2,
-            emptyMessage: 'Nenhum card encontrado',
-            emptySubtext: 'Tente alterar os termos de busca ou selecionar outra categoria acima.',
-            onAction: (action, card, index) => {
-                this.handleCardAction(action, card, index);
-            }
-        });
+        if (window.VirtualList) {
+            this.virtualList = new window.VirtualList(target, {
+                itemHeight: 180,
+                itemMinWidth: 280,
+                gap: 14,
+                bufferRows: 2,
+                emptyMessage: 'Nenhum card encontrado neste pacote',
+                emptySubtext: 'Clique em "➕ Novo Card Neste Pacote" acima para adicionar o primeiro card.',
+                onAction: (action, card, index) => {
+                    this.handleCardAction(action, card, index);
+                }
+            });
+        }
     }
 
-    /* =========================================================================
-     * 3. Manipulação de Eventos e Ações Rápidas
-     * ========================================================================= */
+    setupPackDetailsEvents() {
+        // Voltar à lista de pacotes
+        const btnBack = document.getElementById('btn-pack-back');
+        if (btnBack) {
+            btnBack.addEventListener('click', () => {
+                this.currentViewMode = 'packs';
+                this.render();
+            });
+        }
 
-    setupEventListeners() {
-        // Busca em tempo real
+        // Criar card aninhado neste pacote
+        const btnNewCard = document.getElementById('btn-pack-new-card');
+        if (btnNewCard) {
+            btnNewCard.addEventListener('click', () => {
+                window.cardEditorTargetPackId = this.activePackId;
+                window.cardEditorTargetKey = null;
+                if (this.router && typeof this.router.navigate === 'function') {
+                    this.router.navigate('editor');
+                }
+            });
+        }
+
+        // Carregar este pacote no motor C
+        const btnApply = document.getElementById('btn-pack-apply-engine');
+        if (btnApply) {
+            btnApply.addEventListener('click', () => {
+                this.loadPackIntoEngine(this.activePackId);
+            });
+        }
+
+        // Exportar este pacote
+        const btnExport = document.getElementById('btn-pack-export-current');
+        if (btnExport) {
+            btnExport.addEventListener('click', () => {
+                this.exportPackToFile(this.activePackId);
+            });
+        }
+
+        // Busca textual
         const searchInput = document.getElementById('compendium-search-input');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
@@ -192,7 +575,7 @@ class CompendiumView {
             });
         }
 
-        // Delegação de cliques nos filtros por tipo
+        // Filtros por categoria
         const filtersRow = document.getElementById('compendium-type-filters');
         if (filtersRow) {
             filtersRow.addEventListener('click', (e) => {
@@ -200,84 +583,34 @@ class CompendiumView {
                 if (btn) {
                     const typeAttr = btn.dataset.filterType;
                     this.currentFilterType = typeAttr === 'all' ? null : parseInt(typeAttr, 10);
-                    this.renderFilterPills();
+                    const pack = this.getPackById(this.activePackId);
+                    if (pack) this.renderFilterPillsForPack(pack.cards || []);
                     this.updateCardsList();
-                }
-            });
-        }
-
-        // Botão Novo Card
-        const btnNewCard = document.getElementById('btn-compendium-new-card');
-        if (btnNewCard) {
-            btnNewCard.addEventListener('click', () => {
-                if (this.router && typeof this.router.navigate === 'function') {
-                    window.cardEditorTargetKey = null;
-                    this.router.navigate('editor');
-                }
-            });
-        }
-
-        // Modal de Data Packs Comunitários
-        const btnPacks = document.getElementById('btn-compendium-packs');
-        if (btnPacks) {
-            btnPacks.addEventListener('click', () => {
-                if (window.packManager && typeof window.packManager.openPackModal === 'function') {
-                    window.packManager.openPackModal(() => this.updateCardsList());
-                } else if (typeof window.PackManager === 'function') {
-                    const pm = new window.PackManager(this.engine, this.log);
-                    pm.openPackModal(() => this.updateCardsList());
-                }
-            });
-        }
-
-        // Exportação de pacote .cardpack
-        const btnExport = document.getElementById('btn-compendium-export');
-        if (btnExport) {
-            btnExport.addEventListener('click', () => this.exportCompendium());
-        }
-
-        // Importação de pacote .cardpack
-        const btnImport = document.getElementById('btn-compendium-import');
-        const fileInput = document.getElementById('compendium-file-input');
-        if (btnImport && fileInput) {
-            btnImport.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', (e) => this.handleFileImport(e));
-        }
-
-        // Benchmark de 1.000 cards para estressar o Virtual Scroll
-        const btnBench = document.getElementById('btn-compendium-benchmark');
-        if (btnBench) {
-            btnBench.addEventListener('click', () => this.generateBenchmarkCards());
-        }
-
-        // Limpeza completa do deck (0 cards)
-        const btnClear = document.getElementById('btn-compendium-clear-all');
-        if (btnClear) {
-            btnClear.addEventListener('click', () => {
-                if (typeof confirm === 'function' && !confirm('Tem certeza que deseja apagar TODOS os cards e deixar a aplicação totalmente limpa?')) {
-                    return;
-                }
-                this.engine.clearDeck();
-                this.log('[C Deck] Todos os cards foram apagados. Memória do C totalmente limpa!', 'warn');
-                this.updateCardsList();
-                if (window.sheetView) {
-                    window.sheetView.render();
                 }
             });
         }
     }
 
+    /* =========================================================================
+     * 5. Ações nos Cards (Toggle, Rolagem, Edição e Exclusão)
+     * ========================================================================= */
+
     handleCardAction(action, card, index) {
-        if (!card || !this.engine) return;
+        if (!card) return;
 
         if (action === 'toggle-equip') {
             const newState = !card.equipped;
-            this.engine.setEquipped(card.key, newState);
-            this.log(`[Compêndio] Card "${card.name}" ${newState ? 'equipado/ativado' : 'desequipado/desativado'} na ficha.`, 'info');
+            card.equipped = newState ? 1 : 0;
+            // Se o motor C possui este card, atualiza no C
+            if (this.engine && this.engine.getCardByKey(card.key)) {
+                this.engine.setEquipped(card.key, newState);
+            }
+            this.syncActivePackCard(card);
+            this.log(`[CardPack] Card "${card.name}" ${newState ? 'marcado como ativo' : 'desmarcado'}.`, 'info');
             this.updateCardsList();
         } else if (action === 'roll') {
-            if (card.formula) {
-                const val = this.engine.evalCardFormula(card.index);
+            if (card.formula && this.engine) {
+                const val = this.engine.evalExpression(card.formula);
                 this.log(`[Rolagem C] ${card.name} (${card.formula}): Total = ${val}`, 'success');
                 if (window.diceRoller && typeof window.diceRoller.openRollModal === 'function') {
                     window.diceRoller.openRollModal({
@@ -288,56 +621,139 @@ class CompendiumView {
                 }
             }
         } else if (action === 'edit') {
-            this.log(`[Compêndio] Abrindo editor para o card "@${card.key}".`, 'info');
+            window.cardEditorTargetPackId = this.activePackId;
+            window.cardEditorTargetKey = card.key;
             if (this.router && typeof this.router.navigate === 'function') {
-                window.cardEditorTargetKey = card.key;
                 this.router.navigate('editor');
+            }
+        } else if (action === 'delete') {
+            if (confirm(`Remover o card "${card.name}" deste pacote?`)) {
+                this.removeCardFromActivePack(card.key);
             }
         }
     }
 
-    /* =========================================================================
-     * 4. Atualização Reativa da Lista e Filtros
-     * ========================================================================= */
+    syncActivePackCard(updatedCard) {
+        if (!this.activePackId) return;
+        const pack = this.getPackById(this.activePackId);
+        if (!pack || !pack.cards) return;
+        const idx = pack.cards.findIndex(c => c.key === updatedCard.key);
+        if (idx >= 0) {
+            pack.cards[idx] = updatedCard;
+        } else {
+            pack.cards.push(updatedCard);
+        }
+        this.addOrUpdatePack(pack);
+    }
+
+    removeCardFromActivePack(cardKey) {
+        if (!this.activePackId) return;
+        const pack = this.getPackById(this.activePackId);
+        if (!pack || !pack.cards) return;
+        pack.cards = pack.cards.filter(c => c.key !== cardKey);
+        this.addOrUpdatePack(pack);
+        if (this.engine && this.engine.getCardByKey(cardKey)) {
+            this.engine.removeCardByKey(cardKey);
+            this.engine.recalculate();
+        }
+        this.log(`[CardPack] Card "@${cardKey}" removido do pacote "${pack.name}".`, 'info');
+        this.render();
+    }
 
     updateCardsList() {
-        if (!this.engine || !this.virtualList) return;
+        if (!this.virtualList) return;
 
-        const indices = this.engine.queryCardIndices({
-            type: this.currentFilterType,
-            query: this.searchQuery,
-            onlyEquipped: this.onlyEquipped
-        });
-
-        const cards = indices.map(idx => this.engine.getCardAt(idx)).filter(Boolean);
-        this.virtualList.setData(cards);
-
-        // Atualiza contadores
-        const counterEl = document.getElementById('compendium-counter-badge');
-        if (counterEl) {
-            const total = this.engine.getCardCount();
-            counterEl.textContent = `Exibindo ${cards.length} de ${total} cards`;
+        let cards = [];
+        if (this.activePackId) {
+            const pack = this.getPackById(this.activePackId);
+            cards = pack ? (pack.cards || []) : [];
+        } else if (this.engine) {
+            cards = this.engine.getAllCards();
         }
 
-        this.renderFilterPills();
+        // Aplica busca textual
+        if (this.searchQuery) {
+            const q = this.searchQuery.toLowerCase();
+            cards = cards.filter(c => 
+                (c.name && c.name.toLowerCase().includes(q)) ||
+                (c.key && c.key.toLowerCase().includes(q)) ||
+                (c.desc && c.desc.toLowerCase().includes(q)) ||
+                (c.formula && c.formula.toLowerCase().includes(q))
+            );
+        }
+
+        // Aplica filtro por tipo
+        if (this.currentFilterType !== null) {
+            cards = cards.filter(c => c.type === this.currentFilterType);
+        }
+
+        // Aplica filtro de equipados
+        if (this.onlyEquipped) {
+            cards = cards.filter(c => c.equipped);
+        }
+
+        this.virtualList.setData(cards);
+
+        const counterEl = document.getElementById('compendium-counter-badge');
+        if (counterEl) {
+            counterEl.textContent = `Exibindo ${cards.length} cards`;
+        }
     }
 
     /* =========================================================================
-     * 5. Importação e Exportação de Pacotes (.cardpack)
+     * 6. Importação e Exportação de Pacotes (.cardpack)
      * ========================================================================= */
 
-    exportCompendium() {
-        if (!this.engine) return;
-        const packJson = this.engine.exportCardPack(true);
-        if (!packJson) {
-            this.log('[Export] Erro ao serializar compêndio em C.', 'error');
+    async handlePackFileImport(event) {
+        const file = event.target?.files?.[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const parsed = JSON.parse(text);
+
+            const pack = {
+                id: 'pack_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                name: parsed.sheet_name || parsed.name || file.name.replace(/\.[^/.]+$/, ''),
+                system: parsed.system_name || parsed.system || 'Sistema Aberto',
+                author: parsed.author || 'Importado',
+                version: parsed.version || '1.0.0',
+                desc: parsed.desc || `Importado a partir do arquivo "${file.name}".`,
+                cards: Array.isArray(parsed.cards) ? parsed.cards : [],
+                createdAt: Date.now()
+            };
+
+            this.addOrUpdatePack(pack);
+            this.log(`[Import] CardPack "${pack.name}" importado com sucesso! (${pack.cards.length} cards)`, 'success');
+            this.openPack(pack.id);
+        } catch (err) {
+            this.log(`[Import Erro] Falha ao importar .cardpack: ${err.message}`, 'error');
+            alert(`Erro ao ler o arquivo .cardpack: ${err.message}`);
+        } finally {
+            event.target.value = '';
+        }
+    }
+
+    exportPackToFile(packId) {
+        const pack = this.getPackById(packId);
+        if (!pack) {
+            this.log('[Export Erro] Pacote não encontrado.', 'error');
             return;
         }
 
-        const systemName = (this.engine.getSystemName() || 'compendio').toLowerCase().replace(/[^a-z0-9]/g, '_');
-        const fileName = `${systemName}_pack_${Date.now()}.cardpack`;
+        const packPayload = {
+            sheet_name: pack.name,
+            system_name: pack.system,
+            version: pack.version || '1.0.0',
+            author: pack.author || '',
+            desc: pack.desc || '',
+            cards: pack.cards || []
+        };
 
-        const blob = new Blob([packJson], { type: 'application/json' });
+        const jsonStr = JSON.stringify(packPayload, null, 2);
+        const fileName = `${(pack.name || 'cardpack').toLowerCase().replace(/[^a-z0-9]/g, '_')}.cardpack`;
+
+        const blob = new Blob([jsonStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -345,46 +761,66 @@ class CompendiumView {
         if (document.body && typeof document.body.appendChild === 'function') {
             document.body.appendChild(a);
         }
-        if (typeof a.click === 'function') {
-            a.click();
-        }
+        if (typeof a.click === 'function') a.click();
         if (document.body && typeof document.body.removeChild === 'function') {
             document.body.removeChild(a);
         }
-        if (typeof URL.revokeObjectURL === 'function') {
-            URL.revokeObjectURL(url);
-        }
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
 
-        this.log(`[Export] Compêndio exportado com sucesso: "${fileName}"`, 'success');
+        this.log(`[Export] CardPack exportado com sucesso: "${fileName}"`, 'success');
     }
 
-    async handleFileImport(event) {
-        const file = event.target?.files?.[0];
-        if (!file || !this.engine) return;
+    loadPackIntoEngine(packId) {
+        const pack = this.getPackById(packId);
+        if (!pack || !this.engine) return;
 
-        try {
-            const text = await file.text();
-            const imported = this.engine.importCardPack(text, true); // modo merge
-            if (imported >= 0) {
-                this.log(`[Import] Pacote comunitário importado com sucesso! ${imported} cards adicionados/atualizados.`, 'success');
-                this.updateCardsList();
-            } else {
-                this.log(`[Import] Falha ao analisar o arquivo .cardpack (código: ${imported}).`, 'error');
+        if (pack.name) this.engine.setCharacterName(pack.name);
+        if (pack.system) this.engine.setSystemName(pack.system);
+
+        const count = this.engine.importCardPack(pack, false); // substitui o deck ativo pelo pacote
+        if (count >= 0) {
+            this.engine.recalculate();
+            this.log(`[Motor C] CardPack "${pack.name}" carregado na ficha ativa! (${count} cards na memória C)`, 'success');
+            if (window.sheetView) {
+                window.sheetView.render();
             }
-        } catch (err) {
-            this.log(`[Import Erro] ${err.message}`, 'error');
-        } finally {
-            event.target.value = '';
+            if (this.router && typeof this.router.navigate === 'function') {
+                this.router.navigate('sheet');
+            }
+        } else {
+            this.log(`[Motor C Erro] Falha ao injetar pacote na memória C (código: ${count}).`, 'error');
+        }
+    }
+
+    exportCompendium() {
+        if (this.activePackId) {
+            this.exportPackToFile(this.activePackId);
+        } else if (this.engine) {
+            const rawJson = this.engine.exportCardPack(true);
+            if (!rawJson) return;
+            const fileName = `compendio_export_${Date.now()}.cardpack`;
+            const blob = new Blob([rawJson], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            if (document.body && typeof document.body.appendChild === 'function') {
+                document.body.appendChild(a);
+            }
+            if (typeof a.click === 'function') a.click();
+            if (document.body && typeof document.body.removeChild === 'function') {
+                document.body.removeChild(a);
+            }
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+            this.log(`[Export] Compêndio exportado com sucesso: "${fileName}"`, 'success');
         }
     }
 
     /* =========================================================================
-     * 6. Gerador de Amostras Iniciais e Benchmark
+     * 7. Fallback e Amostras para Testes
      * ========================================================================= */
 
     seedStarterCards() {
-        if (!this.engine) return;
-
         const starterPack = [
             { id: 1, type: 0, key: 'for', name: 'Força', desc: 'Poder físico e potência muscular do aventureiro.', base: 16, equipped: 1 },
             { id: 2, type: 0, key: 'des', name: 'Destreza', desc: 'Agilidade, equilíbrio e reflexos rápidos.', base: 14, equipped: 1 },
@@ -406,42 +842,25 @@ class CompendiumView {
             { id: 15, type: 4, key: 'furia', name: 'Fúria Bárbara', desc: 'Canaliza ira primal aumentando brutalmente o dano físico.', cost_res: 'pm', cost_val: 2, mods: [{ target: 'for', val: 4 }], equipped: 0 }
         ];
 
-        this.engine.importCardPack(starterPack, true);
-        this.log('[Compêndio] Carregado compêndio inicial de aventura com 15 cards.', 'info');
-    }
+        const pack = {
+            id: 'srd_starter_pack',
+            name: 'SRD Básico / Fantasia Aberta',
+            system: 'Fantasia Aberta d20',
+            author: 'Comunidade RPG-SheetC',
+            version: '2.0.0',
+            desc: 'Kit inicial básico com atributos, recursos, perícias, armas e magias abertas.',
+            cards: starterPack,
+            createdAt: Date.now()
+        };
 
-    generateBenchmarkCards() {
-        if (!this.engine) return;
+        this.addOrUpdatePack(pack);
+        this.activePackId = pack.id;
+        this.currentViewMode = 'cards';
 
-        const benchmarkPack = [];
-        const types = [0, 1, 2, 3, 4, 5, 6, 7];
-        const prefixes = ['Lâmina', 'Escudo', 'Tomo', 'Orbe', 'Anel', 'Benção', 'Maldição', 'Golpe', 'Postura', 'Prece'];
-
-        const startIdx = this.engine.getCardCount();
-        for (let i = 0; i < 1000; i++) {
-            const id = startIdx + i + 1;
-            const t = types[i % types.length];
-            const p = prefixes[i % prefixes.length];
-            benchmarkPack.push({
-                id,
-                type: t,
-                key: `card_bench_${id}`,
-                name: `${p} Lendária #${id}`,
-                desc: `Card gerado dinamicamente para teste de virtualização e estresse de rolagem virtual. Índice #${id}`,
-                base: 10 + (i % 25),
-                formula: i % 2 === 0 ? `@for + ${i % 10}` : '',
-                cost_res: i % 3 === 0 ? 'pm' : '',
-                cost_val: (i % 5) + 1,
-                equipped: i % 4 === 0 ? 1 : 0
-            });
+        if (this.engine) {
+            this.engine.importCardPack(starterPack, true);
         }
-
-        const t0 = Date.now();
-        const count = this.engine.importCardPack(benchmarkPack, true);
-        const dt = Date.now() - t0;
-
-        this.log(`[Benchmark] ${count} cards gerados e inseridos no motor C em ${dt}ms! Total no deck: ${this.engine.getCardCount()}`, 'success');
-        this.updateCardsList();
+        this.log('[Compêndio] Carregado CardPack inicial de aventura com 15 cards.', 'info');
     }
 }
 

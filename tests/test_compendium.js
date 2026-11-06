@@ -168,19 +168,71 @@ async function runTests() {
     assert(logs.some(l => l.msg.includes('Rolagem C') && l.msg.includes('Bola de Fogo')));
     console.log(`  [OK] Ação de rolagem de card com fórmula acionada com sucesso`);
 
-    // 6. Teste de Benchmark (1.000 cards inseridos)
-    view.currentFilterType = null;
-    view.searchQuery = '';
-    const countBefore = engine.getCardCount();
-    view.generateBenchmarkCards();
-    const countAfter = engine.getCardCount();
-    assert.strictEqual(countAfter, countBefore + 1000);
-    assert(view.virtualList.items.length >= 1000);
-    console.log(`  [OK] Benchmark: 1.000 cards inseridos e virtual list atualizada (${countAfter} cards no total)`);
+    // 6. Teste de Gerenciamento Hierárquico de CardPacks e Aninhamento de Cards (Passo 10.4)
+    // 6.1. Criação de CardPack autoral
+    const customPack = view.createPack({
+        name: 'Sistema Autoral de Magia',
+        system: 'Grimório Heroico',
+        author: 'Mestre Valente',
+        version: '1.2.0',
+        desc: 'Coleção de magias antigas e canalizações.'
+    });
+    assert(customPack.id);
+    assert.strictEqual(customPack.name, 'Sistema Autoral de Magia');
+    assert.strictEqual(view.getPackById(customPack.id).cards.length, 0);
+    console.log('  [OK] Criação de CardPack autoral no compêndio');
+
+    // 6.2. Abertura e aninhamento de card dentro do pacote
+    view.openPack(customPack.id);
+    assert.strictEqual(view.activePackId, customPack.id);
+    assert.strictEqual(view.currentViewMode, 'cards');
+
+    const newSpellCard = {
+        id: 101,
+        type: CARD_TYPES.SPELL,
+        key: 'raio_trovao',
+        name: 'Raio de Trovão Primal',
+        desc: 'Relâmpago que causa surdez e dano elétrico massivo.',
+        formula: '4d6 + 4',
+        cost_res: 'pm',
+        cost_val: 3,
+        equipped: 1
+    };
+    view.syncActivePackCard(newSpellCard);
+    const updatedPack = view.getPackById(customPack.id);
+    assert.strictEqual(updatedPack.cards.length, 1);
+    assert.strictEqual(updatedPack.cards[0].key, 'raio_trovao');
+    console.log('  [OK] Card aninhado e salvo dentro do CardPack selecionado');
+
+    // 6.3. Upload e Importação de CardPack real (substituindo geração procedural de benchmark)
+    const srdJsonPath = './data/srd_basic_pack.json';
+    if (fs.existsSync(srdJsonPath)) {
+        const rawContent = fs.readFileSync(srdJsonPath, 'utf-8');
+        const mockEvent = {
+            target: {
+                files: [{
+                    name: 'srd_basic_pack.cardpack',
+                    text: async () => rawContent
+                }],
+                value: ''
+            }
+        };
+        await view.handlePackFileImport(mockEvent);
+        const importedPack = view.getInstalledPacks().find(p => p.name.includes('SRD Básico'));
+        assert(importedPack, 'Pacote SRD deve ter sido importado pelo upload real');
+        assert(importedPack.cards.length >= 40, 'Pacote importado deve conter 40+ cards reais');
+        console.log(`  [OK] Upload e importação de CardPack real validado (${importedPack.cards.length} cards)`);
+
+        // 6.4. Carregar CardPack na Ficha / Motor C
+        view.loadPackIntoEngine(importedPack.id);
+        assert(engine.getCardCount() >= 40, 'Cards do pacote devem ser carregados no motor C');
+        assert.strictEqual(engine.getCharacterName(), importedPack.name);
+        console.log(`  [OK] CardPack ativado com sucesso no motor C (${engine.getCardCount()} cards)`);
+    }
 
     // 7. Teste de Exportação
     view.exportCompendium();
-    assert(logs.some(l => l.msg.includes('Compêndio exportado com sucesso')));
+    assert(logs.some(l => l.msg.includes('exportado com sucesso')));
     console.log(`  [OK] Exportação de .cardpack gerada com integridade`);
 
     console.log('=== Todos os testes da CompendiumView passaram com 100% de sucesso! ===\n');
