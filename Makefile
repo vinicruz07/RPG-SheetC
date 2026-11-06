@@ -46,7 +46,7 @@ test-c: $(WASM_SRCS) $(TEST_DIR)/test_cards.c
 	$(CC_NATIVE) $(NATIVE_FLAGS) $(WASM_SRCS) $(TEST_DIR)/test_cards.c -o $(TEST_TARGET)
 	@./$(TEST_TARGET)
 
-# Alvo de testes JavaScript e integração (Virtual Scroll, Compendium, Editor, SheetView, PackManager, Creator)
+# Alvo de testes JavaScript e integração (Virtual Scroll, Compendium, Editor, SheetView, PackManager, Creator, Drawer Navigation)
 test-js:
 	@node $(TEST_DIR)/test_virtual_scroll.js
 	@node $(TEST_DIR)/test_compendium.js
@@ -54,6 +54,7 @@ test-js:
 	@node $(TEST_DIR)/test_sheet_view.js
 	@node $(TEST_DIR)/test_pack_manager.js
 	@node $(TEST_DIR)/test_creator.js
+	@node $(TEST_DIR)/test_drawer_nav.js
 
 # Alvo padrão de testes: compila e executa a suíte unitária C e o teste de virtual scroll
 test: test-c

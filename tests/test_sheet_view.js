@@ -282,6 +282,30 @@ async function runTests() {
     assert.strictEqual(engine.getCardByKey('atletismo').trained, false, 'Treino deve ter sido desmarcado no C');
     console.log('  [OK] Treinamento de perícia alterado reativamente no C');
 
+    // 10. Rolagem rápida de Atributo em Modo In-Game
+    sheetView.setMode('play');
+    assert.strictEqual(sheetView.sheetMode, 'play', 'Modo deve retornar para In-Game');
+    const attrModFor = sheetView.container.querySelectorAll('.sheet-attr-mod').find(m => m.dataset.attrKey === 'for');
+    assert(attrModFor, 'Modificador de Força deve existir');
+    attrModFor.trigger('click');
+    assert(logs.some(l => l.msg.includes('Força') || l.msg.includes('Rolagem')), 'Deve registrar rolagem de atributo no log');
+    console.log('  [OK] Rolagem rápida de atributo no Modo In-Game acionada e registrada');
+
+    // 11. Retorno para a Galeria de Personagens (Roster) a partir da Ficha
+    const btnBackRoster = sheetView.container.querySelector('#btn-sheet-back-to-roster');
+    assert(btnBackRoster, 'Botão de voltar à galeria deve existir no topo da ficha');
+    btnBackRoster.trigger('click');
+    assert.strictEqual(sheetView.showingRoster, true, 'Flag showingRoster deve ser ativada');
+    assert(sheetView.container.innerHTML.includes('sheet-roster-mount-point'), 'Deve renderizar tela da galeria com mount point');
+    console.log('  [OK] Retorno para a Galeria de Personagens a partir da Ficha validado');
+
+    // 12. Retomada da Ficha Ativa a partir da Galeria
+    sheetView.showingRoster = false;
+    sheetView.render();
+    assert.strictEqual(sheetView.showingRoster, false);
+    assert(sheetView.container.innerHTML.includes('Kallan Ironfist'), 'Deve restaurar ficha ativa no DOM');
+    console.log('  [OK] Reabertura da Ficha Ativa a partir da Galeria validada');
+
     console.log('\n=== Todos os testes do SheetView passaram com 100% de sucesso! ===');
 }
 

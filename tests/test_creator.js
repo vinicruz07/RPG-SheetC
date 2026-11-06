@@ -119,3 +119,4 @@ runTests().catch(err => {
     console.error('Falha nos testes do Creator:', err);
     process.exit(1);
 });
+

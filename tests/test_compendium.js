@@ -230,6 +230,17 @@ async function runTests() {
         console.log(`  [OK] CardPack ativado com sucesso no motor C (${engine.getCardCount()} cards)`);
     }
 
+    // 6.5. Retorno à visão de pacotes e exclusão de CardPack autoral
+    view.currentViewMode = 'packs';
+    view.activePackId = null;
+    assert.strictEqual(view.currentViewMode, 'packs');
+    const packCountBefore = view.getInstalledPacks().length;
+    view.deletePack(customPack.id);
+    const packCountAfter = view.getInstalledPacks().length;
+    assert.strictEqual(packCountAfter, packCountBefore - 1, 'Pacote autoral deve ter sido removido');
+    assert(!view.getPackById(customPack.id), 'Pacote excluído não deve mais ser encontrado');
+    console.log('  [OK] Retorno à lista de pacotes e exclusão hierárquica validadas');
+
     // 7. Teste de Exportação
     view.exportCompendium();
     assert(logs.some(l => l.msg.includes('exportado com sucesso')));
