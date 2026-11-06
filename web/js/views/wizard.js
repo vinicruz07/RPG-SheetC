@@ -1,6 +1,6 @@
 /**
- * wizard.js — Assistente Passo-a-Passo de Criação de Personagem (RPG-SheetC)
- * Integrado ao Motor C99 (WebAssembly)
+ * wizard.js — Fluxo Dedicado de Criação de Nova Ficha Vinculado ao CardPack Principal (RPG-SheetC v2.0)
+ * Permite ao usuário selecionar o CardPack de regras principal e optar entre Ficha Rápida ou Assistente Guiado.
  */
 
 class WizardView {
@@ -9,91 +9,12 @@ class WizardView {
         this.router = router;
         this.onCharacterCreated = onCharacterCreated;
 
-        this.currentStep = 1;
-        this.totalSteps = 3;
+        this.container = null;
+        this.currentStep = 1; // 1: Selecionar CardPack Principal | 2: Nome e Modo de Criação
 
-        // Estado do personagem em criação
-        this.state = {
-            name: 'Valeros',
-            raceId: 0,
-            classId: 8,
-            attributes: [14, 12, 14, 10, 10, 10], // FOR, DES, CON, INT, SAB, CAR
-            diceRolls: [null, null, null, null, null, null]
-        };
-
-        // Raças migradas do C (sheet_t20.h)
-        this.races = [
-            {
-                id: 0,
-                name: 'Humano',
-                icon: '👤',
-                bonusText: '+1 em 3 atributos',
-                bonusDesc: 'Versatilidade incomparável, perícia e poderes extras.'
-            },
-            {
-                id: 1,
-                name: 'Elfo',
-                icon: '🧝',
-                bonusText: '+2 INT, +1 DES, -1 CON',
-                bonusDesc: 'Graça arcana e sentidos aguçados na penumbra.'
-            },
-            {
-                id: 2,
-                name: 'Anão',
-                icon: '🧔',
-                bonusText: '+2 CON, +1 SAB, -1 DES',
-                bonusDesc: 'Resistência pétrea, PV bônus e afinidade com metais.'
-            },
-            {
-                id: 3,
-                name: 'Goblin',
-                icon: '👺',
-                bonusText: '+2 DES, +1 INT, -1 CAR',
-                bonusDesc: 'Engenhoso, ágil e acostumado a sobreviver no subterrâneo.'
-            },
-            {
-                id: 4,
-                name: 'Minotauro',
-                icon: '🐂',
-                bonusText: '+2 FOR, +1 CON, -1 SAB',
-                bonusDesc: 'Força formidável, chifres pontiagudos e couro rígido (+1 Defesa).'
-            },
-            {
-                id: 5,
-                name: 'Draconato',
-                icon: '🐲',
-                bonusText: '+2 FOR, +1 CAR, -1 DES',
-                bonusDesc: 'Descendência de dragões, escamas protetoras e baforada elemental.'
-            }
-        ];
-
-        // Classes oficiais migradas do C (sheet_t20.c)
-        this.classes = [
-            { id: 0, name: 'Arcanista', icon: '🔮', pvBase: 8, pmBase: 6, role: 'Conjurador Arcano' },
-            { id: 1, name: 'Bárbaro', icon: '🪓', pvBase: 24, pmBase: 3, role: 'Fúria & Vigor' },
-            { id: 2, name: 'Bardo', icon: '🪕', pvBase: 12, pmBase: 4, role: 'Especialista & Inspiração' },
-            { id: 3, name: 'Bucaneiro', icon: '⚓', pvBase: 16, pmBase: 3, role: 'Agilidade & Bravata' },
-            { id: 4, name: 'Caçador', icon: '🏹', pvBase: 16, pmBase: 4, role: 'Rastreador & Disparos' },
-            { id: 5, name: 'Cavaleiro', icon: '🛡️', pvBase: 20, pmBase: 3, role: 'Defensor & Honra' },
-            { id: 6, name: 'Clérigo', icon: '✝️', pvBase: 16, pmBase: 5, role: 'Conjurador Divino' },
-            { id: 7, name: 'Druida', icon: '🌿', pvBase: 16, pmBase: 4, role: 'Natureza & Metamorfose' },
-            { id: 8, name: 'Guerreiro', icon: '⚔️', pvBase: 20, pmBase: 3, role: 'Maestria em Combate' },
-            { id: 9, name: 'Inventor', icon: '⚙️', pvBase: 12, pmBase: 4, role: 'Engenhosidade & Alquimia' },
-            { id: 10, name: 'Ladino', icon: '🗡️', pvBase: 12, pmBase: 4, role: 'Furtividade & Perícias' },
-            { id: 11, name: 'Lutador', icon: '🥊', pvBase: 20, pmBase: 3, role: 'Desarmado & Briga' },
-            { id: 12, name: 'Nobre', icon: '👑', pvBase: 16, pmBase: 4, role: 'Presença & Liderança' },
-            { id: 13, name: 'Paladino', icon: '⚜️', pvBase: 20, pmBase: 3, role: 'Campeão Sagrado' }
-        ];
-
-        // 6 Atributos canônicos
-        this.attributesMeta = [
-            { id: 0, name: 'Força', abbr: 'FOR', desc: 'Poder físico e carga' },
-            { id: 1, name: 'Destreza', abbr: 'DES', desc: 'Agilidade, reflexos e pontaria' },
-            { id: 2, name: 'Constituição', abbr: 'CON', desc: 'Saúde, vigor e PV' },
-            { id: 3, name: 'Inteligência', abbr: 'INT', desc: 'Raciocínio e perícias' },
-            { id: 4, name: 'Sabedoria', abbr: 'SAB', desc: 'Percepção e vontade' },
-            { id: 5, name: 'Carisma', abbr: 'CAR', desc: 'Presença e persuasão' }
-        ];
+        this.selectedPackId = null;
+        this.characterName = 'Novo Herói';
+        this.creationMode = 'direct'; // 'direct' (Ficha Rápida) | 'guided' (Assistente)
 
         this.fantasyNames = [
             'Valeros', 'Kaelen', 'Lorien', 'Thalor', 'Gwendolyn',
@@ -101,141 +22,364 @@ class WizardView {
             'Sariel', 'Morgran', 'Vanya', 'Zadok', 'Elora',
             'Theron', 'Cassian', 'Jareth', 'Mirena', 'Branok'
         ];
-
-        this.container = null;
     }
 
     /**
-     * Inicializa a view do Wizard no elemento de container
+     * Inicializa a view do Criador no container
      */
     init(containerId = 'wizard-container') {
         this.container = document.getElementById(containerId);
         if (!this.container) return;
 
+        this.reset();
         this.render();
     }
 
     /**
-     * Reseta o wizard para nova criação
+     * Reseta o estado do criador
      */
-    reset(initialRaceId = 0, initialClassId = 8) {
+    reset() {
         this.currentStep = 1;
-        this.state = {
-            name: this.getRandomName(),
-            raceId: initialRaceId,
-            classId: initialClassId,
-            attributes: [14, 12, 14, 10, 10, 10],
-            diceRolls: [null, null, null, null, null, null]
-        };
-        this.render();
+        this.selectedPackId = null;
+        this.characterName = this.getRandomName();
+        this.creationMode = 'direct';
+
+        // Auto-seleciona o primeiro CardPack se houver
+        const packs = this.getAvailablePacks();
+        if (packs.length > 0) {
+            this.selectedPackId = packs[0].id;
+        }
     }
 
-    /**
-     * Retorna nome aleatório de fantasia
-     */
     getRandomName() {
         const idx = Math.floor(Math.random() * this.fantasyNames.length);
         return this.fantasyNames[idx];
     }
 
     /**
-     * Calcula modificador de atributo no padrão canônico de Tormenta 20
+     * Obtém os CardPacks disponíveis (do Compêndio, Storage ou Fallback SRD)
      */
-    calcModifier(val) {
-        if (val >= 10) {
-            return Math.floor((val - 10) / 2);
-        } else {
-            return Math.floor((val - 11) / 2);
+    getAvailablePacks() {
+        let packs = [];
+        if (window.compendiumView && typeof window.compendiumView.getInstalledPacks === 'function') {
+            packs = window.compendiumView.getInstalledPacks();
+        } else if (typeof window !== 'undefined' && window.localStorage) {
+            try {
+                const raw = window.localStorage.getItem('rpg_sheetc_cardpacks_v1');
+                if (raw) packs = JSON.parse(raw);
+            } catch (e) {
+                // continua
+            }
         }
-    }
-
-    formatMod(mod) {
-        return mod >= 0 ? `+${mod}` : `${mod}`;
+        return packs;
     }
 
     /**
-     * Renderiza o assistente completo
+     * Renderiza o fluxo de criação
      */
     render() {
         if (!this.container) return;
 
         this.container.innerHTML = `
             <div class="wizard-wrapper">
-                <!-- Barra de Progresso / Stepper -->
-                <div class="wizard-stepper">
-                    <div class="wizard-step ${this.currentStep === 1 ? 'active' : ''} ${this.currentStep > 1 ? 'completed' : ''}" data-step="1">
+                <!-- Stepper de Progresso Superior -->
+                <div class="wizard-stepper" style="max-width: 600px; margin: 0 auto var(--space-lg) auto;">
+                    <div class="wizard-step ${this.currentStep === 1 ? 'active' : ''} ${this.currentStep > 1 ? 'completed' : ''}">
                         <div class="step-num">${this.currentStep > 1 ? '✓' : '1'}</div>
-                        <div class="step-label">Identidade & Classe</div>
+                        <div class="step-label">CardPack Principal</div>
                     </div>
                     <div class="wizard-step-line ${this.currentStep > 1 ? 'completed' : ''}"></div>
-                    <div class="wizard-step ${this.currentStep === 2 ? 'active' : ''} ${this.currentStep > 2 ? 'completed' : ''}" data-step="2">
-                        <div class="step-num">${this.currentStep > 2 ? '✓' : '2'}</div>
-                        <div class="step-label">Atributos & Dados</div>
-                    </div>
-                    <div class="wizard-step-line ${this.currentStep > 2 ? 'completed' : ''}"></div>
-                    <div class="wizard-step ${this.currentStep === 3 ? 'active' : ''}" data-step="3">
-                        <div class="step-num">3</div>
-                        <div class="step-label">Resumo & Finalização</div>
+                    <div class="wizard-step ${this.currentStep === 2 ? 'active' : ''}">
+                        <div class="step-num">2</div>
+                        <div class="step-label">Identidade & Modo</div>
                     </div>
                 </div>
 
                 <!-- Conteúdo do Passo Ativo -->
-                <div class="wizard-content card">
-                    <div id="wizard-step-body"></div>
-                </div>
-
-                <!-- Barra de Navegação Inferior -->
-                <div class="wizard-footer">
-                    <button id="btn-wizard-prev" class="btn" ${this.currentStep === 1 ? 'disabled' : ''}>
-                        ← Voltar
-                    </button>
-                    <div class="wizard-step-indicator">
-                        Passo <strong>${this.currentStep}</strong> de ${this.totalSteps}
-                    </div>
-                    ${this.currentStep < 3 ? `
-                        <button id="btn-wizard-next" class="btn btn-primary">
-                            Avançar →
-                        </button>
-                    ` : `
-                        <button id="btn-wizard-finish" class="btn btn-primary">
-                            ⚔️ Concluir e Criar no Motor C
-                        </button>
-                    `}
-                </div>
+                ${this.currentStep === 1 ? this.renderStep1() : this.renderStep2()}
             </div>
         `;
 
-        this.setupStepperEvents();
-        this.renderCurrentStepBody();
+        this.setupEventListeners();
     }
 
-    /**
-     * Configura eventos de navegação
-     */
-    setupStepperEvents() {
-        const btnPrev = document.getElementById('btn-wizard-prev');
-        if (btnPrev) {
-            btnPrev.addEventListener('click', () => {
-                if (this.currentStep > 1) {
-                    this.currentStep--;
+    /* =========================================================================
+     * Passo 1: Seleção do CardPack Principal
+     * ========================================================================= */
+
+    renderStep1() {
+        const packs = this.getAvailablePacks();
+
+        return `
+            <div class="card wizard-step-card" style="padding: var(--space-xl); background: var(--color-surface-card); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-lg);">
+                <div class="wizard-section-header">
+                    <div class="wizard-header-row">
+                        <div>
+                            <h2 class="wizard-title" style="margin: 0; color: var(--color-gold-light);">
+                                📦 Escolha o CardPack Principal
+                            </h2>
+                            <p class="wizard-subtitle" style="margin-top: 4px; color: var(--color-text-muted);">
+                                Cada ficha no RPG-SheetC é regida pelas regras, perícias, fórmulas e itens de seu CardPack base.
+                            </p>
+                        </div>
+                        <div class="wizard-quick-actions">
+                            <button type="button" id="btn-creator-upload-pack" class="btn btn-sm btn-secondary" title="Fazer upload de um arquivo .cardpack do computador">
+                                📂 Fazer Upload de .cardpack
+                            </button>
+                            <input type="file" id="creator-file-input" accept=".cardpack,.json" style="display: none;">
+                        </div>
+                    </div>
+                </div>
+
+                ${packs.length === 0 ? `
+                    <div style="text-align: center; padding: 40px 20px; background: var(--color-surface-inset); border: 2px dashed var(--color-border-subtle); border-radius: var(--radius-md); margin-bottom: var(--space-lg);">
+                        <div style="font-size: 3rem; margin-bottom: 8px;">📭</div>
+                        <h3 style="color: var(--color-gold-primary); margin-bottom: 6px;">Nenhum CardPack Instalado no Compêndio</h3>
+                        <p style="color: var(--color-text-muted); max-width: 500px; margin: 0 auto 18px auto; font-size: 0.9rem;">
+                            Carregue o pacote padrão neutro de fantasia (SRD d20) com 1 clique ou importe qualquer arquivo <code>.cardpack</code> do seu computador.
+                        </p>
+                        <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" id="btn-creator-load-srd-fallback" class="btn btn-primary" style="font-weight: 700;">
+                                ✨ Carregar Pacote Padrão SRD d20
+                            </button>
+                            <button type="button" id="btn-creator-upload-empty" class="btn btn-accent">
+                                📂 Fazer Upload de Arquivo .cardpack
+                            </button>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="creator-packs-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-md); margin-bottom: var(--space-lg);">
+                        ${packs.map(p => {
+                            const isSelected = p.id === this.selectedPackId;
+                            const count = p.cards ? p.cards.length : 0;
+                            return `
+                                <div class="card creator-pack-card ${isSelected ? 'is-selected' : ''}" data-pack-id="${p.id}" style="cursor: pointer; padding: 16px; border: 2px solid ${isSelected ? 'var(--color-gold-primary)' : 'var(--color-border-subtle)'}; background: ${isSelected ? 'rgba(212, 163, 115, 0.08)' : 'var(--color-surface-inset)'}; border-radius: var(--radius-md); transition: all 0.15s ease;">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span style="font-size: 1.4rem;">📦</span>
+                                            <strong style="color: var(--color-parchment-light); font-size: 1rem;">${p.name}</strong>
+                                        </div>
+                                        <input type="radio" name="creator-pack-radio" value="${p.id}" ${isSelected ? 'checked' : ''} style="cursor: pointer;">
+                                    </div>
+                                    <div style="display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">
+                                        <span class="sheet-meta-pill system-pill" style="font-size: 0.68rem; padding: 2px 6px;">📜 ${p.system}</span>
+                                        <span class="sheet-meta-pill race-pill" style="font-size: 0.68rem; padding: 2px 6px;">🃏 ${count} Cards</span>
+                                    </div>
+                                    <p style="font-size: 0.8rem; color: var(--color-text-muted); margin: 0; line-height: 1.35;">
+                                        ${p.desc || 'Pacote de regras para personagens.'}
+                                    </p>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `}
+
+                <div class="wizard-footer" style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px;">
+                    <span style="font-size: 0.85rem; color: var(--color-text-muted);">Passo 1 de 2: Seleção de Regras</span>
+                    <button type="button" id="btn-creator-next-step" class="btn btn-primary" ${!this.selectedPackId ? 'disabled' : ''} style="padding: 10px 24px; font-weight: 700;">
+                        Avançar para Identidade & Modo ➔
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    /* =========================================================================
+     * Passo 2: Nome do Personagem e Método de Criação
+     * ========================================================================= */
+
+    renderStep2() {
+        const packs = this.getAvailablePacks();
+        const selectedPack = packs.find(p => p.id === this.selectedPackId) || { name: 'Pacote Selecionado', system: 'Sistema Aberto', cards: [] };
+
+        return `
+            <div class="card wizard-step-card" style="padding: var(--space-xl); background: var(--color-surface-card); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-lg);">
+                <div class="wizard-section-header">
+                    <h2 class="wizard-title" style="margin: 0; color: var(--color-gold-light);">
+                        ⚔️ Identidade & Método de Criação
+                    </h2>
+                    <p class="wizard-subtitle" style="margin-top: 4px; color: var(--color-text-muted);">
+                        Defina o nome do herói e como deseja iniciar a ficha a partir de <strong>${selectedPack.name}</strong>.
+                    </p>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: var(--space-lg); margin-bottom: var(--space-xl);">
+                    <!-- Campo de Nome do Herói -->
+                    <div style="background: var(--color-surface-inset); padding: 18px; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md);">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--color-gold-primary); margin-bottom: 6px;">
+                            Nome do Personagem
+                        </label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="input-creator-name" class="sheet-name-field" value="${this.characterName}" maxlength="32" placeholder="Nome do Herói" style="flex: 1; padding: 10px 14px; font-size: 1.1rem;">
+                            <button type="button" id="btn-creator-random-name" class="btn btn-secondary" title="Gerar nome aleatório">
+                                🎲 Aleatório
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Métodos de Criação: Ficha Rápida vs Assistente -->
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--color-gold-primary); margin-bottom: 10px;">
+                            Método de Inicialização da Ficha
+                        </label>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-md);">
+                            <!-- Opção 1: Ficha Direta do CardPack -->
+                            <div class="card creator-mode-option ${this.creationMode === 'direct' ? 'is-selected' : ''}" data-mode="direct" style="cursor: pointer; padding: 18px; border: 2px solid ${this.creationMode === 'direct' ? 'var(--color-gold-primary)' : 'var(--color-border-subtle)'}; background: ${this.creationMode === 'direct' ? 'rgba(212, 163, 115, 0.08)' : 'var(--color-surface-inset)'}; border-radius: var(--radius-md); transition: all 0.15s ease;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-size: 1.4rem;">⚡</span>
+                                        <strong style="color: var(--color-gold-light); font-size: 1.05rem;">Ficha Rápida do Pacote</strong>
+                                    </div>
+                                    <span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #4ade80; font-size: 0.7rem;">Recomendado</span>
+                                </div>
+                                <p style="font-size: 0.82rem; color: var(--color-text-muted); line-height: 1.4; margin: 0;">
+                                    Inicializa a ficha imediatamente com todos os atributos, perícias, fórmulas e itens básicos do CardPack prontos para jogar. Você poderá personalizar tudo depois no <strong>Modo Editar</strong>.
+                                </p>
+                            </div>
+
+                            <!-- Opção 2: Assistente Guiado -->
+                            <div class="card creator-mode-option ${this.creationMode === 'guided' ? 'is-selected' : ''}" data-mode="guided" style="cursor: pointer; padding: 18px; border: 2px solid ${this.creationMode === 'guided' ? 'var(--color-gold-primary)' : 'var(--color-border-subtle)'}; background: ${this.creationMode === 'guided' ? 'rgba(212, 163, 115, 0.08)' : 'var(--color-surface-inset)'}; border-radius: var(--radius-md); transition: all 0.15s ease;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-size: 1.4rem;">🧙</span>
+                                        <strong style="color: var(--color-gold-light); font-size: 1.05rem;">Assistente Guiado do Pacote</strong>
+                                    </div>
+                                </div>
+                                <p style="font-size: 0.82rem; color: var(--color-text-muted); line-height: 1.4; margin: 0;">
+                                    Abre o assistente guiado passo a passo para distribuir atributos com rolagem de dados e escolher especialidades do pacote.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rodapé com Botões de Ação -->
+                <div class="wizard-footer" style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px;">
+                    <button type="button" id="btn-creator-prev-step" class="btn btn-secondary">
+                        ⬅️ Voltar ao Passo 1
+                    </button>
+                    <button type="button" id="btn-creator-finish" class="btn btn-primary" style="padding: 10px 28px; font-weight: 800; font-size: 1rem;">
+                        ⚔️ Criar Ficha e Jogar
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    /* =========================================================================
+     * Manipulação de Eventos e Finalização
+     * ========================================================================= */
+
+    setupEventListeners() {
+        if (!this.container) return;
+
+        // Seleção de CardPack no Passo 1
+        this.container.querySelectorAll('.creator-pack-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const packId = card.dataset.packId;
+                if (packId) {
+                    this.selectedPackId = packId;
                     this.render();
                 }
             });
-        }
+        });
 
-        const btnNext = document.getElementById('btn-wizard-next');
-        if (btnNext) {
-            btnNext.addEventListener('click', () => {
-                if (this.validateCurrentStep()) {
-                    if (this.currentStep < this.totalSteps) {
-                        this.currentStep++;
+        // Upload de CardPack
+        const btnUpload = document.getElementById('btn-creator-upload-pack') || document.getElementById('btn-creator-upload-empty');
+        const fileInput = document.getElementById('creator-file-input');
+        if (btnUpload && fileInput) {
+            btnUpload.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', async (e) => {
+                const file = e.target?.files?.[0];
+                if (file) {
+                    try {
+                        const text = await file.text();
+                        const parsed = JSON.parse(text);
+                        const newPack = {
+                            id: 'pack_' + Date.now(),
+                            name: parsed.sheet_name || parsed.name || file.name.replace(/\.[^/.]+$/, ''),
+                            system: parsed.system_name || parsed.system || 'Sistema Aberto',
+                            author: parsed.author || 'Importado',
+                            version: parsed.version || '1.0.0',
+                            desc: parsed.desc || `Importado de "${file.name}".`,
+                            cards: Array.isArray(parsed.cards) ? parsed.cards : []
+                        };
+
+                        if (window.compendiumView && typeof window.compendiumView.addOrUpdatePack === 'function') {
+                            window.compendiumView.addOrUpdatePack(newPack);
+                        }
+                        this.selectedPackId = newPack.id;
                         this.render();
+                    } catch (err) {
+                        alert(`Erro ao ler .cardpack: ${err.message}`);
                     }
                 }
             });
         }
 
-        const btnFinish = document.getElementById('btn-wizard-finish');
+        // Carregar SRD Fallback
+        const btnSrd = document.getElementById('btn-creator-load-srd-fallback');
+        if (btnSrd) {
+            btnSrd.addEventListener('click', () => {
+                if (window.compendiumView && typeof window.compendiumView.seedStarterCards === 'function') {
+                    window.compendiumView.seedStarterCards();
+                    const packs = this.getAvailablePacks();
+                    if (packs.length > 0) {
+                        this.selectedPackId = packs[0].id;
+                    }
+                    this.render();
+                }
+            });
+        }
+
+        // Avançar para Passo 2
+        const btnNext = document.getElementById('btn-creator-next-step');
+        if (btnNext) {
+            btnNext.addEventListener('click', () => {
+                if (this.selectedPackId) {
+                    this.currentStep = 2;
+                    this.render();
+                }
+            });
+        }
+
+        // Voltar ao Passo 1
+        const btnPrev = document.getElementById('btn-creator-prev-step');
+        if (btnPrev) {
+            btnPrev.addEventListener('click', () => {
+                this.currentStep = 1;
+                this.render();
+            });
+        }
+
+        // Nome do Herói e Aleatório
+        const nameInput = document.getElementById('input-creator-name');
+        if (nameInput) {
+            nameInput.addEventListener('input', (e) => {
+                this.characterName = e.target.value.trim() || 'Novo Herói';
+            });
+        }
+
+        const btnRandom = document.getElementById('btn-creator-random-name');
+        if (btnRandom && nameInput) {
+            btnRandom.addEventListener('click', () => {
+                const rName = this.getRandomName();
+                this.characterName = rName;
+                nameInput.value = rName;
+            });
+        }
+
+        // Escolha de Modo (Ficha Rápida vs Assistente)
+        this.container.querySelectorAll('.creator-mode-option').forEach(opt => {
+            opt.addEventListener('click', () => {
+                this.creationMode = opt.dataset.mode;
+                this.render();
+            });
+        });
+
+        // Botão Finalizar e Criar Ficha
+        const btnFinish = document.getElementById('btn-creator-finish');
         if (btnFinish) {
             btnFinish.addEventListener('click', () => {
                 this.finishCreation();
@@ -244,492 +388,74 @@ class WizardView {
     }
 
     /**
-     * Valida os campos da etapa atual antes de avançar
-     */
-    validateCurrentStep() {
-        if (this.currentStep === 1) {
-            const nameInput = document.getElementById('wizard-char-name');
-            if (nameInput) {
-                const val = nameInput.value.trim();
-                if (!val) {
-                    alert('Por favor, informe o nome do seu personagem.');
-                    nameInput.focus();
-                    return false;
-                }
-                this.state.name = val;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Renderiza o corpo do passo atual
-     */
-    renderCurrentStepBody() {
-        const bodyEl = document.getElementById('wizard-step-body');
-        if (!bodyEl) return;
-
-        if (this.currentStep === 1) {
-            this.renderStep1(bodyEl);
-        } else if (this.currentStep === 2) {
-            this.renderStep2(bodyEl);
-        } else if (this.currentStep === 3) {
-            this.renderStep3(bodyEl);
-        }
-    }
-
-    /* =========================================================================
-     * Passo 1: Nome, Raça e Classe
-     * ========================================================================= */
-
-    renderStep1(container) {
-        container.innerHTML = `
-            <div class="wizard-section-header">
-                <h3 class="wizard-title">Identidade do Aventureiro</h3>
-                <p class="wizard-subtitle">Defina o nome, a linhagem ancestral e a vocação heroica do seu personagem.</p>
-            </div>
-
-            <!-- Campo de Nome -->
-            <div class="form-group wizard-name-group">
-                <label for="wizard-char-name" class="form-label">Nome do Personagem</label>
-                <div class="input-with-button">
-                    <input type="text" id="wizard-char-name" class="form-input" value="${this.state.name}" maxlength="30" placeholder="Ex: Sir Galahad, Valeros, etc.">
-                    <button type="button" id="btn-wizard-random-name" class="btn" title="Gera um nome de fantasia aleatório">
-                        🎲 Nome Aleatório
-                    </button>
-                </div>
-            </div>
-
-            <!-- Seleção de Raça -->
-            <div class="wizard-choice-section">
-                <div class="choice-section-header">
-                    <label class="form-label">Escolha a Raça</label>
-                    <span class="choice-counter">6 opções disponíveis do Tormenta 20</span>
-                </div>
-                <div class="races-grid">
-                    ${this.races.map(r => `
-                        <div class="choice-card ${this.state.raceId === r.id ? 'selected' : ''}" data-race-id="${r.id}">
-                            <div class="choice-icon">${r.icon}</div>
-                            <div class="choice-content">
-                                <div class="choice-name">${r.name}</div>
-                                <div class="choice-badge">${r.bonusText}</div>
-                                <div class="choice-desc">${r.bonusDesc}</div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-
-            <!-- Seleção de Classe -->
-            <div class="wizard-choice-section" style="margin-top: var(--space-lg);">
-                <div class="choice-section-header">
-                    <label class="form-label">Escolha a Classe Oficial</label>
-                    <span class="choice-counter">14 classes oficiais compiladas no C</span>
-                </div>
-                <div class="classes-grid">
-                    ${this.classes.map(c => `
-                        <div class="choice-card class-card-mini ${this.state.classId === c.id ? 'selected' : ''}" data-class-id="${c.id}">
-                            <div class="choice-header-mini">
-                                <span class="choice-icon-mini">${c.icon}</span>
-                                <span class="choice-name-mini">${c.name}</span>
-                            </div>
-                            <div class="choice-role">${c.role}</div>
-                            <div class="choice-stats-mini">
-                                <span class="stat-tag-pv">PV: ${c.pvBase}</span>
-                                <span class="stat-tag-pm">PM: ${c.pmBase}</span>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-
-        // Input nome
-        const nameInput = document.getElementById('wizard-char-name');
-        if (nameInput) {
-            nameInput.addEventListener('input', (e) => {
-                this.state.name = e.target.value;
-            });
-        }
-
-        // Botão nome aleatório
-        const btnRand = document.getElementById('btn-wizard-random-name');
-        if (btnRand && nameInput) {
-            btnRand.addEventListener('click', () => {
-                const newName = this.getRandomName();
-                this.state.name = newName;
-                nameInput.value = newName;
-            });
-        }
-
-        // Cards de Raça
-        const raceCards = container.querySelectorAll('.choice-card[data-race-id]');
-        raceCards.forEach(card => {
-            card.addEventListener('click', () => {
-                const raceId = parseInt(card.dataset.raceId, 10);
-                this.state.raceId = raceId;
-                raceCards.forEach(c => c.classList.remove('selected'));
-                card.classList.add('selected');
-            });
-        });
-
-        // Cards de Classe
-        const classCards = container.querySelectorAll('.choice-card[data-class-id]');
-        classCards.forEach(card => {
-            card.addEventListener('click', () => {
-                const classId = parseInt(card.dataset.classId, 10);
-                this.state.classId = classId;
-                classCards.forEach(c => c.classList.remove('selected'));
-                card.classList.add('selected');
-            });
-        });
-    }
-
-    /* =========================================================================
-     * Passo 2: Atributos & Rolador 4d6
-     * ========================================================================= */
-
-    renderStep2(container) {
-        container.innerHTML = `
-            <div class="wizard-section-header">
-                <div class="wizard-header-row">
-                    <div>
-                        <h3 class="wizard-title">Atributos Básicos</h3>
-                        <p class="wizard-subtitle">Ajuste os valores manualmente ou role <strong>4d6 descartando o menor</strong> via motor C.</p>
-                    </div>
-                    <div class="wizard-quick-actions">
-                        <button type="button" id="btn-roll-all-attrs" class="btn btn-primary" title="Rola 4d6 para todos os 6 atributos usando o PRNG Xorshift32 do C">
-                            🎲 Rolar Todos (4d6)
-                        </button>
-                        <button type="button" id="btn-standard-array" class="btn" title="Aplica a distribuição padrão de T20 (18, 14, 13, 12, 10, 8)">
-                            ⚖️ Array Padrão
-                        </button>
-                        <button type="button" id="btn-reset-attrs" class="btn" title="Reseta todos para 10">
-                            🔄 Resetar (10)
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Grade de Atributos -->
-            <div class="wizard-attributes-grid" id="wizard-attrs-grid">
-                <!-- Renderizado dinamicamente -->
-            </div>
-        `;
-
-        this.renderStep2AttributesList();
-
-        // Ações de topo
-        const btnRollAll = document.getElementById('btn-roll-all-attrs');
-        if (btnRollAll) {
-            btnRollAll.addEventListener('click', () => {
-                this.rollAllAttributes();
-            });
-        }
-
-        const btnStandard = document.getElementById('btn-standard-array');
-        if (btnStandard) {
-            btnStandard.addEventListener('click', () => {
-                this.applyStandardArray();
-            });
-        }
-
-        const btnReset = document.getElementById('btn-reset-attrs');
-        if (btnReset) {
-            btnReset.addEventListener('click', () => {
-                this.state.attributes = [10, 10, 10, 10, 10, 10];
-                this.state.diceRolls = [null, null, null, null, null, null];
-                this.renderStep2AttributesList();
-            });
-        }
-    }
-
-    renderStep2AttributesList() {
-        const grid = document.getElementById('wizard-attrs-grid');
-        if (!grid) return;
-
-        grid.innerHTML = this.attributesMeta.map(attr => {
-            const val = this.state.attributes[attr.id];
-            const mod = this.calcModifier(val);
-            const rollInfo = this.state.diceRolls[attr.id];
-
-            return `
-                <div class="wizard-attr-card" data-attr-id="${attr.id}">
-                    <div class="wizard-attr-top">
-                        <div class="wizard-attr-info">
-                            <span class="wizard-attr-abbr">${attr.abbr}</span>
-                            <span class="wizard-attr-name">${attr.name}</span>
-                        </div>
-                        <div class="wizard-attr-mod ${mod >= 0 ? 'mod-positive' : 'mod-negative'}">
-                            ${this.formatMod(mod)}
-                        </div>
-                    </div>
-
-                    <div class="wizard-attr-desc">${attr.desc}</div>
-
-                    <div class="wizard-attr-controls">
-                        <button type="button" class="btn-stepper btn-stepper-minus" data-attr-id="${attr.id}" title="Diminuir">-</button>
-                        <input type="number" class="wizard-attr-input" data-attr-id="${attr.id}" value="${val}" min="3" max="22">
-                        <button type="button" class="btn-stepper btn-stepper-plus" data-attr-id="${attr.id}" title="Aumentar">+</button>
-                        <button type="button" class="btn btn-roll-single" data-attr-id="${attr.id}" title="Rolar 4d6 descartando o menor no motor C">
-                            🎲 Rolar 4d6
-                        </button>
-                    </div>
-
-                    ${rollInfo ? `
-                        <div class="wizard-roll-badge">
-                            <span class="roll-badge-label">C 4d6:</span>
-                            <div class="roll-dice-tags">
-                                ${rollInfo.rolls.map((r, i) => `
-                                    <span class="die-tag ${i === rollInfo.droppedIndex ? 'die-dropped' : 'die-kept'}">${r}</span>
-                                `).join('')}
-                            </div>
-                            <span class="roll-sum">= <strong>${rollInfo.total}</strong></span>
-                        </div>
-                    ` : `
-                        <div class="wizard-roll-placeholder">Valor manual / inicial</div>
-                    `}
-                </div>
-            `;
-        }).join('');
-
-        // Eventos dos steppers e inputs
-        grid.querySelectorAll('.btn-stepper-minus').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const id = parseInt(btn.dataset.attrId, 10);
-                if (this.state.attributes[id] > 3) {
-                    this.state.attributes[id]--;
-                    this.state.diceRolls[id] = null;
-                    this.renderStep2AttributesList();
-                }
-            });
-        });
-
-        grid.querySelectorAll('.btn-stepper-plus').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const id = parseInt(btn.dataset.attrId, 10);
-                if (this.state.attributes[id] < 22) {
-                    this.state.attributes[id]++;
-                    this.state.diceRolls[id] = null;
-                    this.renderStep2AttributesList();
-                }
-            });
-        });
-
-        grid.querySelectorAll('.wizard-attr-input').forEach(inp => {
-            inp.addEventListener('change', (e) => {
-                const id = parseInt(inp.dataset.attrId, 10);
-                let val = parseInt(e.target.value, 10);
-                if (isNaN(val)) val = 10;
-                if (val < 3) val = 3;
-                if (val > 22) val = 22;
-                this.state.attributes[id] = val;
-                this.state.diceRolls[id] = null;
-                this.renderStep2AttributesList();
-            });
-        });
-
-        grid.querySelectorAll('.btn-roll-single').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const id = parseInt(btn.dataset.attrId, 10);
-                this.rollAttribute(id);
-            });
-        });
-    }
-
-    /**
-     * Rola 4d6 descartando o menor para um atributo específico através do motor C
-     */
-    rollAttribute(attrId) {
-        if (!this.engine || !this.engine.isLoaded) {
-            alert('Aguardando inicialização do motor WebAssembly...');
-            return;
-        }
-
-        // Executa 4d6 no motor C
-        const rollResult = this.engine.rollDice(4, 6, 0);
-        if (!rollResult || !rollResult.rolls || rollResult.rolls.length < 4) return;
-
-        const rolls = [...rollResult.rolls];
-        
-        // Localiza índice do menor dado para descarte
-        let minIdx = 0;
-        for (let i = 1; i < rolls.length; i++) {
-            if (rolls[i] < rolls[minIdx]) {
-                minIdx = i;
-            }
-        }
-
-        // Soma os 3 dados mais altos
-        let total = 0;
-        for (let i = 0; i < rolls.length; i++) {
-            if (i !== minIdx) {
-                total += rolls[i];
-            }
-        }
-
-        this.state.attributes[attrId] = total;
-        this.state.diceRolls[attrId] = {
-            rolls: rolls,
-            droppedIndex: minIdx,
-            total: total
-        };
-
-        this.renderStep2AttributesList();
-    }
-
-    /**
-     * Rola 4d6 para todos os 6 atributos usando o motor C
-     */
-    rollAllAttributes() {
-        for (let i = 0; i < 6; i++) {
-            this.rollAttribute(i);
-        }
-    }
-
-    /**
-     * Aplica o array clássico de Tormenta 20
-     */
-    applyStandardArray() {
-        // Distribuição padrão heroica: 18, 14, 13, 12, 10, 8
-        this.state.attributes = [18, 14, 13, 12, 10, 8];
-        this.state.diceRolls = [null, null, null, null, null, null];
-        this.renderStep2AttributesList();
-    }
-
-    /* =========================================================================
-     * Passo 3: Resumo e Confirmação
-     * ========================================================================= */
-
-    renderStep3(container) {
-        const selectedRace = this.races.find(r => r.id === this.state.raceId) || this.races[0];
-        const selectedClass = this.classes.find(c => c.id === this.state.classId) || this.classes[8];
-
-        const conMod = this.calcModifier(this.state.attributes[2]);
-        const desMod = this.calcModifier(this.state.attributes[1]);
-
-        const estimatedPv = Math.max(1, selectedClass.pvBase + conMod);
-        const estimatedPm = Math.max(1, selectedClass.pmBase);
-        const estimatedDefesa = 10 + desMod + (selectedRace.id === 4 ? 1 : 0); // Minotauro ganha +1 couro
-
-        container.innerHTML = `
-            <div class="wizard-section-header">
-                <h3 class="wizard-title">Resumo do Herói</h3>
-                <p class="wizard-subtitle">Revise todos os parâmetros calculados antes de instanciar a ficha completa no motor C.</p>
-            </div>
-
-            <div class="wizard-summary-card">
-                <!-- Cabeçalho do Personagem -->
-                <div class="summary-identity">
-                    <div class="summary-avatar">${selectedRace.icon}</div>
-                    <div class="summary-info">
-                        <h4 class="summary-name">${this.state.name || 'Sem Nome'}</h4>
-                        <div class="summary-tags">
-                            <span class="summary-tag">⚔️ ${selectedRace.name}</span>
-                            <span class="summary-tag">🛡️ ${selectedClass.name}</span>
-                            <span class="summary-tag">⭐ Nível 1</span>
-                            <span class="summary-tag">📜 Tormenta 20</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Estimativas de Combate no Nível 1 -->
-                <div class="summary-combat-grid">
-                    <div class="summary-combat-box pv-box">
-                        <span class="combat-box-title">Pontos de Vida (PV)</span>
-                        <div class="combat-box-val">${estimatedPv}</div>
-                        <span class="combat-box-formula">Base ${selectedClass.pvBase} + CON (${this.formatMod(conMod)})</span>
-                    </div>
-
-                    <div class="summary-combat-box pm-box">
-                        <span class="combat-box-title">Pontos de Mana (PM)</span>
-                        <div class="combat-box-val">${estimatedPm}</div>
-                        <span class="combat-box-formula">Base da Classe ${selectedClass.name}</span>
-                    </div>
-
-                    <div class="summary-combat-box def-box">
-                        <span class="combat-box-title">Defesa Passiva</span>
-                        <div class="combat-box-val">${estimatedDefesa}</div>
-                        <span class="combat-box-formula">10 + DES (${this.formatMod(desMod)})${selectedRace.id === 4 ? ' + Couro (1)' : ''}</span>
-                    </div>
-                </div>
-
-                <!-- Tabela de Atributos Finais -->
-                <div class="summary-attrs-section">
-                    <h5 class="summary-section-title">Atributos e Modificadores Finais</h5>
-                    <div class="summary-attrs-grid">
-                        ${this.attributesMeta.map(attr => {
-                            const val = this.state.attributes[attr.id];
-                            const mod = this.calcModifier(val);
-                            return `
-                                <div class="summary-attr-pill">
-                                    <span class="attr-pill-name">${attr.abbr}</span>
-                                    <span class="attr-pill-val">${val}</span>
-                                    <span class="attr-pill-mod ${mod >= 0 ? 'mod-positive' : 'mod-negative'}">${this.formatMod(mod)}</span>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-
-                <!-- Aviso do Motor C -->
-                <div class="summary-c-notice">
-                    <span>⚡</span>
-                    <div>
-                        Ao clicar em concluir, a struct <code>T20Sheet</code> será inicializada na memória linear do WebAssembly,
-                        recalculando todas as 29 perícias treinadas, limites e salvamentos.
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    /**
-     * Finaliza a criação e envia todos os dados ao Motor C
+     * Inicializa a ficha no motor C com as regras do CardPack e direciona para a aba Ficha
      */
     finishCreation() {
         if (!this.engine || !this.engine.isLoaded) {
-            alert('Erro: O motor C (WebAssembly) ainda não está carregado.');
+            alert('Motor C não conectado.');
             return;
         }
 
-        const { name, raceId, classId, attributes } = this.state;
-        const finalName = (name || 'Herói').trim();
-
-        // 1. Instancia ficha limpa no C com raça e classe selecionadas
-        this.engine.newDefaultCharacter(raceId, classId);
-
-        // 2. Define o nome na memória linear
-        this.engine.setCharacterName(finalName);
-
-        // 3. Aplica os 6 atributos (dispara t20_recalculate automaticamente no C)
-        for (let i = 0; i < 6; i++) {
-            this.engine.setAttribute(i, attributes[i]);
+        const packs = this.getAvailablePacks();
+        const pack = packs.find(p => p.id === this.selectedPackId);
+        if (!pack) {
+            alert('Por favor, selecione um CardPack.');
+            return;
         }
 
-        // 4. Executa callback de atualização da ficha
+        const charName = (this.characterName || 'Novo Herói').trim();
+        const sysName = pack.system || 'Sistema Aberto';
+
+        // 1. Inicializa deck limpo no C com identidade da ficha
+        this.engine.initDeck(charName, sysName);
+
+        // 2. Importa os cards do CardPack principal
+        if (pack.cards && pack.cards.length > 0) {
+            this.engine.importCardPack(pack, false);
+        }
+
+        // Garante que o nome do herói seja preservado
+        this.engine.setCharacterName(charName);
+        this.engine.setSystemName(sysName);
+        this.engine.recalculate();
+
+        // 3. Salva a nova ficha no CharacterStorage
+        if (window.characterStorage && typeof window.characterStorage.saveCurrent === 'function') {
+            try {
+                window.characterStorage.saveCurrent(this.engine, charName);
+            } catch (err) {
+                console.warn('[Creator] Falha ao persistir no storage:', err);
+            }
+        }
+
+        // 4. Notifica callbacks
         if (typeof this.onCharacterCreated === 'function') {
             this.onCharacterCreated({
-                name: finalName,
-                raceId: raceId,
-                classId: classId,
-                pv: this.engine.getPvAtual(),
-                pvMax: this.engine.getPvMax(),
-                pm: this.engine.getPmAtual(),
-                pmMax: this.engine.getPmMax(),
-                defense: this.engine.getDefesa()
+                name: charName,
+                system: sysName,
+                cardCount: this.engine.getCardCount()
             });
         }
 
-        // 5. Navega para a visualização da ficha
+        // 5. Configura a SheetView e navega para a Ficha
+        if (window.sheetView) {
+            window.sheetView.showingRoster = false;
+            window.sheetView.sheetMode = 'play'; // Inicia no Modo In-Game ágil
+            window.sheetView.render();
+        }
+
         if (this.router && typeof this.router.navigate === 'function') {
             this.router.navigate('sheet');
         }
     }
 }
 
-// Expõe globalmente
+// Suporte a ambientes Web e Node.js
 if (typeof window !== 'undefined') {
     window.WizardView = WizardView;
+    window.CharacterCreatorView = WizardView;
 }
 
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { WizardView, CharacterCreatorView: WizardView };
+}

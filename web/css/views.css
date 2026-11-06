@@ -20,6 +20,7 @@
         opacity: 0;
         transform: translateY(6px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -529,7 +530,8 @@
     margin-top: 4px;
 }
 
-.stat-tag-pv, .stat-tag-pm {
+.stat-tag-pv,
+.stat-tag-pm {
     font-size: 0.72rem;
     font-weight: 700;
     padding: 1px 6px;
@@ -812,9 +814,17 @@
     font-weight: 900;
 }
 
-.pv-box .combat-box-val { color: var(--color-hp); }
-.pm-box .combat-box-val { color: var(--color-mp); }
-.def-box .combat-box-val { color: var(--color-defense); }
+.pv-box .combat-box-val {
+    color: var(--color-hp);
+}
+
+.pm-box .combat-box-val {
+    color: var(--color-mp);
+}
+
+.def-box .combat-box-val {
+    color: var(--color-defense);
+}
 
 .combat-box-formula {
     font-size: 0.75rem;
@@ -962,7 +972,8 @@
     transition: all var(--transition-fast);
 }
 
-.sheet-name-field:hover, .sheet-name-field:focus {
+.sheet-name-field:hover,
+.sheet-name-field:focus {
     border-color: var(--color-gold-primary);
     background: var(--color-surface-inset);
     border-radius: var(--radius-sm);
@@ -1120,8 +1131,13 @@
     letter-spacing: 0.5px;
 }
 
-.pv-block .res-label { color: #fca5a5; }
-.pm-block .res-label { color: #93c5fd; }
+.pv-block .res-label {
+    color: #fca5a5;
+}
+
+.pm-block .res-label {
+    color: #93c5fd;
+}
 
 .res-inputs {
     display: flex;
@@ -1168,8 +1184,13 @@
     transition: width 0.3s ease;
 }
 
-.pv-fill { background: linear-gradient(90deg, #dc2626, #ef4444); }
-.pm-fill { background: linear-gradient(90deg, #2563eb, #3b82f6); }
+.pv-fill {
+    background: linear-gradient(90deg, #dc2626, #ef4444);
+}
+
+.pm-fill {
+    background: linear-gradient(90deg, #2563eb, #3b82f6);
+}
 
 .res-quick-buttons {
     display: flex;
@@ -1178,7 +1199,11 @@
     flex-wrap: wrap;
 }
 
-.btn-quick-dmg, .btn-quick-heal, .btn-quick-mana-sub, .btn-quick-mana-add, .btn-quick-action {
+.btn-quick-dmg,
+.btn-quick-heal,
+.btn-quick-mana-sub,
+.btn-quick-mana-add,
+.btn-quick-action {
     padding: 3px 8px;
     font-size: 0.75rem;
     font-weight: 700;
@@ -1192,28 +1217,40 @@
     color: #fca5a5;
     border-color: rgba(239, 68, 68, 0.4);
 }
-.btn-quick-dmg:hover { background: rgba(239, 68, 68, 0.4); }
+
+.btn-quick-dmg:hover {
+    background: rgba(239, 68, 68, 0.4);
+}
 
 .btn-quick-heal {
     background: rgba(34, 197, 94, 0.2);
     color: #86efac;
     border-color: rgba(34, 197, 94, 0.4);
 }
-.btn-quick-heal:hover { background: rgba(34, 197, 94, 0.4); }
+
+.btn-quick-heal:hover {
+    background: rgba(34, 197, 94, 0.4);
+}
 
 .btn-quick-mana-sub {
     background: rgba(234, 179, 8, 0.2);
     color: #fde047;
     border-color: rgba(234, 179, 8, 0.4);
 }
-.btn-quick-mana-sub:hover { background: rgba(234, 179, 8, 0.4); }
+
+.btn-quick-mana-sub:hover {
+    background: rgba(234, 179, 8, 0.4);
+}
 
 .btn-quick-mana-add {
     background: rgba(59, 130, 246, 0.2);
     color: #93c5fd;
     border-color: rgba(59, 130, 246, 0.4);
 }
-.btn-quick-mana-add:hover { background: rgba(59, 130, 246, 0.4); }
+
+.btn-quick-mana-add:hover {
+    background: rgba(59, 130, 246, 0.4);
+}
 
 .btn-quick-action {
     margin-left: auto;
@@ -1221,7 +1258,10 @@
     color: var(--color-text-muted);
     border-color: var(--color-border-subtle);
 }
-.btn-quick-action:hover { color: var(--color-gold-primary); }
+
+.btn-quick-action:hover {
+    color: var(--color-gold-primary);
+}
 
 /* Breakdown de Defesa */
 .defense-breakdown-card {
@@ -1466,10 +1506,29 @@
     background: rgba(34, 197, 94, 0.03);
 }
 
-.th-train, .td-train { width: 50px; text-align: center; }
-.th-attr, .td-attr { width: 80px; text-align: center; }
-.th-bonus, .td-bonus { width: 90px; text-align: center; }
-.th-roll, .td-roll { width: 90px; text-align: center; }
+.th-train,
+.td-train {
+    width: 50px;
+    text-align: center;
+}
+
+.th-attr,
+.td-attr {
+    width: 80px;
+    text-align: center;
+}
+
+.th-bonus,
+.td-bonus {
+    width: 90px;
+    text-align: center;
+}
+
+.th-roll,
+.td-roll {
+    width: 90px;
+    text-align: center;
+}
 
 .skill-trained-checkbox {
     width: 16px;
@@ -1494,8 +1553,13 @@
     font-size: 1.05rem;
 }
 
-.bonus-pos { color: #86efac; }
-.bonus-neg { color: #fca5a5; }
+.bonus-pos {
+    color: #86efac;
+}
+
+.bonus-neg {
+    color: #fca5a5;
+}
 
 .btn-roll-skill {
     padding: 3px 8px;
@@ -1658,7 +1722,35 @@
     border-radius: var(--radius-lg);
 }
 
+/* =========================================================================
+   Fluxo de Criar Nova Ficha Orientado a CardPacks - Passo 10.5
+   ========================================================================= */
 
+.creator-pack-card {
+    transition: all var(--transition-fast);
+}
 
+.creator-pack-card:hover {
+    border-color: var(--color-gold-hover) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
 
+.creator-pack-card.is-selected {
+    border-color: var(--color-gold-primary) !important;
+    box-shadow: 0 0 0 1px var(--color-gold-primary), 0 4px 14px rgba(212, 163, 115, 0.25);
+}
 
+.creator-mode-option {
+    transition: all var(--transition-fast);
+}
+
+.creator-mode-option:hover {
+    border-color: var(--color-gold-hover) !important;
+    transform: translateY(-2px);
+}
+
+.creator-mode-option.is-selected {
+    border-color: var(--color-gold-primary) !important;
+    box-shadow: 0 0 0 1px var(--color-gold-primary), 0 4px 14px rgba(212, 163, 115, 0.25);
+}
