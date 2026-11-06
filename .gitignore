@@ -59,3 +59,9 @@ limbo.md
 three.md
 *.log
 
+# Local / Private Data Packs (not for github)
+packs_local/
+local_packs/
+web/data/local/
+*.cardpack
+
