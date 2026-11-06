@@ -167,6 +167,271 @@ class CharacterStorage {
     }
 
     /**
+     * Define ou atualiza a foto/avatar de um personagem
+     */
+    setSheetAvatar(id, avatarUrl) {
+        if (!id) return false;
+        const list = this.getAllSheets();
+        const sheet = list.find(s => s.id === id);
+        if (!sheet) return false;
+        sheet.avatar = avatarUrl;
+        sheet.updatedAt = Date.now();
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(list));
+        this._notify();
+        return true;
+    }
+
+    /**
+     * Define a localização física do arquivo da ficha no computador
+     */
+    setSheetFilePath(id, filePath) {
+        if (!id) return false;
+        const list = this.getAllSheets();
+        const sheet = list.find(s => s.id === id);
+        if (!sheet) return false;
+        sheet.filePath = filePath;
+        sheet.updatedAt = Date.now();
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(list));
+        this._notify();
+        return true;
+    }
+
+    /**
+     * Retorna o avatar ou símbolo visual estilizado para o personagem
+     */
+    getDefaultAvatar(sheet) {
+        if (sheet.avatar && sheet.avatar.trim()) {
+            return { type: 'custom', value: sheet.avatar };
+        }
+        const cls = (sheet.class || '').toLowerCase();
+        if (cls.includes('guerreiro') || cls.includes('cavaleiro') || cls.includes('lutador')) {
+            return { type: 'icon', icon: '⚔️', bg: 'linear-gradient(135deg, #7f1d1d 0%, #350808 100%)' };
+        }
+        if (cls.includes('arcanista') || cls.includes('mago') || cls.includes('bruxo') || cls.includes('feiticeiro')) {
+            return { type: 'icon', icon: '🔮', bg: 'linear-gradient(135deg, #312e81 0%, #151336 100%)' };
+        }
+        if (cls.includes('ladino') || cls.includes('bucaneiro') || cls.includes('cacador') || cls.includes('caçador')) {
+            return { type: 'icon', icon: '🗡️', bg: 'linear-gradient(135deg, #064e3b 0%, #022018 100%)' };
+        }
+        if (cls.includes('clerigo') || cls.includes('clérigo') || cls.includes('paladino')) {
+            return { type: 'icon', icon: '✨', bg: 'linear-gradient(135deg, #78350f 0%, #381803 100%)' };
+        }
+        if (cls.includes('bardo')) {
+            return { type: 'icon', icon: '🎭', bg: 'linear-gradient(135deg, #701a75 0%, #350438 100%)' };
+        }
+        if (cls.includes('druida')) {
+            return { type: 'icon', icon: '🍃', bg: 'linear-gradient(135deg, #14532d 0%, #052410 100%)' };
+        }
+        return { type: 'icon', icon: '🛡️', bg: 'linear-gradient(135deg, #374151 0%, #171d26 100%)' };
+    }
+
+    /**
+     * Renderiza a Galeria Visual de Personagens (Ícones/Retângulos com Foto)
+     * Reutilizada tanto na Home quanto na aba de Ficha
+     * @param {HTMLElement} container 
+     * @param {Object} engine 
+     * @param {Object} router 
+     * @param {Object} callbacks { onSelect, onNew, onImport }
+     */
+    renderRosterGallery(container, engine, router, callbacks = {}) {
+        if (!container) return;
+        container.innerHTML = '';
+
+        const sheets = this.getAllSheets();
+        const activeId = this.getActiveSheetId();
+
+        const grid = document.createElement('div');
+        grid.className = 'character-roster-grid';
+
+        // 1. Cards dos Personagens Salvos
+        sheets.forEach(sheet => {
+            const card = document.createElement('div');
+            const isActive = (sheet.id === activeId && engine && engine.isLoaded && engine.getCardCount() > 0);
+            card.className = `character-card-icon ${isActive ? 'active-sheet-card' : ''}`;
+            card.dataset.sheetId = sheet.id;
+
+            const av = this.getDefaultAvatar(sheet);
+            const portraitContent = av.type === 'custom'
+                ? `<img src="${av.value}" alt="${sheet.name}" class="char-portrait-custom-img" onerror="this.parentElement.innerHTML='⚔️';">`
+                : `<span class="char-portrait-emoji">${av.icon}</span>`;
+            const portraitBg = av.type === 'custom' ? '#111' : av.bg;
+
+            const fileLabel = sheet.filePath 
+                ? `<div class="char-card-filepath" title="${sheet.filePath}">📂 ${sheet.filePath.split(/[\\\\/]/).pop()}</div>`
+                : '';
+
+            card.innerHTML = `
+                <div class="char-portrait-wrapper" style="background: ${portraitBg}">
+                    <div class="char-portrait-content">${portraitContent}</div>
+                    <div class="char-level-badge">Nível ${sheet.level || 1}</div>
+                    ${isActive ? '<span class="char-active-pill">⚔️ Ficha Ativa</span>' : ''}
+                    <button type="button" class="btn-change-avatar" title="Alterar Foto/Retrato" data-action="change-photo">📷</button>
+                </div>
+                <div class="char-card-body">
+                    <h3 class="char-card-name" title="${sheet.name}">${sheet.name}</h3>
+                    <div class="char-card-meta">${sheet.race || 'Humano'} &bull; ${sheet.class || 'Aventureiro'}</div>
+                    <div class="char-card-sys-pill">📜 ${sheet.system || 'Agnóstico v2.0'}</div>
+                    
+                    <div class="char-card-quick-stats">
+                        <span class="quick-stat-item stat-pv" title="Pontos de Vida">
+                            <span class="quick-stat-icon">❤️</span>
+                            <span class="quick-stat-val">${sheet.pvCur ?? '-'}/${sheet.pvMax ?? '-'}</span>
+                        </span>
+                        <span class="quick-stat-item stat-pm" title="Pontos de Mana">
+                            <span class="quick-stat-icon">💧</span>
+                            <span class="quick-stat-val">${sheet.pmCur ?? '-'}/${sheet.pmMax ?? '-'}</span>
+                        </span>
+                        <span class="quick-stat-item stat-def" title="Defesa">
+                            <span class="quick-stat-icon">🛡️</span>
+                            <span class="quick-stat-val">${sheet.defense ?? '-'}</span>
+                        </span>
+                    </div>
+
+                    ${fileLabel}
+                </div>
+                <div class="char-card-actions">
+                    <button type="button" class="btn btn-primary btn-play-char" data-action="play" title="Abrir e Jogar com esta Ficha">
+                        ⚔️ Jogar
+                    </button>
+                    <button type="button" class="btn btn-action-icon" data-action="export" title="Exportar Ficha (.sheetc)">
+                        📥
+                    </button>
+                    <button type="button" class="btn btn-action-icon btn-action-delete" data-action="delete" title="Excluir Personagem">
+                        🗑️
+                    </button>
+                </div>
+            `;
+
+            // Evento: Jogar / Abrir
+            card.querySelector('[data-action="play"]').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const loaded = this.loadSheet(sheet.id, engine);
+                if (loaded) {
+                    if (callbacks.onSelect) {
+                        callbacks.onSelect(loaded);
+                    } else {
+                        if (window.sheetView) {
+                            window.sheetView.showingRoster = false;
+                            window.sheetView.render();
+                        }
+                        if (router && typeof router.navigate === 'function') {
+                            router.navigate('sheet');
+                        }
+                    }
+                }
+            });
+
+            // Evento: Alterar Foto
+            card.querySelector('[data-action="change-photo"]').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const newPhoto = prompt('Informe a URL da imagem (ou cole um emoji) para o retrato do personagem:', sheet.avatar || '');
+                if (newPhoto !== null) {
+                    this.setSheetAvatar(sheet.id, newPhoto.trim());
+                    this.renderRosterGallery(container, engine, router, callbacks);
+                }
+            });
+
+            // Evento: Exportar
+            card.querySelector('[data-action="export"]').addEventListener('click', (e) => {
+                e.stopPropagation();
+                try {
+                    const charName = sheet.name || 'heroi';
+                    const sanitized = charName.toLowerCase().replace(/[^a-z0-9_-]/gi, '_');
+                    const filename = `${sanitized}.sheetc`;
+                    const payload = {
+                        format: 'RPG-SheetC',
+                        version: '2.0.0',
+                        exportedAt: new Date().toISOString(),
+                        engine: 'C99 Freestanding WebAssembly',
+                        system: sheet.system || 'Agnóstico v2.0',
+                        sheet: sheet.data
+                    };
+                    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    a.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                } catch (err) {
+                    alert('Erro ao exportar: ' + err.message);
+                }
+            });
+
+            // Evento: Excluir
+            card.querySelector('[data-action="delete"]').addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (confirm(`Tem certeza que deseja excluir o personagem "${sheet.name}"?`)) {
+                    this.deleteSheet(sheet.id);
+                    this.renderRosterGallery(container, engine, router, callbacks);
+                    if (window.sheetView) {
+                        window.sheetView.render();
+                    }
+                }
+            });
+
+            // Clique no próprio card abre a ficha
+            card.addEventListener('click', () => {
+                const btn = card.querySelector('[data-action="play"]');
+                if (btn) btn.click();
+            });
+
+            grid.appendChild(card);
+        });
+
+        // 2. Card de Ação Especial: Criar Novo Personagem
+        const cardNew = document.createElement('div');
+        cardNew.className = 'character-card-icon card-action-dashed';
+        cardNew.innerHTML = `
+            <div class="card-action-dashed-inner">
+                <span class="action-dashed-icon">➕</span>
+                <h3 class="action-dashed-title">Novo Personagem</h3>
+                <p class="action-dashed-desc">Crie um novo herói escolhendo um CardPack do seu compêndio.</p>
+            </div>
+        `;
+        cardNew.addEventListener('click', () => {
+            if (callbacks.onNew) {
+                callbacks.onNew();
+            } else if (router && typeof router.navigate === 'function') {
+                router.navigate('creator');
+            }
+        });
+        grid.appendChild(cardNew);
+
+        // 3. Card de Ação Especial: Carregar do Computador
+        const cardImport = document.createElement('div');
+        cardImport.className = 'character-card-icon card-action-dashed';
+        cardImport.innerHTML = `
+            <div class="card-action-dashed-inner">
+                <span class="action-dashed-icon">📂</span>
+                <h3 class="action-dashed-title">Carregar Ficha Local</h3>
+                <p class="action-dashed-desc">Abra um arquivo .sheetc ou .json salvo no seu computador.</p>
+            </div>
+        `;
+        cardImport.addEventListener('click', () => {
+            if (window.CharacterExportService) {
+                window.CharacterExportService.promptImportFile(engine, this, (res) => {
+                    if (res.success) {
+                        this.renderRosterGallery(container, engine, router, callbacks);
+                        if (window.sheetView) {
+                            window.sheetView.showingRoster = false;
+                            window.sheetView.render();
+                        }
+                        if (router && typeof router.navigate === 'function') {
+                            router.navigate('sheet');
+                        }
+                    } else {
+                        alert(`Falha na importação: ${res.error}`);
+                    }
+                });
+            }
+        });
+        grid.appendChild(cardImport);
+
+        container.appendChild(grid);
+    }
+
+    /**
      * Carrega uma ficha do storage para o motor C
      * @param {string} id 
      * @param {Object} engine 

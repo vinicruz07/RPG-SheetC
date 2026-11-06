@@ -12,6 +12,7 @@ class SheetView {
         this.container = null;
         this.skillFilter = '';
         this.skillFilterOnlyTrained = false;
+        this.showingRoster = false; // Controle de exibição da galeria vs ficha ativa
 
         // Inscrição reativa para atualizar a ficha sempre que o deck no C for modificado
         if (this.engine && typeof this.engine.onChange === 'function') {
@@ -44,7 +45,7 @@ class SheetView {
     }
 
     /**
-     * Renderiza o painel modular completo da ficha
+     * Renderiza o painel modular completo da ficha ou a galeria de personagens
      */
     render() {
         if (!this.container || !this.engine || !this.engine.isLoaded) return;
@@ -54,6 +55,12 @@ class SheetView {
         const level = this.engine.getLevel() || 1;
         const xp = this.engine.getXp() || 0;
         const cardCount = this.engine.getCardCount();
+
+        // Se o usuário pediu a galeria ou se não há ficha carregada no C:
+        if (this.showingRoster || cardCount === 0) {
+            this.renderRosterView();
+            return;
+        }
 
         // 1. Coleta de Cards Categorizados do Motor C
         const CARD_TYPES = (typeof window !== 'undefined' && window.CARD_TYPES) ? window.CARD_TYPES : {
@@ -69,16 +76,18 @@ class SheetView {
         const availableSpellsAbilities = this.engine.getAllCards(c => (c.type === CARD_TYPES.SPELL || c.type === CARD_TYPES.ABILITY || c.type === CARD_TYPES.TRAIT) && !c.equipped);
         const skillCards = this.engine.getAllCards(c => c.type === CARD_TYPES.SKILL);
 
-        // Se o deck estiver completamente vazio, oferece tela inicial amigável
-        if (cardCount === 0) {
-            this.container.innerHTML = this.renderEmptyDeckState(name, system, level, xp);
-            this.setupHeaderEventListeners();
-            this.setupEmptyStateEventListeners();
-            return;
-        }
-
         this.container.innerHTML = `
             <div class="sheet-main-layout">
+                <!-- Barra Superior de Navegação / Retorno à Galeria -->
+                <div class="sheet-top-navigation-bar">
+                    <button type="button" id="btn-sheet-back-to-roster" class="btn btn-secondary" title="Voltar à Galeria de Personagens">
+                        ⬅️ Trocar / Ver Todos os Personagens
+                    </button>
+                    <span style="font-size: 0.85rem; color: var(--color-gold-light); font-weight: 600;">
+                        ⚔️ Ficha Ativa no Motor C (${name})
+                    </span>
+                </div>
+
                 <!-- Cabeçalho Principal da Ficha -->
                 <section class="card sheet-header-card">
                     <div class="sheet-header-top">
@@ -542,6 +551,39 @@ class SheetView {
     }
 
     /**
+     * Renderiza a Galeria Visual de Personagens (Modo Roster)
+     */
+    renderRosterView() {
+        if (!this.container) return;
+        this.container.innerHTML = `
+            <div class="sheet-roster-view-container">
+                <div class="systems-section-header" style="margin-bottom: var(--space-md);">
+                    <div>
+                        <h2 class="systems-section-title">📜 Personagens Salvos no Computador</h2>
+                        <p class="systems-section-subtitle">Ficha Modular Vazia &bull; Selecione uma ficha salva para carregar e jogar, ou crie um novo herói:</p>
+                    </div>
+                </div>
+                <div id="sheet-roster-mount-point"></div>
+            </div>
+        `;
+
+        const mount = document.getElementById('sheet-roster-mount-point');
+        if (mount && window.characterStorage) {
+            window.characterStorage.renderRosterGallery(mount, this.engine, this.router, {
+                onSelect: (sheet) => {
+                    this.showingRoster = false;
+                    this.render();
+                },
+                onNew: () => {
+                    if (this.router && typeof this.router.navigate === 'function') {
+                        this.router.navigate('creator');
+                    }
+                }
+            });
+        }
+    }
+
+    /**
      * Renderiza o estado vazio quando o deck não possui cards
      */
     renderEmptyDeckState(name, system, level, xp) {
@@ -591,6 +633,18 @@ class SheetView {
      * Configura ouvintes de cabeçalho
      */
     setupHeaderEventListeners() {
+        // Voltar à Galeria de Personagens
+        const btnBackRoster = document.getElementById('btn-sheet-back-to-roster');
+        if (btnBackRoster) {
+            btnBackRoster.addEventListener('click', () => {
+                if (window.characterStorage && this.engine && this.engine.getCardCount() > 0) {
+                    window.characterStorage.saveCurrent(this.engine, this.engine.getCharacterName());
+                }
+                this.showingRoster = true;
+                this.render();
+            });
+        }
+
         // Nome
         const nameInput = document.getElementById('sheet-name-input');
         if (nameInput) {

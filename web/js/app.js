@@ -159,7 +159,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnHeaderManageSheets = document.getElementById('btn-header-manage-sheets');
     if (btnHeaderManageSheets) {
         btnHeaderManageSheets.addEventListener('click', () => {
-            storageModal.open();
+            if (sheetView) {
+                sheetView.showingRoster = true;
+            }
+            router.navigate('sheet');
         });
     }
 
