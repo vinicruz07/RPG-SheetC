@@ -26,13 +26,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     const engine = new window.SheetCWasm();
     window.rpgEngine = engine; // Disponível no DevTools para inspeção interativa
 
-    // Roteador simples da SPA
+    // Elementos do Sidebar Drawer
+    const sidebarDrawer = document.getElementById('sidebar-drawer');
+    const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+    const btnToggleMenu = document.getElementById('btn-toggle-menu');
+    const btnCloseSidebar = document.getElementById('btn-close-sidebar');
+
+    const openSidebar = () => {
+        if (sidebarDrawer) {
+            sidebarDrawer.classList.add('open');
+            sidebarDrawer.setAttribute('aria-hidden', 'false');
+        }
+        if (sidebarBackdrop) {
+            sidebarBackdrop.classList.add('active');
+        }
+    };
+
+    const closeSidebar = () => {
+        if (sidebarDrawer) {
+            sidebarDrawer.classList.remove('open');
+            sidebarDrawer.setAttribute('aria-hidden', 'true');
+        }
+        if (sidebarBackdrop) {
+            sidebarBackdrop.classList.remove('active');
+        }
+    };
+
+    if (btnToggleMenu) btnToggleMenu.addEventListener('click', openSidebar);
+    if (btnCloseSidebar) btnCloseSidebar.addEventListener('click', closeSidebar);
+    if (sidebarBackdrop) sidebarBackdrop.addEventListener('click', closeSidebar);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sidebarDrawer && sidebarDrawer.classList.contains('open')) {
+            closeSidebar();
+        }
+    });
+
+    // Roteador da SPA
     const router = {
         currentView: 'home',
         navigate(viewName) {
             this.currentView = viewName;
             
-            // Alterna abas
+            // Fecha a barra lateral após navegar
+            closeSidebar();
+
+            // Alterna itens do Sidebar
+            const navItems = document.querySelectorAll('.sidebar-nav-item[data-view]');
+            navItems.forEach(item => {
+                if (item.dataset.view === viewName) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+
+            // Alterna abas (compatibilidade)
             const tabs = document.querySelectorAll('.tab-button');
             tabs.forEach(tab => {
                 if (tab.dataset.view === viewName) {
@@ -69,7 +117,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     window.appRouter = router;
 
-    // Configura cliques nas abas de navegação
+    // Configura cliques nos itens do Sidebar Drawer
+    const sidebarNavItems = document.querySelectorAll('.sidebar-nav-item[data-view]');
+    sidebarNavItems.forEach(item => {
+        item.addEventListener('click', () => {
+            if (!item.disabled && item.dataset.view) {
+                router.navigate(item.dataset.view);
+            }
+        });
+    });
+
+    // Configura cliques em botões de abas legados se existirem
     const navTabs = document.querySelectorAll('.tab-button[data-view]');
     navTabs.forEach(tab => {
         tab.addEventListener('click', () => {

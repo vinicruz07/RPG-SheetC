@@ -14,14 +14,65 @@
     <link rel="stylesheet" href="css/print.css" media="print">
 </head>
 <body>
+    <!-- Backdrop do Menu Lateral -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
+    <!-- Sidebar Drawer Deslizante -->
+    <aside id="sidebar-drawer" class="sidebar-drawer" aria-hidden="true">
+        <div class="sidebar-header">
+            <div class="sidebar-brand">
+                <span class="sidebar-brand-icon">⚔️</span>
+                <span class="sidebar-brand-title">RPG-SheetC</span>
+            </div>
+            <button type="button" id="btn-close-sidebar" class="btn-sidebar-close" title="Fechar Menu" aria-label="Fechar Menu">✕</button>
+        </div>
+        
+        <div class="sidebar-content">
+            <div class="sidebar-section-label">Navegação Principal</div>
+            <nav class="sidebar-nav">
+                <button type="button" class="sidebar-nav-item active" data-view="home">
+                    <span class="sidebar-item-icon">🏠</span>
+                    <span class="sidebar-item-text">Início</span>
+                </button>
+                <button type="button" class="sidebar-nav-item" data-view="sheet">
+                    <span class="sidebar-item-icon">📜</span>
+                    <span class="sidebar-item-text">Ficha do Personagem</span>
+                </button>
+                <button type="button" class="sidebar-nav-item" data-view="creator">
+                    <span class="sidebar-item-icon">➕</span>
+                    <span class="sidebar-item-text">Criar Nova Ficha</span>
+                </button>
+                <button type="button" class="sidebar-nav-item" data-view="compendium">
+                    <span class="sidebar-item-icon">🎴</span>
+                    <span class="sidebar-item-text">Compêndio de CardPacks</span>
+                </button>
+                <button type="button" class="sidebar-nav-item" data-view="roller">
+                    <span class="sidebar-item-icon">🎲</span>
+                    <span class="sidebar-item-text">Rolador de Dados</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-version-badge">v2.0 • C99 Freestanding WASM</div>
+            </div>
+        </div>
+    </aside>
+
     <div class="container">
         <!-- Header Principal -->
-        <header>
-            <div class="brand-wrapper">
-                <h1 class="brand-title">
-                    ⚔️ RPG-SheetC
-                </h1>
-                <p class="brand-subtitle">Lógica de regras 100% em C puro (C99) &bull; Interface Web via WebAssembly</p>
+        <header class="app-header">
+            <div class="header-left">
+                <button type="button" id="btn-toggle-menu" class="btn-menu-hamburger" title="Abrir Menu de Navegação" aria-label="Abrir Menu">
+                    <span class="hamburger-bar"></span>
+                    <span class="hamburger-bar"></span>
+                    <span class="hamburger-bar"></span>
+                </button>
+                <div class="brand-wrapper">
+                    <h1 class="brand-title">
+                        ⚔️ RPG-SheetC
+                    </h1>
+                    <p class="brand-subtitle">Motor C99 Freestanding &bull; WebAssembly &bull; Cards Agnósticos</p>
+                </div>
             </div>
             <div class="header-right-group" style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
                 <button type="button" id="btn-header-manage-sheets" class="header-storage-btn" title="Gerenciar Fichas Salvas no Navegador">
@@ -33,16 +84,6 @@
                 </div>
             </div>
         </header>
-
-        <!-- Navegação da Aplicação (SPA Tabs) -->
-        <nav class="nav-tabs">
-            <button class="tab-button active" data-view="home">Início</button>
-            <button class="tab-button" data-view="sheet">Ficha do Personagem</button>
-            <button class="tab-button" data-view="compendium">🎴 Compêndio de Cards</button>
-            <button class="tab-button" data-view="editor">✨ Criador de Cards</button>
-            <button class="tab-button" data-view="creator">Assistente Clássico</button>
-            <button class="tab-button" data-view="roller">Rolador de Dados</button>
-        </nav>
 
         <!-- ===================================================================
              VIEW: Início & Visão Geral
