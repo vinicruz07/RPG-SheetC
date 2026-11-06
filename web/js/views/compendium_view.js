@@ -284,16 +284,19 @@ class CompendiumView {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
-        // Abrir modal de criação
-        const btnCreate = document.getElementById('btn-compendium-create-pack') || document.getElementById('btn-empty-create');
+        // Abrir modal de criação (vincula botões do header e do estado vazio)
+        const createButtons = [
+            document.getElementById('btn-compendium-create-pack'),
+            document.getElementById('btn-empty-create')
+        ].filter(Boolean);
         const overlay = document.getElementById('modal-create-cardpack-overlay');
-        if (btnCreate && overlay) {
-            btnCreate.addEventListener('click', () => {
-                overlay.style.display = 'flex';
+        createButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (overlay) overlay.style.display = 'flex';
                 const nameInp = document.getElementById('input-new-pack-name');
                 if (nameInp) nameInp.focus();
             });
-        }
+        });
 
         const btnCancelCreate = document.getElementById('btn-cancel-create-pack');
         if (btnCancelCreate && overlay) {
@@ -323,25 +326,35 @@ class CompendiumView {
             });
         }
 
-        // Importação de arquivo .cardpack
-        const btnImport = document.getElementById('btn-compendium-import-pack') || document.getElementById('btn-empty-import');
+        // Importação de arquivo .cardpack (vincula botões do header e do estado vazio)
+        const importButtons = [
+            document.getElementById('btn-compendium-import-pack'),
+            document.getElementById('btn-empty-import')
+        ].filter(Boolean);
         const fileInput = document.getElementById('compendium-pack-file-input');
-        if (btnImport && fileInput) {
-            btnImport.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', (e) => this.handlePackFileImport(e));
+        importButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (fileInput) fileInput.click();
+            });
+        });
+        if (fileInput) {
+            fileInput.onchange = (e) => this.handlePackFileImport(e);
         }
 
-        // Data Packs Comunitários
-        const btnCommunity = document.getElementById('btn-compendium-community') || document.getElementById('btn-empty-community');
-        if (btnCommunity) {
-            btnCommunity.addEventListener('click', () => {
+        // Data Packs Comunitários (vincula botões do header e do estado vazio)
+        const communityButtons = [
+            document.getElementById('btn-compendium-community'),
+            document.getElementById('btn-empty-community')
+        ].filter(Boolean);
+        communityButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
                 if (window.packManager && typeof window.packManager.openPackModal === 'function') {
                     window.packManager.openPackModal(() => {
                         this.render();
                     });
                 }
             });
-        }
+        });
 
         // Cliques nos cartões de CardPacks
         container.querySelectorAll('.btn-open-pack').forEach(btn => {
@@ -782,6 +795,7 @@ class CompendiumView {
             this.engine.recalculate();
             this.log(`[Motor C] CardPack "${pack.name}" carregado na ficha ativa! (${count} cards na memória C)`, 'success');
             if (window.sheetView) {
+                window.sheetView.showingRoster = false;
                 window.sheetView.render();
             }
             if (this.router && typeof this.router.navigate === 'function') {

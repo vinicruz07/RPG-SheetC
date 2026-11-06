@@ -285,12 +285,17 @@ class WizardView {
             });
         });
 
-        // Upload de CardPack
-        const btnUpload = document.getElementById('btn-creator-upload-pack') || document.getElementById('btn-creator-upload-empty');
+        // Upload de CardPack (vincula botões do header e do estado vazio)
+        const uploadButtons = [
+            document.getElementById('btn-creator-upload-pack'),
+            document.getElementById('btn-creator-upload-empty')
+        ].filter(Boolean);
         const fileInput = document.getElementById('creator-file-input');
-        if (btnUpload && fileInput) {
-            btnUpload.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', async (e) => {
+        if (uploadButtons.length > 0 && fileInput) {
+            uploadButtons.forEach(btn => {
+                btn.addEventListener('click', () => fileInput.click());
+            });
+            fileInput.onchange = async (e) => {
                 const file = e.target?.files?.[0];
                 if (file) {
                     try {
@@ -315,7 +320,7 @@ class WizardView {
                         alert(`Erro ao ler .cardpack: ${err.message}`);
                     }
                 }
-            });
+            };
         }
 
         // Carregar SRD Fallback

@@ -264,6 +264,22 @@ class PackManager {
         if (result.success) {
             const packName = packJson.sheet_name || 'SRD Básico / Fantasia Aberta';
             this.logger(`[PackManager] Pacote "${packName}" aplicado com 1 clique! (${result.count} cards no Compêndio).`, 'success');
+
+            // Sincroniza com a coleção do Compêndio para listagem e seleção no Criador
+            if (typeof window !== 'undefined' && window.compendiumView && typeof window.compendiumView.addOrUpdatePack === 'function') {
+                const compPack = {
+                    id: packJson.pack_id || 'srd_community_pack',
+                    name: packName,
+                    system: packJson.system_name || packJson.system || 'Fantasia Aberta d20',
+                    author: packJson.author || 'Comunidade RPG-SheetC',
+                    version: packJson.version || '2.0.0',
+                    desc: packJson.desc || 'Pacote importado de Data Pack Comunitário.',
+                    cards: Array.isArray(packJson.cards) ? packJson.cards : [],
+                    createdAt: Date.now()
+                };
+                window.compendiumView.addOrUpdatePack(compPack);
+            }
+
             return { ...result, packName };
         }
         return result;
@@ -368,6 +384,10 @@ class PackManager {
                         btn.textContent = '✅ Importado!';
                         setTimeout(() => {
                             closeModal();
+                            if (window.sheetView) {
+                                window.sheetView.showingRoster = false;
+                                window.sheetView.render();
+                            }
                             if (typeof onImportSuccess === 'function') {
                                 onImportSuccess(res);
                             }

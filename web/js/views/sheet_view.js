@@ -899,6 +899,7 @@ class SheetView {
                     window.CharacterExportService.promptImportFile(this.engine, window.characterStorage, (res) => {
                         if (res.success) {
                             this.logger(`[Import] Ficha importada com sucesso no motor C!`, 'success');
+                            this.showingRoster = false;
                             this.render();
                         } else {
                             this.logger(`[Import Error] ${res.error}`, 'error');
@@ -935,10 +936,16 @@ class SheetView {
         if (btnPacks) {
             btnPacks.addEventListener('click', () => {
                 if (window.packManager && typeof window.packManager.openPackModal === 'function') {
-                    window.packManager.openPackModal(() => this.render());
+                    window.packManager.openPackModal(() => {
+                        this.showingRoster = false;
+                        this.render();
+                    });
                 } else if (typeof window.PackManager === 'function') {
                     const pm = new window.PackManager(this.engine, this.logger);
-                    pm.openPackModal(() => this.render());
+                    pm.openPackModal(() => {
+                        this.showingRoster = false;
+                        this.render();
+                    });
                 }
             });
         }
@@ -978,10 +985,16 @@ class SheetView {
         if (btnSrd) {
             btnSrd.addEventListener('click', () => {
                 if (window.packManager && typeof window.packManager.openPackModal === 'function') {
-                    window.packManager.openPackModal(() => this.render());
+                    window.packManager.openPackModal(() => {
+                        this.showingRoster = false;
+                        this.render();
+                    });
                 } else if (typeof window.PackManager === 'function') {
                     const pm = new window.PackManager(this.engine, this.logger);
-                    pm.openPackModal(() => this.render());
+                    pm.openPackModal(() => {
+                        this.showingRoster = false;
+                        this.render();
+                    });
                 }
             });
         }
@@ -1463,6 +1476,7 @@ class SheetView {
 
         this.engine.recalculate();
         this.logger('[C Deck] Kit Inicial carregado com sucesso na memória C!', 'success');
+        this.showingRoster = false;
         this.render();
     }
 }
