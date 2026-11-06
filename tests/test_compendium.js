@@ -131,7 +131,7 @@ async function runTests() {
     const view = new CompendiumView(engine, router, logFn);
 
     // 1. Inicialização e Seeding de Cards Iniciais
-    view.init('compendium-container');
+    view.init('compendium-container', true);
     const initialCount = engine.getCardCount();
     console.log(`  [OK] Compêndio inicializado com ${initialCount} cards de amostra`);
     assert(initialCount >= 15);

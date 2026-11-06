@@ -183,16 +183,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         logToConsole('Motor C (Clang wasm32) conectado com sucesso! Motor agnóstico v2.0 ativo.', 'success');
 
-        // Tenta restaurar automaticamente a última ficha ativa salva no localStorage
-        if (storage.autoRestore(engine)) {
-            const restoredName = engine.getCharacterName();
-            logToConsole(`[Storage] Ficha ativa "${restoredName}" restaurada automaticamente do navegador.`, 'info');
-        } else {
-            // Se não houver fichas salvas, salva a ficha inicial para que o usuário já tenha um slot
-            if (storage.getAllSheets().length === 0) {
-                storage.saveCurrent(engine, engine.getCharacterName());
-            }
-        }
+        // Inicializa o Deck 100% limpo na memória linear do C (0 cards)
+        engine.initDeck('Novo Personagem', 'Sistema Agnóstico');
+        engine.clearDeck();
+        logToConsole('[Deck] Motor C inicializado limpo (0 cards na memória).', 'info');
         updateStorageBadge();
 
         // Atualiza a visualização inicial dos dados

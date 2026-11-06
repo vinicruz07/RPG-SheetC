@@ -29,14 +29,15 @@ class CompendiumView {
     /**
      * Inicializa a view no container DOM
      * @param {string} containerId
+     * @param {boolean} autoSeed - se deve semear cards de amostra (padrão false: aplicação totalmente limpa)
      */
-    init(containerId = 'compendium-container') {
+    init(containerId = 'compendium-container', autoSeed = false) {
         this.containerId = containerId;
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
-        // Se o deck estiver vazio, carrega o compêndio padrão de aventura
-        if (this.engine && this.engine.getCardCount() === 0) {
+        // Se explicitamente solicitado (ex: testes legados), semeia cards
+        if (autoSeed && this.engine && this.engine.getCardCount() === 0) {
             this.seedStarterCards();
         }
 
@@ -71,6 +72,9 @@ class CompendiumView {
                         </button>
                         <button type="button" id="btn-compendium-export" class="btn" title="Exportar compêndio completo como .cardpack">
                             📥 Exportar (.cardpack)
+                        </button>
+                        <button type="button" id="btn-compendium-clear-all" class="btn" style="color: var(--color-danger, #ef4444); border-color: rgba(239, 68, 68, 0.4);" title="Limpa todos os cards da memória do motor C">
+                            🗑️ Limpar Tudo
                         </button>
                         <button type="button" id="btn-compendium-benchmark" class="btn" title="Gera 1.000 cards para testar a rolagem a 60 FPS">
                             ⚡ Testar 1.000 Cards
@@ -244,6 +248,22 @@ class CompendiumView {
         const btnBench = document.getElementById('btn-compendium-benchmark');
         if (btnBench) {
             btnBench.addEventListener('click', () => this.generateBenchmarkCards());
+        }
+
+        // Limpeza completa do deck (0 cards)
+        const btnClear = document.getElementById('btn-compendium-clear-all');
+        if (btnClear) {
+            btnClear.addEventListener('click', () => {
+                if (typeof confirm === 'function' && !confirm('Tem certeza que deseja apagar TODOS os cards e deixar a aplicação totalmente limpa?')) {
+                    return;
+                }
+                this.engine.clearDeck();
+                this.log('[C Deck] Todos os cards foram apagados. Memória do C totalmente limpa!', 'warn');
+                this.updateCardsList();
+                if (window.sheetView) {
+                    window.sheetView.render();
+                }
+            });
         }
     }
 
