@@ -1763,11 +1763,7 @@ class SheetView {
         ];
     }
 
-    updateCardPickerResults() {
-        const container = document.getElementById('sheet-picker-results-container');
-        const countLabel = document.getElementById('sheet-picker-count-label');
-        if (!container) return;
-
+    getAvailablePickerCards() {
         const CARD_TYPES = (typeof window !== 'undefined' && window.CARD_TYPES) ? window.CARD_TYPES : {
             ATTRIBUTE: 0, RESOURCE: 1, STAT: 2, SKILL: 3, ABILITY: 4, EQUIPMENT: 5, SPELL: 6, TRAIT: 7
         };
@@ -1775,7 +1771,7 @@ class SheetView {
         const allCards = this.getAvailableCompendiumCards();
         const search = (this.pickerSearchQuery || '').toLowerCase().trim();
 
-        const filtered = allCards.filter(card => {
+        return allCards.filter(card => {
             if (!card || !card.name) return false;
 
             // Filtro por Target Mode (equipment vs spells)
@@ -1809,6 +1805,18 @@ class SheetView {
 
             return true;
         });
+    }
+
+    updateCardPickerResults() {
+        const container = document.getElementById('sheet-picker-results-container');
+        const countLabel = document.getElementById('sheet-picker-count-label');
+        if (!container) return;
+
+        const CARD_TYPES = (typeof window !== 'undefined' && window.CARD_TYPES) ? window.CARD_TYPES : {
+            ATTRIBUTE: 0, RESOURCE: 1, STAT: 2, SKILL: 3, ABILITY: 4, EQUIPMENT: 5, SPELL: 6, TRAIT: 7
+        };
+
+        const filtered = this.getAvailablePickerCards();
 
         if (countLabel) {
             countLabel.textContent = `${filtered.length} card(s) disponível(is)`;

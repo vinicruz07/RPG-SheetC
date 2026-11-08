@@ -222,6 +222,41 @@ async function runTests() {
     assert(engine.getCardByKey('teleporte'), 'Card do arquivo deve ter sido mesclado');
     console.log('  [OK] Importação assíncrona de arquivo local (File API)');
 
+    // 8. Teste de Integridade e Carregamento do CardPack Completo de Tormenta 20 (Passo 11.5)
+    const t20Paths = ['./local_packs/t20_completo.cardpack', './web/data/local/t20_completo.cardpack'];
+    const activeT20Path = t20Paths.find(p => fs.existsSync(p));
+    if (activeT20Path) {
+        console.log(`--- Validando CardPack Unificado de Tormenta 20 (${activeT20Path}) ---`);
+        const t20Raw = fs.readFileSync(activeT20Path, 'utf-8');
+        const t20Json = JSON.parse(t20Raw);
+
+        assert(t20Json.pack_name.includes('Tormenta 20'), 'Nome do pacote deve referenciar Tormenta 20');
+        assert(t20Json.cards && t20Json.cards.length >= 200, `Pacote deve conter mais de 200 cards (encontrados: ${t20Json.cards.length})`);
+        assert(t20Json.wizard_schema, 'Pacote deve conter wizard_schema integrado');
+        assert.strictEqual(t20Json.wizard_schema.steps.length, 8, 'wizard_schema deve conter exatamente as 8 etapas oficiais');
+
+        // Teste de importação direta no motor C99
+        engine.initDeck('Kaelen de Valkaria', 'Tormenta 20');
+        const importedT20Count = engine.importCardPack(t20Json, false);
+        assert.strictEqual(importedT20Count, t20Json.cards.length, 'Todos os cards de T20 devem ser importados no C');
+        engine.recalculate();
+
+        assert.strictEqual(engine.getCardCount(), t20Json.cards.length, 'Contagem total de cards deve bater com o pacote');
+        const t20Def = engine.getCardByKey('defesa');
+        assert(t20Def !== null, 'Card de Defesa dinâmica deve existir');
+        assert.strictEqual(t20Def.effective, 10, 'Defesa base sem modificadores deve ser 10');
+
+        const forcaCard = engine.getCardByKey('for');
+        assert(forcaCard !== null, 'Atributo Força deve existir');
+
+        // Exportação do deck de T20 ativo e validação round-trip
+        const t20Export = packManager.exportPack('t20_roundtrip.cardpack');
+        assert(t20Export && t20Export.bytes > 10000, 'Exportação de T20 deve gerar arquivo completo');
+        const parsedT20Export = JSON.parse(t20Export.content);
+        assert.strictEqual(parsedT20Export.cards.length, t20Json.cards.length, 'Round-trip de exportação deve preservar todos os cards');
+        console.log(`  [OK] Integridade do CardPack T20 Completo (${importedT20Count} cards, 8 etapas oficiais, round-trip O(1)) validada com sucesso!`);
+    }
+
     console.log('\n=== Todos os testes do PackManager passaram com 100% de sucesso! ===');
 }
 

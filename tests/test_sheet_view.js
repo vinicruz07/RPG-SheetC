@@ -374,6 +374,39 @@ async function runTests() {
     assert(sheetView.container.innerHTML.includes('Toque Chocante'), 'Grimório deve exibir nova magia na ficha');
     console.log('  [OK] Passo 11.2: Fechamento do modal e re-renderização com novos cards validados');
 
+    // 18. Passo 11.5: Validação do Sistema de Busca e Filtragem por Categorias no Picker
+    sheetView.openCardPicker('equipment');
+    sheetView.getAvailableCompendiumCards = () => [
+        { key: 'espada_longa', name: 'Espada Longa', type: CARD_TYPES.EQUIPMENT, formula: '1d8 + @for' },
+        { key: 'arco_curto', name: 'Arco Curto', type: CARD_TYPES.EQUIPMENT, formula: '1d6' },
+        { key: 'armadura_couro', name: 'Armadura de Couro', type: CARD_TYPES.EQUIPMENT, mods: [{ target: 'defesa', val: 2 }] },
+        { key: 'pocao_cura', name: 'Poção de Cura', type: CARD_TYPES.EQUIPMENT, desc: 'Restaura vida.' }
+    ];
+
+    // Busca textual
+    sheetView.pickerSearchQuery = 'arco';
+    sheetView.pickerCategoryFilter = null;
+    let filteredCards = sheetView.getAvailablePickerCards();
+    assert.strictEqual(filteredCards.length, 1, 'Busca por "arco" deve retornar 1 card');
+    assert.strictEqual(filteredCards[0].key, 'arco_curto');
+
+    // Filtro por categoria "weapons"
+    sheetView.pickerSearchQuery = '';
+    sheetView.pickerCategoryFilter = 'weapons';
+    filteredCards = sheetView.getAvailablePickerCards();
+    assert(filteredCards.some(c => c.key === 'espada_longa'), 'Filtro de armas deve incluir espada_longa');
+    assert(filteredCards.some(c => c.key === 'arco_curto'), 'Filtro de armas deve incluir arco_curto');
+    assert(!filteredCards.some(c => c.key === 'armadura_couro'), 'Filtro de armas não deve incluir armaduras');
+
+    // Filtro por categoria "armors"
+    sheetView.pickerCategoryFilter = 'armors';
+    filteredCards = sheetView.getAvailablePickerCards();
+    assert(filteredCards.some(c => c.key === 'armadura_couro'), 'Filtro de armaduras deve incluir armadura_couro');
+    assert(!filteredCards.some(c => c.key === 'espada_longa'), 'Filtro de armaduras não deve incluir armas');
+
+    sheetView.closeCardPicker();
+    console.log('  [OK] Passo 11.5: Filtragem textual e por categorias do modal de busca validadas com sucesso');
+
     console.log('\n=== Todos os testes do SheetView passaram com 100% de sucesso! ===');
 }
 
