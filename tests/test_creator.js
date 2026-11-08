@@ -278,6 +278,39 @@ async function runTests() {
     assert.strictEqual(navigatedTo, 'sheet', 'Deve direcionar para a aba Ficha após conclusão');
     console.log('  [OK] Finalização do Assistente Guiado: Cards injetados e recalculados com 100% de sucesso no motor C!');
 
+    // =========================================================================
+    // CENÁRIO 4: Criação a partir da Ficha Modelo em Branco (Template T20)
+    // =========================================================================
+    console.log('--- Cenário 4: Criação a partir da Ficha Modelo em Branco ---');
+    creator.currentStep = 2;
+    creator.characterName = 'Herói da Ficha Vazia';
+    creator.creationMode = 'template';
+    creator.selectedTemplateId = 'tpl_t20_vazia_padrao';
+
+    creator.finishCreation();
+    assert.strictEqual(engine.getCharacterName(), 'Herói da Ficha Vazia');
+    assert(engine.getCardCount() >= 5, 'Ficha modelo deve ter cards básicos carregados no C');
+    assert(engine.getCardByKey('defesa'), 'Ficha modelo deve conter card de Defesa');
+    assert.strictEqual(navigatedTo, 'sheet');
+    console.log(`  [OK] Ficha Modelo em Branco instanciada com sucesso no motor C (${engine.getCardCount()} cards essenciais populados)`);
+
+    // =========================================================================
+    // CENÁRIO 5: Execução do Segundo Assistente (Assistente Rápido de 4 Etapas)
+    // =========================================================================
+    console.log('--- Cenário 5: Execução do Assistente Rápido (4 Etapas) ---');
+    const configT20 = creator.getPackCreationConfig();
+    const quickWizard = configT20.wizards.find(w => w.id === 't20_quick_4_steps');
+    if (quickWizard) {
+        creator.selectedWizardId = 't20_quick_4_steps';
+        creator.characterName = 'Herói Ágil';
+        creator.startGuidedWizard();
+        assert.strictEqual(creator.getActiveSteps().length, 4, 'Assistente rápido deve ter exatamente 4 etapas');
+        assert.strictEqual(creator.guidedStep, 1);
+        creator.render();
+        assert(creator.container.innerHTML.includes('Conceito'), 'Passo 1 do assistente rápido deve ser Conceito');
+        console.log('  [OK] Assistente Rápido de 4 etapas validado com sucesso');
+    }
+
     console.log('=== Todos os testes do Motor Universal de Criação passaram com 100% de sucesso! ===\n');
 }
 

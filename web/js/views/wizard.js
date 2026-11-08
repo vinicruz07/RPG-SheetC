@@ -453,6 +453,13 @@ class WizardView {
         const hasCustomModes = config.customModes.length > 0;
         const hasAnyConfiguredOptions = hasWizards || hasTemplates || hasCustomModes;
 
+        if (!this.selectedWizardId && hasWizards) {
+            this.selectedWizardId = config.wizards[0].id;
+        }
+        if (!this.selectedTemplateId && hasTemplates) {
+            this.selectedTemplateId = config.templates[0].id;
+        }
+
         const packTitle = selectedPack ? (selectedPack.name || selectedPack.pack_name || 'CardPack Selecionado') : 'Sem CardPack (Ficha Neutra)';
 
         return `
@@ -502,7 +509,7 @@ class WizardView {
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-md);">
                                 <!-- 1. Assistente(s) Guiado(s) se configurado(s) no pacote -->
                                 ${hasWizards ? config.wizards.map(w => {
-                                    const isThisWizard = this.creationMode === 'guided' && (this.selectedWizardId === w.id || config.wizards.length === 1);
+                                    const isThisWizard = this.creationMode === 'guided' && (this.selectedWizardId === w.id);
                                     const stepCount = Array.isArray(w.steps) ? w.steps.length : 0;
                                     return `
                                         <div class="card creator-mode-option ${isThisWizard ? 'is-selected' : ''}" data-mode="guided" data-wizard-id="${w.id}" style="cursor: pointer; padding: 18px; border: 2px solid ${isThisWizard ? 'var(--color-gold-primary)' : 'var(--color-border-subtle)'}; background: ${isThisWizard ? 'rgba(212, 163, 115, 0.08)' : 'var(--color-surface-inset)'}; border-radius: var(--radius-md); transition: all 0.15s ease;">
@@ -518,6 +525,7 @@ class WizardView {
                                             </p>
                                         </div>
                                     `;
+                                }).join('') : ''}
                                 }).join('') : ''}
 
                                 <!-- 2. Ficha(s) Modelo se configurada(s) no pacote -->
@@ -1447,7 +1455,8 @@ class WizardView {
 
         // Seleção de Modo no Passo 2
         this.container.querySelectorAll('.creator-mode-option').forEach(opt => {
-            opt.addEventListener('click', () => {
+            opt.addEventListener('click', (e) => {
+                if (e.target && (e.target.tagName === 'SELECT' || e.target.tagName === 'OPTION')) return;
                 this.creationMode = opt.dataset.mode;
                 if (opt.dataset.wizardId) {
                     this.selectedWizardId = opt.dataset.wizardId;
