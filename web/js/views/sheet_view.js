@@ -14,9 +14,12 @@ class SheetView {
         this.skillFilterOnlyTrained = false;
         this.showingRoster = false; // Controle de exibição da galeria vs ficha ativa
         this.sheetMode = 'play'; // 'play' (In-Game / Jogar) | 'edit' (Editar / Construir)
+        this.activeEditorTab = 'overview'; // Tab ativa do editor configurada dinamicamente pelo CardPack
+        this._activeCardPack = null; // Cache do CardPack ativo com ui_layout
+        this._cardMetaMap = new Map(); // Mapa de metadados estendidos (category, is_mandatory) dos cards
 
-        // Estado do Modal de Busca e Adição de Cards à Ficha (Mochila / Grimório)
-        this.pickerTargetMode = 'equipment'; // 'equipment' ou 'spells'
+        // Estado do Modal de Busca e Adição de Cards à Ficha (Mochila / Grimório / Habilidades)
+        this.pickerTargetMode = 'equipment'; // 'equipment', 'spells' ou 'abilities'
         this.pickerSearchQuery = '';
         this.pickerCategoryFilter = null;
         this.pickerSelectedPackId = 'all';
@@ -32,6 +35,51 @@ class SheetView {
     }
 
     /**
+     * Retorna o CardPack ativo associado ao sistema da ficha atual (ou primeiro pacote instalado)
+     */
+    getActiveCardPack() {
+        if (this._activeCardPack && this._activeCardPack.ui_layout) {
+            return this._activeCardPack;
+        }
+
+        let packs = [];
+        if (typeof window !== 'undefined' && window.compendiumView && typeof window.compendiumView.getInstalledPacks === 'function') {
+            packs = window.compendiumView.getInstalledPacks();
+        } else if (typeof localStorage !== 'undefined') {
+            try {
+                const raw = localStorage.getItem('compendium_packs_v2');
+                if (raw) packs = JSON.parse(raw);
+            } catch (e) {}
+        }
+
+        const currentSys = (this.engine?.getSystemName?.() || '').toLowerCase();
+        if (packs && packs.length > 0) {
+            if (currentSys) {
+                const match = packs.find(p => {
+                    const sName = (p.system || p.system_name || p.name || '').toLowerCase();
+                    return sName.includes(currentSys) || currentSys.includes(sName);
+                });
+                if (match) {
+                    this._activeCardPack = match;
+                    return match;
+                }
+            }
+            this._activeCardPack = packs[0];
+            return packs[0];
+        }
+        return null;
+    }
+
+    /**
+     * Define o CardPack ativo manualmente
+     */
+    setActiveCardPack(pack) {
+        if (pack) {
+            this._activeCardPack = pack;
+        }
+    }
+
+    /**
      * Inicializa a view da ficha
      */
     init(containerId = 'sheet-container') {
@@ -40,6 +88,24 @@ class SheetView {
             this.container = document.getElementById('view-sheet');
         }
         if (!this.container) return;
+
+        // Auto-carrega metadados do CardPack local se ainda não estiver em cache
+        if (typeof fetch !== 'undefined' && (!this._activeCardPack || !this._activeCardPack.ui_layout)) {
+            fetch('./data/local/t20_completo.cardpack')
+                .then(r => r.ok ? r.json() : null)
+                .then(pack => {
+                    if (pack) {
+                        this._activeCardPack = pack;
+                        if (typeof window !== 'undefined' && window.compendiumView && typeof window.compendiumView.addOrUpdatePack === 'function') {
+                            window.compendiumView.addOrUpdatePack(pack);
+                        }
+                        if (this.container && this.container.innerHTML) {
+                            this.render();
+                        }
+                    }
+                })
+                .catch(() => {});
+        }
 
         this.render();
     }
@@ -93,6 +159,18 @@ class SheetView {
         const availableSpellsAbilities = this.engine.getAllCards(c => (c.type === CARD_TYPES.SPELL || c.type === CARD_TYPES.ABILITY || c.type === CARD_TYPES.TRAIT) && !c.equipped);
         const skillCards = this.engine.getAllCards(c => c.type === CARD_TYPES.SKILL);
         const isPlayMode = this.sheetMode === 'play';
+        const pack = this.getActiveCardPack();
+        const editorTabs = pack?.ui_layout?.editor_tabs || [
+            { id: 'overview', name: 'Visão Geral', icon: '📜' },
+            { id: 'abilities', name: 'Habilidades', icon: '⚡' },
+            { id: 'equipment', name: 'Equipamento & Mochila', icon: '🎒' },
+            { id: 'spells', name: 'Magias & Grimório', icon: '✨' },
+            { id: 'skills', name: 'Perícias', icon: '🎯' }
+        ];
+
+        if (!this.activeEditorTab && pack?.ui_layout?.default_tab) {
+            this.activeEditorTab = pack.ui_layout.default_tab;
+        }
 
         this.container.innerHTML = `
             <div class="sheet-main-layout ${isPlayMode ? 'sheet-mode-play' : 'sheet-mode-edit'}">
@@ -210,299 +288,31 @@ class SheetView {
                     </section>
                 `}
 
+                ${!isPlayMode ? `
+                    <!-- Barra de Abas do Modo Editar Configuradas Dinamicamente pelo CardPack -->
+                    <div class="sheet-editor-tabs-bar">
+                        ${editorTabs.map(t => `
+                            <button type="button" class="btn btn-editor-tab ${this.activeEditorTab === t.id ? 'active' : ''}" data-editor-tab="${t.id}">
+                                <span class="tab-icon">${t.icon || '📄'}</span>
+                                <span class="tab-title">${t.name}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                ` : ''}
+
                 <div class="dashboard-grid sheet-grid-columns">
                     <!-- Coluna Principal (Recursos, Stats, Atributos, Equipamentos, Habilidades, Perícias) -->
                     <main class="sheet-column-main" style="display: flex; flex-direction: column; gap: var(--space-lg);">
-                        
-                        <!-- 1. Recursos Dinâmicos (PV, PM, Sanidade, etc.) e Estatísticas (Defesa, etc.) -->
-                        <section class="card sheet-resources-card">
-                            <div class="card-header" style="margin-bottom: var(--space-md);">
-                                <div>
-                                    <span class="card-title">Recursos de Combate & Estatísticas</span>
-                                    <span class="card-subtitle-small">Recalculados automaticamente na memória C</span>
-                                </div>
-                            </div>
-
-                            <!-- Grade de Recursos Dinâmicos -->
-                            ${resourceCards.length > 0 ? `
-                                <div class="sheet-combat-meters" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-md); margin-bottom: var(--space-lg);">
-                                    ${resourceCards.map(rc => {
-                                        const cur = rc.current;
-                                        const max = rc.max > 0 ? rc.max : 1;
-                                        const pct = Math.min(100, Math.max(0, (cur / max) * 100));
-                                        const isMana = rc.key.includes('pm') || rc.key.includes('mana') || rc.key.includes('mp');
-                                        const icon = isMana ? '✨' : '❤️';
-                                        return `
-                                            <div class="resource-block ${isMana ? 'pm-block' : 'pv-block'}" data-res-key="${rc.key}">
-                                                <div class="resource-block-header">
-                                                    <span class="res-label">${icon} ${rc.name} (${rc.key.toUpperCase()})</span>
-                                                    <div class="res-inputs">
-                                                        <input type="number" class="res-num-input res-cur-input" data-res-key="${rc.key}" value="${cur}" min="0" max="${max}">
-                                                        <span class="res-sep">/</span>
-                                                        <span class="res-max">${max}</span>
-                                                    </div>
-                                                </div>
-                                                <div class="res-progress-track">
-                                                    <div class="res-progress-fill ${isMana ? 'pm-fill' : 'pv-fill'}" style="width: ${pct}%;"></div>
-                                                </div>
-                                                <div class="res-quick-buttons">
-                                                    <button type="button" class="btn-res-delta btn-quick-dmg" data-res-key="${rc.key}" data-delta="-5">-5</button>
-                                                    <button type="button" class="btn-res-delta btn-quick-dmg" data-res-key="${rc.key}" data-delta="-1">-1</button>
-                                                    <button type="button" class="btn-res-delta btn-quick-heal" data-res-key="${rc.key}" data-delta="1">+1</button>
-                                                    <button type="button" class="btn-res-delta btn-quick-heal" data-res-key="${rc.key}" data-delta="5">+5</button>
-                                                    <button type="button" class="btn-res-full btn-quick-action" data-res-key="${rc.key}" data-max="${max}" title="Recuperar Total">Total</button>
-                                                </div>
-                                            </div>
-                                        `;
-                                    }).join('')}
-                                </div>
-                            ` : ''}
-
-                            <!-- Estatísticas Derivadas (Defesa, etc.) -->
-                            ${statCards.length > 0 ? `
-                                <div class="sheet-stats-container" style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
-                                    ${statCards.map(sc => `
-                                        <div class="defense-breakdown-card" style="flex: 1; min-width: 240px;" data-stat-key="${sc.key}">
-                                            <div class="defense-main-badge">
-                                                <span class="def-badge-label">${sc.name}</span>
-                                                <div class="def-badge-val" id="stat-val-${sc.key}">${sc.effective}</div>
-                                            </div>
-                                            <div class="defense-calc-items">
-                                                <div class="def-calc-item">
-                                                    <span class="calc-label">Base</span>
-                                                    <span class="calc-val">${sc.base}</span>
-                                                </div>
-                                                ${sc.formula ? `
-                                                    <span class="calc-op">•</span>
-                                                    <div class="def-calc-item">
-                                                        <span class="calc-label">Fórmula</span>
-                                                        <span class="calc-val" style="font-size: 0.82rem; font-family: var(--font-mono); color: #67e8f9;">${sc.formula}</span>
-                                                    </div>
-                                                ` : ''}
-                                                ${sc.effective !== sc.base ? `
-                                                    <span class="calc-op">=</span>
-                                                    <div class="def-calc-item">
-                                                        <span class="calc-label">Bônus Cards</span>
-                                                        <span class="calc-val" style="color: #4ade80;">${this.formatMod(sc.effective - sc.base)}</span>
-                                                    </div>
-                                                ` : ''}
-                                            </div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            ` : ''}
-                        </section>
-
-                        <!-- 2. Atributos Básicos com Edição In-Place ou Rolagem Direta -->
-                        ${attributeCards.length > 0 ? `
-                            <section class="card sheet-attributes-card">
-                                <div class="card-header">
-                                    <span class="card-title">Atributos Básicos</span>
-                                    <span class="card-subtitle-small">${isPlayMode ? 'Clique no modificador para rolar 1d20 no combate' : 'Modifique a base ou clique no modificador para rolar d20'}</span>
-                                </div>
-
-                                <div class="sheet-attributes-grid ${isPlayMode ? 'sheet-attributes-play' : ''}">
-                                    ${attributeCards.map(attr => {
-                                        const eff = attr.effective;
-                                        const mod = Math.floor((eff - 10) / 2);
-                                        const hasBonus = eff !== attr.base;
-                                        return `
-                                            <div class="sheet-attr-card ${isPlayMode ? 'sheet-attr-play-card' : ''}" data-attr-key="${attr.key}">
-                                                <div class="sheet-attr-header">
-                                                    <span class="attr-abbr-tag">${attr.key.toUpperCase()}</span>
-                                                    <span class="attr-title-text">${attr.name}</span>
-                                                </div>
-                                                <div class="sheet-attr-mod ${mod >= 0 ? 'mod-positive' : 'mod-negative'}" 
-                                                     data-attr-key="${attr.key}" 
-                                                     data-attr-name="${attr.name}" 
-                                                     data-attr-mod="${mod}"
-                                                     title="Clique para rolar 1d20 ${this.formatMod(mod)}"
-                                                     style="cursor: pointer;">
-                                                    ${this.formatMod(mod)}
-                                                </div>
-                                                ${!isPlayMode ? `
-                                                    <div class="sheet-attr-input-row">
-                                                        <button type="button" class="btn-attr-stepper btn-attr-minus" data-attr-key="${attr.key}">-</button>
-                                                        <input type="number" class="sheet-attr-val-input" data-attr-key="${attr.key}" value="${attr.base}" min="1" max="40">
-                                                        <button type="button" class="btn-attr-stepper btn-attr-plus" data-attr-key="${attr.key}">+</button>
-                                                    </div>
-                                                ` : `
-                                                    <span style="font-size: 0.8rem; color: var(--color-text-muted); font-weight: 700;">
-                                                        Valor: <strong style="color: ${hasBonus ? '#4ade80' : 'var(--color-text-main)'}; font-family: var(--font-heading);">${eff}</strong>
-                                                    </span>
-                                                `}
-                                                ${(!isPlayMode && hasBonus) ? `
-                                                    <span style="font-size: 0.68rem; color: #4ade80; font-weight: 700;">Efetivo: ${eff}</span>
-                                                ` : ''}
-                                            </div>
-                                        `;
-                                    }).join('')}
-                                </div>
-                            </section>
-                        ` : ''}
-
-                        <!-- 3. Equipamentos e Itens Aplicados (Cards com Recálculo Dinâmico) -->
-                        <section class="card sheet-equipment-card">
-                            <div class="card-header">
-                                <div>
-                                    <span class="card-title">Equipamento & Armas</span>
-                                    <span class="card-subtitle-small">${isPlayMode ? 'Apenas itens em uso (clique em Rolar para atacar ou causar dano)' : 'Itens em uso afetam dinamicamente os valores da ficha'}</span>
-                                </div>
-                                ${!isPlayMode ? `
-                                    <button type="button" id="btn-add-item-modal" class="btn btn-sm btn-primary" title="Buscar e adicionar item/equipamento do CardPack à mochila" style="font-size: 0.8rem; font-weight: 700;">
-                                        ➕ Adicionar Item / Equipamento
-                                    </button>
-                                ` : ''}
-                            </div>
-
-                            <!-- Equipamentos Atualmente Equipados -->
-                            <div style="margin-bottom: var(--space-md);">
-                                <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-gold-primary); margin-bottom: var(--space-xs);">
-                                    🛡️ Equipados na Ficha (${equippedEquipment.length})
-                                </h4>
-                                ${equippedEquipment.length > 0 ? `
-                                    <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
-                                        ${equippedEquipment.map(eq => this.renderMiniCard(eq, true, isPlayMode)).join('')}
-                                    </div>
-                                ` : `
-                                    <p style="font-size: 0.85rem; color: var(--color-text-dim); margin: 0; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 6px;">
-                                        Nenhum equipamento equipado no momento. ${isPlayMode ? 'Alterne para o Modo Editar para equipar armas ou armaduras.' : 'Equipe um item do inventário abaixo para aplicar seus bônus.'}
-                                    </p>
-                                `}
-                            </div>
-
-                            <!-- Mochila / Inventário Disponível -->
-                            ${!isPlayMode ? `
-                                <div>
-                                    <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted); margin-bottom: var(--space-xs);">
-                                        🎒 Mochila / Inventário (${inventoryEquipment.length})
-                                    </h4>
-                                    ${inventoryEquipment.length > 0 ? `
-                                        <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
-                                            ${inventoryEquipment.map(eq => this.renderMiniCard(eq, false, false)).join('')}
-                                        </div>
-                                    ` : `
-                                        <div class="sheet-empty-backpack-box" style="padding: 16px; text-align: center; background: rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.12); border-radius: 8px;">
-                                            <p style="font-size: 0.85rem; color: var(--color-text-dim); margin: 0 0 10px 0;">
-                                                Mochila vazia. Adicione armas, armaduras ou itens para equipar ou guardar.
-                                            </p>
-                                            <button type="button" class="btn btn-sm btn-secondary btn-trigger-add-item" style="font-weight: 600;">
-                                                ➕ Adicionar Item à Mochila
-                                            </button>
-                                        </div>
-                                    `}
-                                </div>
-                            ` : (inventoryEquipment.length > 0 ? `
-                                <details class="in-game-backpack-details">
-                                    <summary>🎒 Mochila (${inventoryEquipment.length} itens guardados)</summary>
-                                    <div style="padding-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px;">
-                                        ${inventoryEquipment.map(eq => `
-                                            <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
-                                                <span>⚔️ ${eq.name}</span>
-                                                <span style="color: var(--color-text-dim); font-size: 0.75rem;">Guardado</span>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                </details>
-                            ` : '')}
-                        </section>
-
-                        <!-- 4. Magias, Habilidades & Características -->
-                        <section class="card sheet-spells-abilities-card">
-                            <div class="card-header">
-                                <div>
-                                    <span class="card-title">Habilidades & Magias</span>
-                                    <span class="card-subtitle-small">${isPlayMode ? 'Poderes ativos em combate (custo debitado automaticamente)' : 'Cards ativos aplicam bônus ou executam rolagens com custo'}</span>
-                                </div>
-                                ${!isPlayMode ? `
-                                    <button type="button" id="btn-add-spell-modal" class="btn btn-sm btn-accent" title="Buscar e adicionar magia ou poder do CardPack ao grimório" style="font-size: 0.8rem; font-weight: 700;">
-                                        ➕ Adicionar Magia / Poder
-                                    </button>
-                                ` : ''}
-                            </div>
-
-                            <!-- Cards de Habilidade / Magia Ativos / Sustentados -->
-                            ${activeSpellsAbilities.length > 0 ? `
-                                <div style="margin-bottom: var(--space-md);">
-                                    <h4 style="font-size: 0.85rem; text-transform: uppercase; color: #a78bfa; margin-bottom: var(--space-xs);">
-                                        ⚡ Ativos / Sustentados (${activeSpellsAbilities.length})
-                                    </h4>
-                                    <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
-                                        ${activeSpellsAbilities.map(sp => this.renderMiniCard(sp, true, isPlayMode)).join('')}
-                                    </div>
-                                </div>
-                            ` : (isPlayMode ? `
-                                <p style="font-size: 0.82rem; color: var(--color-text-dim); margin-bottom: var(--space-md);">
-                                    Nenhuma magia ou habilidade ativa no momento.
-                                </p>
-                            ` : '')}
-
-                            <!-- Grimório / Habilidades Disponíveis -->
-                            ${!isPlayMode ? `
-                                <div>
-                                    <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: var(--space-xs);">
-                                        ✨ Grimório e Talentos (${availableSpellsAbilities.length})
-                                    </h4>
-                                    ${availableSpellsAbilities.length > 0 ? `
-                                        <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
-                                            ${availableSpellsAbilities.map(sp => this.renderMiniCard(sp, false, false)).join('')}
-                                        </div>
-                                    ` : `
-                                        <div class="sheet-empty-spells-box" style="padding: 16px; text-align: center; background: rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.12); border-radius: 8px;">
-                                            <p style="font-size: 0.85rem; color: var(--color-text-dim); margin: 0 0 10px 0;">
-                                                Nenhuma magia ou talento cadastrado no seu grimório.
-                                            </p>
-                                            <button type="button" class="btn btn-sm btn-secondary btn-trigger-add-spell" style="font-weight: 600;">
-                                                ➕ Adicionar Magia ao Grimório
-                                            </button>
-                                        </div>
-                                    `}
-                                </div>
-                            ` : (availableSpellsAbilities.length > 0 ? `
-                                <details class="in-game-backpack-details">
-                                    <summary>✨ Grimório (${availableSpellsAbilities.length} magias/talentos não preparados)</summary>
-                                    <div style="padding-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px;">
-                                        ${availableSpellsAbilities.map(sp => `
-                                            <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
-                                                <span>✨ ${sp.name}</span>
-                                                <span style="color: var(--color-text-dim); font-size: 0.75rem;">Não preparado</span>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                </details>
-                            ` : '')}
-                        </section>
-
-                        <!-- 5. Perícias Baseadas em Cards -->
-                        <section class="card sheet-skills-card">
-                            <div class="card-header">
-                                <span class="card-title">Perícias (${skillCards.length})</span>
-                                <div class="skills-filter-bar">
-                                    <input type="text" id="skills-search-input" class="skills-search" placeholder="🔍 Filtrar perícia..." value="${this.skillFilter}">
-                                    <label class="skills-checkbox-label">
-                                        <input type="checkbox" id="skills-only-trained" ${this.skillFilterOnlyTrained ? 'checked' : ''}>
-                                        Somente Treinadas
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div class="skills-table-container">
-                                <table class="skills-table">
-                                    <thead>
-                                        <tr>
-                                            <th class="th-train">Treino</th>
-                                            <th class="th-name">Perícia</th>
-                                            <th class="th-attr">Referência</th>
-                                            <th class="th-bonus">Bônus</th>
-                                            <th class="th-roll">Ação</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="skills-table-body">
-                                        ${this.renderSkillsTableRows(skillCards, isPlayMode)}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </section>
+                        ${this.renderMainColumnContent(isPlayMode, pack, {
+                            resourceCards,
+                            statCards,
+                            attributeCards,
+                            equippedEquipment,
+                            inventoryEquipment,
+                            activeSpellsAbilities,
+                            availableSpellsAbilities,
+                            skillCards
+                        })}
                     </main>
 
                     <!-- Coluna Lateral (Logs e Testes do Motor C) -->
@@ -563,6 +373,528 @@ class SheetView {
     }
 
     /**
+     * Renderiza o conteúdo da coluna principal de acordo com o modo (In-Game vs Editor) e a aba ativa configurada
+     */
+    renderMainColumnContent(isPlayMode, pack, data) {
+        const {
+            resourceCards,
+            statCards,
+            attributeCards,
+            equippedEquipment,
+            inventoryEquipment,
+            activeSpellsAbilities,
+            availableSpellsAbilities,
+            skillCards
+        } = data;
+
+        // No Modo In-Game: Dashboard ágil consolidado com todas as seções operacionais
+        if (isPlayMode) {
+            return `
+                ${this.renderResourcesSection(resourceCards, statCards)}
+                ${this.renderAttributesSection(attributeCards, true)}
+                ${this.renderEquipmentSection(equippedEquipment, inventoryEquipment, true)}
+                ${this.renderSpellsSection(activeSpellsAbilities, availableSpellsAbilities, true)}
+                ${this.renderSkillsSection(skillCards, true)}
+            `;
+        }
+
+        // No Modo Editar: Navegação orientada pelas abas do CardPack
+        const tab = this.activeEditorTab || 'overview';
+        if (tab === 'abilities') {
+            return this.renderAbilitiesTab(pack);
+        } else if (tab === 'equipment') {
+            return this.renderEquipmentSection(equippedEquipment, inventoryEquipment, false);
+        } else if (tab === 'spells') {
+            return this.renderSpellsSection(activeSpellsAbilities, availableSpellsAbilities, false);
+        } else if (tab === 'skills') {
+            return this.renderSkillsSection(skillCards, false);
+        } else {
+            // 'overview' ou padrão: Visão geral completa para construção
+            return `
+                ${this.renderResourcesSection(resourceCards, statCards)}
+                ${this.renderAttributesSection(attributeCards, false)}
+                ${this.renderEquipmentSection(equippedEquipment, inventoryEquipment, false)}
+                ${this.renderSpellsSection(activeSpellsAbilities, availableSpellsAbilities, false)}
+                ${this.renderSkillsSection(skillCards, false)}
+            `;
+        }
+    }
+
+    renderResourcesSection(resourceCards, statCards) {
+        return `
+            <section class="card sheet-resources-card">
+                <div class="card-header" style="margin-bottom: var(--space-md);">
+                    <div>
+                        <span class="card-title">Recursos de Combate & Estatísticas</span>
+                        <span class="card-subtitle-small">Recalculados automaticamente na memória C</span>
+                    </div>
+                </div>
+
+                ${resourceCards.length > 0 ? `
+                    <div class="sheet-combat-meters" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-md); margin-bottom: var(--space-lg);">
+                        ${resourceCards.map(rc => {
+                            const cur = rc.current;
+                            const max = rc.max > 0 ? rc.max : 1;
+                            const pct = Math.min(100, Math.max(0, (cur / max) * 100));
+                            const isMana = rc.key.includes('pm') || rc.key.includes('mana') || rc.key.includes('mp');
+                            const icon = isMana ? '✨' : '❤️';
+                            return `
+                                <div class="resource-block ${isMana ? 'pm-block' : 'pv-block'}" data-res-key="${rc.key}">
+                                    <div class="resource-block-header">
+                                        <span class="res-label">${icon} ${rc.name} (${rc.key.toUpperCase()})</span>
+                                        <div class="res-inputs">
+                                            <input type="number" class="res-num-input res-cur-input" data-res-key="${rc.key}" value="${cur}" min="0" max="${max}">
+                                            <span class="res-sep">/</span>
+                                            <span class="res-max">${max}</span>
+                                        </div>
+                                    </div>
+                                    <div class="res-progress-track">
+                                        <div class="res-progress-fill ${isMana ? 'pm-fill' : 'pv-fill'}" style="width: ${pct}%;"></div>
+                                    </div>
+                                    <div class="res-quick-buttons">
+                                        <button type="button" class="btn-res-delta btn-quick-dmg" data-res-key="${rc.key}" data-delta="-5">-5</button>
+                                        <button type="button" class="btn-res-delta btn-quick-dmg" data-res-key="${rc.key}" data-delta="-1">-1</button>
+                                        <button type="button" class="btn-res-delta btn-quick-heal" data-res-key="${rc.key}" data-delta="1">+1</button>
+                                        <button type="button" class="btn-res-delta btn-quick-heal" data-res-key="${rc.key}" data-delta="5">+5</button>
+                                        <button type="button" class="btn-res-full btn-quick-action" data-res-key="${rc.key}" data-max="${max}" title="Recuperar Total">Total</button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                ` : ''}
+
+                ${statCards.length > 0 ? `
+                    <div class="sheet-stats-container" style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
+                        ${statCards.map(sc => `
+                            <div class="defense-breakdown-card" style="flex: 1; min-width: 240px;" data-stat-key="${sc.key}">
+                                <div class="defense-main-badge">
+                                    <span class="def-badge-label">${sc.name}</span>
+                                    <div class="def-badge-val" id="stat-val-${sc.key}">${sc.effective}</div>
+                                </div>
+                                <div class="defense-calc-items">
+                                    <div class="def-calc-item">
+                                        <span class="calc-label">Base</span>
+                                        <span class="calc-val">${sc.base}</span>
+                                    </div>
+                                    ${sc.formula ? `
+                                        <span class="calc-op">•</span>
+                                        <div class="def-calc-item">
+                                            <span class="calc-label">Fórmula</span>
+                                            <span class="calc-val" style="font-size: 0.82rem; font-family: var(--font-mono); color: #67e8f9;">${sc.formula}</span>
+                                        </div>
+                                    ` : ''}
+                                    ${sc.effective !== sc.base ? `
+                                        <span class="calc-op">=</span>
+                                        <div class="def-calc-item">
+                                            <span class="calc-label">Bônus Cards</span>
+                                            <span class="calc-val" style="color: #4ade80;">${this.formatMod(sc.effective - sc.base)}</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            </section>
+        `;
+    }
+
+    renderAttributesSection(attributeCards, isPlayMode) {
+        if (!attributeCards || attributeCards.length === 0) return '';
+        return `
+            <section class="card sheet-attributes-card">
+                <div class="card-header">
+                    <span class="card-title">Atributos Básicos</span>
+                    <span class="card-subtitle-small">${isPlayMode ? 'Clique no modificador para rolar 1d20 no combate' : 'Modifique a base ou clique no modificador para rolar d20'}</span>
+                </div>
+
+                <div class="sheet-attributes-grid ${isPlayMode ? 'sheet-attributes-play' : ''}">
+                    ${attributeCards.map(attr => {
+                        const eff = attr.effective;
+                        const mod = Math.floor((eff - 10) / 2);
+                        const hasBonus = eff !== attr.base;
+                        return `
+                            <div class="sheet-attr-card ${isPlayMode ? 'sheet-attr-play-card' : ''}" data-attr-key="${attr.key}">
+                                <div class="sheet-attr-header">
+                                    <span class="attr-abbr-tag">${attr.key.toUpperCase()}</span>
+                                    <span class="attr-title-text">${attr.name}</span>
+                                </div>
+                                <div class="sheet-attr-mod ${mod >= 0 ? 'mod-positive' : 'mod-negative'}" 
+                                     data-attr-key="${attr.key}" 
+                                     data-attr-name="${attr.name}" 
+                                     data-attr-mod="${mod}"
+                                     title="Clique para rolar 1d20 ${this.formatMod(mod)}"
+                                     style="cursor: pointer;">
+                                    ${this.formatMod(mod)}
+                                </div>
+                                ${!isPlayMode ? `
+                                    <div class="sheet-attr-input-row">
+                                        <button type="button" class="btn-attr-stepper btn-attr-minus" data-attr-key="${attr.key}">-</button>
+                                        <input type="number" class="sheet-attr-val-input" data-attr-key="${attr.key}" value="${attr.base}" min="1" max="40">
+                                        <button type="button" class="btn-attr-stepper btn-attr-plus" data-attr-key="${attr.key}">+</button>
+                                    </div>
+                                ` : `
+                                    <span style="font-size: 0.8rem; color: var(--color-text-muted); font-weight: 700;">
+                                        Valor: <strong style="color: ${hasBonus ? '#4ade80' : 'var(--color-text-main)'}; font-family: var(--font-heading);">${eff}</strong>
+                                    </span>
+                                `}
+                                ${(!isPlayMode && hasBonus) ? `
+                                    <span style="font-size: 0.68rem; color: #4ade80; font-weight: 700;">Efetivo: ${eff}</span>
+                                ` : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </section>
+        `;
+    }
+
+    renderEquipmentSection(equippedEquipment, inventoryEquipment, isPlayMode) {
+        return `
+            <section class="card sheet-equipment-card">
+                <div class="card-header">
+                    <div>
+                        <span class="card-title">Equipamento & Armas</span>
+                        <span class="card-subtitle-small">${isPlayMode ? 'Apenas itens em uso (clique em Rolar para atacar ou causar dano)' : 'Itens em uso afetam dinamicamente os valores da ficha'}</span>
+                    </div>
+                    ${!isPlayMode ? `
+                        <button type="button" id="btn-add-item-modal" class="btn btn-sm btn-primary" title="Buscar e adicionar item/equipamento do CardPack à mochila" style="font-size: 0.8rem; font-weight: 700;">
+                            ➕ Adicionar Item / Equipamento
+                        </button>
+                    ` : ''}
+                </div>
+
+                <!-- Equipamentos Atualmente Equipados -->
+                <div style="margin-bottom: var(--space-md);">
+                    <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-gold-primary); margin-bottom: var(--space-xs);">
+                        🛡️ Equipados na Ficha (${equippedEquipment.length})
+                    </h4>
+                    ${equippedEquipment.length > 0 ? `
+                        <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
+                            ${equippedEquipment.map(eq => this.renderMiniCard(eq, true, isPlayMode)).join('')}
+                        </div>
+                    ` : `
+                        <p style="font-size: 0.85rem; color: var(--color-text-dim); margin: 0; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+                            Nenhum equipamento equipado no momento. ${isPlayMode ? 'Alterne para o Modo Editar para equipar armas ou armaduras.' : 'Equipe um item do inventário abaixo para aplicar seus bônus.'}
+                        </p>
+                    `}
+                </div>
+
+                <!-- Mochila / Inventário Disponível -->
+                ${!isPlayMode ? `
+                    <div>
+                        <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted); margin-bottom: var(--space-xs);">
+                            🎒 Mochila / Inventário (${inventoryEquipment.length})
+                        </h4>
+                        ${inventoryEquipment.length > 0 ? `
+                            <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
+                                ${inventoryEquipment.map(eq => this.renderMiniCard(eq, false, false)).join('')}
+                            </div>
+                        ` : `
+                            <div class="sheet-empty-backpack-box" style="padding: 16px; text-align: center; background: rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.12); border-radius: 8px;">
+                                <p style="font-size: 0.85rem; color: var(--color-text-dim); margin: 0 0 10px 0;">
+                                    Mochila vazia. Adicione armas, armaduras ou itens para equipar ou guardar.
+                                </p>
+                                <button type="button" class="btn btn-sm btn-secondary btn-trigger-add-item" style="font-weight: 600;">
+                                    ➕ Adicionar Item à Mochila
+                                </button>
+                            </div>
+                        `}
+                    </div>
+                ` : (inventoryEquipment.length > 0 ? `
+                    <details class="in-game-backpack-details">
+                        <summary>🎒 Mochila (${inventoryEquipment.length} itens guardados)</summary>
+                        <div style="padding-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px;">
+                            ${inventoryEquipment.map(eq => `
+                                <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
+                                    <span>⚔️ ${eq.name}</span>
+                                    <span style="color: var(--color-text-dim); font-size: 0.75rem;">Guardado</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </details>
+                ` : '')}
+            </section>
+        `;
+    }
+
+    renderSpellsSection(activeSpellsAbilities, availableSpellsAbilities, isPlayMode) {
+        return `
+            <section class="card sheet-spells-abilities-card">
+                <div class="card-header">
+                    <div>
+                        <span class="card-title">Habilidades & Magias</span>
+                        <span class="card-subtitle-small">${isPlayMode ? 'Poderes ativos em combate (custo debitado automaticamente)' : 'Cards ativos aplicam bônus ou executam rolagens com custo'}</span>
+                    </div>
+                    ${!isPlayMode ? `
+                        <button type="button" id="btn-add-spell-modal" class="btn btn-sm btn-accent" title="Buscar e adicionar magia ou poder do CardPack ao grimório" style="font-size: 0.8rem; font-weight: 700;">
+                            ➕ Adicionar Magia / Poder
+                        </button>
+                    ` : ''}
+                </div>
+
+                <!-- Cards de Habilidade / Magia Ativos / Sustentados -->
+                ${activeSpellsAbilities.length > 0 ? `
+                    <div style="margin-bottom: var(--space-md);">
+                        <h4 style="font-size: 0.85rem; text-transform: uppercase; color: #a78bfa; margin-bottom: var(--space-xs);">
+                            ⚡ Ativos / Sustentados (${activeSpellsAbilities.length})
+                        </h4>
+                        <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
+                            ${activeSpellsAbilities.map(sp => this.renderMiniCard(sp, true, isPlayMode)).join('')}
+                        </div>
+                    </div>
+                ` : (isPlayMode ? `
+                    <p style="font-size: 0.82rem; color: var(--color-text-dim); margin-bottom: var(--space-md);">
+                        Nenhuma magia ou habilidade ativa no momento.
+                    </p>
+                ` : '')}
+
+                <!-- Grimório / Habilidades Disponíveis -->
+                ${!isPlayMode ? `
+                    <div>
+                        <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: var(--space-xs);">
+                            ✨ Grimório e Talentos (${availableSpellsAbilities.length})
+                        </h4>
+                        ${availableSpellsAbilities.length > 0 ? `
+                            <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm);">
+                                ${availableSpellsAbilities.map(sp => this.renderMiniCard(sp, false, false)).join('')}
+                            </div>
+                        ` : `
+                            <div class="sheet-empty-spells-box" style="padding: 16px; text-align: center; background: rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.12); border-radius: 8px;">
+                                <p style="font-size: 0.85rem; color: var(--color-text-dim); margin: 0 0 10px 0;">
+                                    Nenhuma magia ou talento cadastrado no seu grimório.
+                                </p>
+                                <button type="button" class="btn btn-sm btn-secondary btn-trigger-add-spell" style="font-weight: 600;">
+                                    ➕ Adicionar Magia ao Grimório
+                                </button>
+                            </div>
+                        `}
+                    </div>
+                ` : (availableSpellsAbilities.length > 0 ? `
+                    <details class="in-game-backpack-details">
+                        <summary>✨ Grimório (${availableSpellsAbilities.length} magias/talentos não preparados)</summary>
+                        <div style="padding-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px;">
+                            ${availableSpellsAbilities.map(sp => `
+                                <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
+                                    <span>✨ ${sp.name}</span>
+                                    <span style="color: var(--color-text-dim); font-size: 0.75rem;">Não preparado</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </details>
+                ` : '')}
+            </section>
+        `;
+    }
+
+    renderSkillsSection(skillCards, isPlayMode) {
+        return `
+            <section class="card sheet-skills-card">
+                <div class="card-header">
+                    <span class="card-title">Perícias (${skillCards.length})</span>
+                    <div class="skills-filter-bar">
+                        <input type="text" id="skills-search-input" class="skills-search" placeholder="🔍 Filtrar perícia..." value="${this.skillFilter}">
+                        <label class="skills-checkbox-label">
+                            <input type="checkbox" id="skills-only-trained" ${this.skillFilterOnlyTrained ? 'checked' : ''}>
+                            Somente Treinadas
+                        </label>
+                    </div>
+                </div>
+
+                <div class="skills-table-container">
+                    <table class="skills-table">
+                        <thead>
+                            <tr>
+                                <th class="th-train">Treino</th>
+                                <th class="th-name">Perícia</th>
+                                <th class="th-attr">Referência</th>
+                                <th class="th-bonus">Bônus</th>
+                                <th class="th-roll">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="skills-table-body">
+                            ${this.renderSkillsTableRows(skillCards, isPlayMode)}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        `;
+    }
+
+    /**
+     * Renderiza a Aba Especial de Habilidades configurada no CardPack
+     * Organiza as habilidades em seções (Classe, Raça, Origem, Divindade)
+     * e identifica visualmente habilidades obrigatórias de classe/raça.
+     */
+    renderAbilitiesTab(pack) {
+        const CARD_TYPES = (typeof window !== 'undefined' && window.CARD_TYPES) ? window.CARD_TYPES : {
+            ATTRIBUTE: 0, RESOURCE: 1, STAT: 2, SKILL: 3, ABILITY: 4, EQUIPMENT: 5, SPELL: 6, TRAIT: 7
+        };
+
+        const abilitiesTabConfig = pack?.ui_layout?.editor_tabs?.find(t => t.id === 'abilities');
+        const categories = abilitiesTabConfig?.categories || [
+            { id: 'class', name: 'Habilidades de Classe', category: 'class_ability', icon: '⚔️', description: 'Habilidades fundamentais e poderes especiais da sua classe de combate.' },
+            { id: 'race', name: 'Habilidades & Traços de Raça', category: 'race_trait', icon: '🧬', description: 'Herança física, características fisiológicas e bônus ancestrais da sua espécie.' },
+            { id: 'origin', name: 'Poderes de Origem', category: 'origin_power', icon: '📜', description: 'Habilidades, contatos e vantagens herdadas do seu passado pré-aventura.' },
+            { id: 'deity', name: 'Poderes Concedidos / Divindade', category: 'deity_power', icon: '🕊️', description: 'Bênçãos divinas outorgadas pelos Deuses Maiores de Arton aos seus devotos.' }
+        ];
+
+        // Coleta todos os cards de habilidade/traço do deck C
+        const allCards = this.engine.getAllCards();
+        const abilityCards = allCards.filter(c => {
+            if (c.type === CARD_TYPES.EQUIPMENT || c.type === CARD_TYPES.ATTRIBUTE || 
+                c.type === CARD_TYPES.RESOURCE || c.type === CARD_TYPES.STAT || c.type === CARD_TYPES.SKILL) {
+                return false;
+            }
+            return (c.type === CARD_TYPES.ABILITY || c.type === CARD_TYPES.TRAIT || c.category);
+        });
+
+        const enrichedCards = abilityCards.map(c => {
+            const packCard = pack?.cards?.find(pk => pk.key === c.key);
+            const meta = this._cardMetaMap?.get(c.key);
+            let cat = c.category || meta?.category || packCard?.category || '';
+            if (!cat) {
+                if (c.key.startsWith('raca_') || c.key.startsWith('humano_') || c.key.startsWith('anao_') || c.key.startsWith('elfo_') || c.key.startsWith('dahllan_') || c.key.startsWith('goblin_') || c.key.startsWith('lefou_') || c.key.startsWith('minotauro_') || c.key.startsWith('qareen_')) cat = 'race_trait';
+                else if (c.key.startsWith('origem_')) cat = 'origin_power';
+                else if (c.key.startsWith('deus_')) cat = 'deity_power';
+                else cat = 'class_ability';
+            }
+            const isMandatory = (c.is_mandatory === 1 || c.is_mandatory === true || 
+                                 meta?.is_mandatory === 1 || meta?.is_mandatory === true || 
+                                 packCard?.is_mandatory === 1 || packCard?.is_mandatory === true);
+            return {
+                ...c,
+                resolvedCategory: cat,
+                isMandatory: isMandatory,
+                mods: c.modifiers || c.mods || packCard?.mods || []
+            };
+        });
+
+        return `
+            <div class="sheet-abilities-tab-container sheet-abilities-tab-view" style="display: flex; flex-direction: column; gap: var(--space-lg);">
+                <!-- Cabeçalho da Aba de Habilidades -->
+                <div class="card sheet-abilities-header-card" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--color-surface-card); border-radius: var(--radius-md); border: 1px solid var(--color-border-subtle); flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <h3 style="font-family: var(--font-heading); font-size: 1.25rem; color: var(--color-gold-light); margin: 0; display: flex; align-items: center; gap: 8px;">
+                            ⚡ Habilidades, Poderes & Traços
+                        </h3>
+                        <p style="margin: 4px 0 0 0; font-size: 0.82rem; color: var(--color-text-muted);">
+                            Habilidades de classe, traços raciais, poderes de origem e bênçãos do seu personagem.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" id="btn-open-abilities-picker-all" class="btn btn-primary btn-sm" style="font-weight: 700; padding: 8px 16px;">
+                            ➕ Escolher / Adicionar Habilidade
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Seções Dinâmicas Configuradas no CardPack -->
+                ${categories.map(cat => {
+                    const sectionCards = enrichedCards.filter(c => c.resolvedCategory === cat.category);
+                    return `
+                        <section class="card sheet-ability-section-card" data-category-id="${cat.id}" style="padding: 16px 20px; background: var(--color-surface-card); border-radius: var(--radius-md); border: 1px solid var(--color-border-subtle);">
+                            <div class="sheet-ability-section-header">
+                                <div>
+                                    <h4 style="font-size: 1.05rem; font-family: var(--font-heading); color: var(--color-gold-primary); margin: 0; display: flex; align-items: center; gap: 8px;">
+                                        <span>${cat.icon || '⚡'}</span> ${cat.name}
+                                        <span class="sheet-meta-pill" style="font-size: 0.72rem; padding: 2px 8px;">${sectionCards.length} ativas</span>
+                                    </h4>
+                                    <span style="font-size: 0.78rem; color: var(--color-text-muted);">${cat.description || ''}</span>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-secondary btn-add-ability-category" data-category="${cat.category}" style="font-size: 0.78rem; font-weight: 600;">
+                                    ➕ Adicionar ${cat.name.replace('Habilidades & ', '').replace('Habilidades de ', '').replace('Poderes de ', '')}
+                                </button>
+                            </div>
+
+                            ${sectionCards.length > 0 ? `
+                                <div class="sheet-card-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-sm);">
+                                    ${sectionCards.map(c => this.renderAbilityCard(c)).join('')}
+                                </div>
+                            ` : `
+                                <div style="padding: 18px; text-align: center; background: rgba(0,0,0,0.18); border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px;">
+                                    <p style="font-size: 0.85rem; color: var(--color-text-dim); margin: 0 0 10px 0;">
+                                        Nenhuma habilidade nesta categoria. Escolha poderes para fortalecer seu herói.
+                                    </p>
+                                    <button type="button" class="btn btn-sm btn-outline btn-add-ability-category" data-category="${cat.category}" style="font-size: 0.8rem;">
+                                        ➕ Escolher ${cat.name}
+                                    </button>
+                                </div>
+                            `}
+                        </section>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    renderAbilityCard(card) {
+        const isMandatory = !!card.isMandatory;
+        const costVal = card.costValue || card.cost_val || 0;
+        const costRes = card.costResource || card.cost_res || '';
+        const costHtml = (costRes && costVal > 0) ? `
+            <span class="card-chip card-chip-cost">⚡ ${costVal} ${costRes.toUpperCase()}</span>
+        ` : '';
+        const formulaHtml = card.formula ? `
+            <span class="card-chip card-chip-formula">🎲 ${card.formula}</span>
+        ` : '';
+        const mods = card.mods || card.modifiers || [];
+        const modsHtml = mods.map(m => `
+            <span class="card-mod-badge" style="background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3);">
+                ${this.formatMod(m.value || m.val || 0)} ${(m.target_key || m.target || '').toUpperCase()}
+            </span>
+        `).join('');
+
+        return `
+            <div class="rpg-card sheet-mini-card is-equipped" data-card-key="${card.key}" style="min-height: 110px; background: rgba(0,0,0,0.25); border: 1px solid ${isMandatory ? 'rgba(234, 179, 8, 0.35)' : 'rgba(255,255,255,0.08)'}; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between;">
+                <div class="rpg-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; gap: 8px;">
+                    <strong style="font-size: 0.95rem; color: var(--color-parchment-light);">${card.name}</strong>
+                    ${isMandatory ? `
+                        <span class="badge-mandatory" title="Habilidade Obrigatória de Classe ou Raça">
+                            🔒 Obrigatória
+                        </span>
+                    ` : `
+                        <span class="sheet-meta-pill" style="font-size: 0.68rem; background: rgba(167, 139, 250, 0.15); color: #c4b5fd; border: 1px solid rgba(167, 139, 250, 0.3); white-space: nowrap;">
+                            ✨ Opcional
+                        </span>
+                    `}
+                </div>
+
+                <div class="rpg-card-body" style="font-size: 0.78rem; color: var(--color-text-muted); line-height: 1.35; margin-bottom: 8px;">
+                    ${card.desc || ''}
+                    <div class="card-chips-row" style="margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap;">
+                        ${costHtml}
+                        ${formulaHtml}
+                        ${modsHtml}
+                    </div>
+                </div>
+
+                <div class="sheet-mini-card-actions" style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px; margin-top: 4px;">
+                    <div>
+                        ${card.formula ? `
+                            <button type="button" class="btn btn-sm btn-roll-card" data-card-key="${card.key}" data-card-name="${card.name}" title="Rolar fórmula de habilidade" style="font-size: 0.75rem; padding: 2px 8px;">
+                                🎲 Rolar
+                            </button>
+                        ` : ''}
+                    </div>
+                    <div>
+                        ${isMandatory ? `
+                            <span style="font-size: 0.72rem; color: #facc15; font-style: italic; display: flex; align-items: center; gap: 4px;" title="Esta habilidade é parte intrínseca do seu personagem e não pode ser removida.">
+                                🔒 Fixa na Ficha
+                            </span>
+                        ` : `
+                            <button type="button" class="btn btn-sm btn-remove-card" data-card-key="${card.key}" title="Remover habilidade opcional" style="color: #f87171; font-size: 0.75rem; padding: 2px 8px;">
+                                🗑️ Remover
+                            </button>
+                        `}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
      * Renderiza o HTML de um mini card para as listas de equipamento/magia/habilidade
      */
     renderMiniCard(card, isEquippedSection, isPlayMode = false) {
@@ -573,6 +905,10 @@ class SheetView {
         const isEquip = card.type === CARD_TYPES.EQUIPMENT;
         const icon = card.typeIcon || (isEquip ? '⚔️' : '✨');
         const badgeClass = card.badgeClass || (isEquip ? 'badge-equip' : 'badge-spell');
+
+        const pack = this.getActiveCardPack();
+        const packCard = pack?.cards?.find(pk => pk.key === card.key);
+        const isMandatory = (card.is_mandatory === 1 || card.is_mandatory === true || packCard?.is_mandatory === 1 || packCard?.is_mandatory === true);
 
         // Bônus formatados
         const mods = card.modifiers || [];
@@ -598,6 +934,7 @@ class SheetView {
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <span style="font-size: 1.1rem;">${icon}</span>
                         <strong style="font-size: 0.9rem; color: var(--color-parchment-light);">${card.name}</strong>
+                        ${isMandatory ? `<span class="badge-mandatory" title="Habilidade Obrigatória de Classe ou Raça">🔒 Obrigatória</span>` : ''}
                     </div>
                     <span class="card-type-badge ${badgeClass}" style="font-size: 0.65rem;">${card.typeLabel}</span>
                 </div>
@@ -619,19 +956,25 @@ class SheetView {
                     ` : ''}
 
                     ${!isPlayMode ? `
-                        ${isEquippedSection ? `
-                            <button type="button" class="btn btn-sm btn-unequip-card" data-card-key="${card.key}" style="color: #f87171; border-color: rgba(239, 68, 68, 0.4);" title="Desequipar este item e recalcular">
-                                ❌ Desequipar
-                            </button>
+                        ${isMandatory ? `
+                            <span style="font-size: 0.72rem; color: #facc15; font-style: italic; display: flex; align-items: center; gap: 4px;" title="Esta habilidade é parte intrínseca do seu personagem e não pode ser removida.">
+                                🔒 Fixa
+                            </span>
                         ` : `
-                            <button type="button" class="btn btn-sm btn-primary btn-equip-card" data-card-key="${card.key}" title="Equipar este item e aplicar bônus no motor C">
-                                ⚔️ Equipar
+                            ${isEquippedSection ? `
+                                <button type="button" class="btn btn-sm btn-unequip-card" data-card-key="${card.key}" style="color: #f87171; border-color: rgba(239, 68, 68, 0.4);" title="Desequipar este item e recalcular">
+                                    ❌ Desequipar
+                                </button>
+                            ` : `
+                                <button type="button" class="btn btn-sm btn-primary btn-equip-card" data-card-key="${card.key}" title="Equipar este item e aplicar bônus no motor C">
+                                    ⚔️ Equipar
+                                </button>
+                            `}
+
+                            <button type="button" class="btn btn-sm btn-remove-card" data-card-key="${card.key}" title="Excluir card da ficha" style="color: var(--color-text-dim);">
+                                🗑️
                             </button>
                         `}
-
-                        <button type="button" class="btn btn-sm btn-remove-card" data-card-key="${card.key}" title="Excluir card da ficha" style="color: var(--color-text-dim);">
-                            🗑️
-                        </button>
                     ` : ''}
                 </div>
             </div>
@@ -1166,6 +1509,13 @@ class SheetView {
             btn.addEventListener('click', () => {
                 const key = btn.dataset.cardKey;
                 if (key) {
+                    const card = this.engine.getCardByKey(key);
+                    const pack = this.getActiveCardPack();
+                    const packCard = pack?.cards?.find(pk => pk.key === key);
+                    if (card?.is_mandatory || packCard?.is_mandatory) {
+                        alert(`A habilidade "${card?.name || key}" é obrigatória da sua classe/raça e não pode ser removida.`);
+                        return;
+                    }
                     if (typeof confirm === 'function' && !confirm(`Deseja remover o card "${key}" da ficha?`)) {
                         return;
                     }
@@ -1175,6 +1525,32 @@ class SheetView {
                 }
             });
         });
+
+        // 3.1. Abas do Modo Editar (Configuradas pelo CardPack)
+        this.container.querySelectorAll('.btn-editor-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.dataset.editorTab;
+                if (tabId && this.activeEditorTab !== tabId) {
+                    this.activeEditorTab = tabId;
+                    this.render();
+                }
+            });
+        });
+
+        // 3.2. Abertura do Modal de Habilidades / Categorias na Aba Habilidades
+        this.container.querySelectorAll('.btn-add-ability-category').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const category = btn.dataset.category;
+                this.openCardPicker('abilities', category);
+            });
+        });
+
+        const btnOpenAbilitiesAll = this.container.querySelector('#btn-open-abilities-picker-all');
+        if (btnOpenAbilitiesAll) {
+            btnOpenAbilitiesAll.addEventListener('click', () => {
+                this.openCardPicker('abilities');
+            });
+        }
 
         // 4. Rolar / Ativar Card
         this.container.querySelectorAll('.btn-roll-card').forEach(btn => {
@@ -1581,10 +1957,10 @@ class SheetView {
         `;
     }
 
-    openCardPicker(targetMode = 'equipment') {
+    openCardPicker(targetMode = 'equipment', categoryFilter = null) {
         this.pickerTargetMode = targetMode;
         this.pickerSearchQuery = '';
-        this.pickerCategoryFilter = null;
+        this.pickerCategoryFilter = categoryFilter || null;
 
         const overlay = document.getElementById('modal-sheet-add-card-overlay');
         if (!overlay) return;
@@ -1596,7 +1972,11 @@ class SheetView {
         const titleEl = document.getElementById('sheet-picker-title');
         const subtitleEl = document.getElementById('sheet-picker-subtitle');
 
-        if (targetMode === 'equipment') {
+        if (targetMode === 'abilities') {
+            if (iconEl) iconEl.textContent = '⚡';
+            if (titleEl) titleEl.textContent = 'Escolher Habilidade / Poder da Ficha';
+            if (subtitleEl) subtitleEl.textContent = 'Escolha habilidades de classe, traços de raça, poderes de origem ou bênçãos divinas.';
+        } else if (targetMode === 'equipment') {
             if (iconEl) iconEl.textContent = '🎒';
             if (titleEl) titleEl.textContent = 'Adicionar Equipamento / Item à Mochila';
             if (subtitleEl) subtitleEl.textContent = 'Escolha armas, armaduras, escudos e itens do seu CardPack para guardar ou equipar.';
@@ -1662,7 +2042,15 @@ class SheetView {
         if (!container) return;
 
         let categories = [];
-        if (this.pickerTargetMode === 'equipment') {
+        if (this.pickerTargetMode === 'abilities') {
+            categories = [
+                { id: null, label: 'Todas as Habilidades' },
+                { id: 'class_ability', label: '⚔️ Habilidades de Classe' },
+                { id: 'race_trait', label: '🧬 Traços de Raça' },
+                { id: 'origin_power', label: '📜 Poderes de Origem' },
+                { id: 'deity_power', label: '🕊️ Poderes Concedidos' }
+            ];
+        } else if (this.pickerTargetMode === 'equipment') {
             categories = [
                 { id: null, label: 'Todos os Itens' },
                 { id: 'weapons', label: '⚔️ Armas & Ataques' },
@@ -1774,8 +2162,21 @@ class SheetView {
         return allCards.filter(card => {
             if (!card || !card.name) return false;
 
-            // Filtro por Target Mode (equipment vs spells)
-            if (this.pickerTargetMode === 'equipment') {
+            // Filtro por Target Mode (abilities vs equipment vs spells)
+            if (this.pickerTargetMode === 'abilities') {
+                const hasAbilityCategory = card.category && ['class_ability', 'race_trait', 'origin_power', 'deity_power'].includes(card.category);
+                const isAbilityType = card.type === CARD_TYPES.ABILITY || card.type === CARD_TYPES.TRAIT;
+                const isNotOther = card.type !== CARD_TYPES.ATTRIBUTE && card.type !== CARD_TYPES.RESOURCE && 
+                                   card.type !== CARD_TYPES.STAT && card.type !== CARD_TYPES.SKILL && 
+                                   card.type !== CARD_TYPES.EQUIPMENT;
+
+                if (!((hasAbilityCategory || isAbilityType) && isNotOther)) return false;
+
+                if (this.pickerCategoryFilter) {
+                    const cat = card.category || (card.type === CARD_TYPES.TRAIT ? 'race_trait' : 'class_ability');
+                    if (cat !== this.pickerCategoryFilter) return false;
+                }
+            } else if (this.pickerTargetMode === 'equipment') {
                 if (card.type !== CARD_TYPES.EQUIPMENT) return false;
                 if (this.pickerCategoryFilter === 'weapons') {
                     const isWeapon = card.formula || (card.name && /espada|machado|adaga|arco|martelo|lança|adaga|clava|katana|pistola|mosquete/i.test(card.name));
@@ -1816,6 +2217,7 @@ class SheetView {
             ATTRIBUTE: 0, RESOURCE: 1, STAT: 2, SKILL: 3, ABILITY: 4, EQUIPMENT: 5, SPELL: 6, TRAIT: 7
         };
 
+        const allAvailable = this.getAvailableCompendiumCards();
         const filtered = this.getAvailablePickerCards();
 
         if (countLabel) {
@@ -1836,7 +2238,8 @@ class SheetView {
         container.innerHTML = filtered.map(card => {
             const inDeck = this.engine && this.engine.getCardByKey(card.key) !== null;
             const isEquip = card.type === CARD_TYPES.EQUIPMENT;
-            const icon = card.type === CARD_TYPES.EQUIPMENT ? '⚔️' : (card.type === CARD_TYPES.SPELL ? '✨' : '⚡');
+            const isAbilMode = this.pickerTargetMode === 'abilities';
+            const icon = isAbilMode ? '⚡' : (card.type === CARD_TYPES.EQUIPMENT ? '⚔️' : (card.type === CARD_TYPES.SPELL ? '✨' : '⚡'));
             
             // Badges formatadas
             const mods = card.modifiers || card.mods || [];
@@ -1858,12 +2261,43 @@ class SheetView {
                 </span>
             ` : '';
 
+            // Badges de categoria e obrigatoriedade
+            let categoryBadgeHtml = '';
+            if (card.category === 'class_ability') {
+                categoryBadgeHtml = `<span style="font-size: 0.7rem; color: #f59e0b; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 6px; border-radius: 4px; font-weight: 600;">⚔️ Classe</span>`;
+            } else if (card.category === 'race_trait') {
+                categoryBadgeHtml = `<span style="font-size: 0.7rem; color: #10b981; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 6px; border-radius: 4px; font-weight: 600;">🧬 Raça</span>`;
+            } else if (card.category === 'origin_power') {
+                categoryBadgeHtml = `<span style="font-size: 0.7rem; color: #3b82f6; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); padding: 2px 6px; border-radius: 4px; font-weight: 600;">📜 Origem</span>`;
+            } else if (card.category === 'deity_power') {
+                categoryBadgeHtml = `<span style="font-size: 0.7rem; color: #ec4899; background: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.3); padding: 2px 6px; border-radius: 4px; font-weight: 600;">🕊️ Divindade</span>`;
+            }
+
+            const mandatoryBadgeHtml = (card.is_mandatory || card.mandatory) ? `
+                <span class="badge-mandatory" title="Habilidade obrigatória intrínseca da classe ou raça">
+                    🔒 Obrigatória
+                </span>
+            ` : '';
+
+            let btnActionText = '';
+            if (inDeck) {
+                btnActionText = '➕ Adicionar Outro';
+            } else if (isAbilMode) {
+                btnActionText = '➕ Equipar à Ficha';
+            } else if (isEquip) {
+                btnActionText = '➕ Adicionar à Mochila';
+            } else {
+                btnActionText = '➕ Adicionar ao Grimório';
+            }
+
             return `
                 <div class="sheet-picker-item-row" data-card-key="${card.key}">
                     <div class="sheet-picker-item-info">
                         <div class="sheet-picker-item-title">
                             <span>${icon}</span>
                             <span>${card.name}</span>
+                            ${categoryBadgeHtml}
+                            ${mandatoryBadgeHtml}
                             ${inDeck ? `
                                 <span style="font-size: 0.7rem; color: #4ade80; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); padding: 2px 6px; border-radius: 4px; font-weight: 600;">
                                     ✓ Já na Ficha
@@ -1881,7 +2315,7 @@ class SheetView {
                     </div>
                     <div class="sheet-picker-item-action">
                         <button type="button" class="btn btn-sm ${inDeck ? 'btn-secondary' : 'btn-primary'} btn-picker-add-card" data-card-key="${card.key}" style="font-weight: 700; padding: 6px 14px; white-space: nowrap;">
-                            ${inDeck ? '➕ Adicionar Outro' : (isEquip ? '➕ Adicionar à Mochila' : '➕ Adicionar ao Grimório')}
+                            ${btnActionText}
                         </button>
                     </div>
                 </div>
@@ -1892,7 +2326,7 @@ class SheetView {
         container.querySelectorAll('.btn-picker-add-card').forEach(btn => {
             btn.addEventListener('click', () => {
                 const cardKey = btn.dataset.cardKey;
-                const card = allCards.find(c => c.key === cardKey);
+                const card = filtered.find(c => c.key === cardKey) || allAvailable.find(c => c.key === cardKey);
                 if (card) {
                     this.addCardFromPicker(card);
                 }
@@ -1908,6 +2342,7 @@ class SheetView {
         };
 
         const isEquip = card.type === CARD_TYPES.EQUIPMENT;
+        const isAbil = this.pickerTargetMode === 'abilities' || card.type === CARD_TYPES.ABILITY || card.type === CARD_TYPES.TRAIT;
         let cardKey = card.key;
 
         // Se já existe um card com essa chave no deck, gera chave única para permitir múltiplos itens
@@ -1918,7 +2353,7 @@ class SheetView {
         const cardObj = {
             key: cardKey,
             name: card.name,
-            type: card.type,
+            type: card.type !== undefined ? card.type : CARD_TYPES.ABILITY,
             desc: card.desc || '',
             base: card.base || 0,
             current: card.current || card.curr || 0,
@@ -1926,14 +2361,28 @@ class SheetView {
             cost_resource: card.cost_resource || card.cost_res || '',
             cost_value: card.cost_value || card.cost_val || 0,
             formula: card.formula || '',
-            equipped: false,
+            equipped: isAbil ? true : false,
             modifiers: card.modifiers || card.mods || []
         };
 
+        if (card.category) {
+            cardObj.category = card.category;
+        }
+        if (card.is_mandatory || card.mandatory) {
+            cardObj.is_mandatory = 1;
+        }
+
         const added = this.engine.addCard(cardObj);
         if (added) {
+            if (this._cardMetaMap) {
+                this._cardMetaMap.set(cardKey, {
+                    category: card.category || '',
+                    is_mandatory: (card.is_mandatory || card.mandatory) ? 1 : 0
+                });
+            }
             this.engine.recalculate();
-            this.logger(`[Ficha] "${card.name}" adicionado à ${isEquip ? 'mochila' : 'grimório'}!`, 'success');
+            const dest = isAbil ? 'habilidades da ficha' : (isEquip ? 'mochila' : 'grimório');
+            this.logger(`[Ficha] "${card.name}" adicionado às ${dest}!`, 'success');
             if (window.characterStorage) {
                 window.characterStorage.saveCurrent(this.engine, this.engine.getCharacterName());
             }

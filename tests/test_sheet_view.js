@@ -407,6 +407,100 @@ async function runTests() {
     sheetView.closeCardPicker();
     console.log('  [OK] Passo 11.5: Filtragem textual e por categorias do modal de busca validadas com sucesso');
 
+    // 19. Validação da Aba de Habilidades Orientada a CardPack (ui_layout.editor_tabs) e Obrigatoriedade
+    // Mock do cardpack ativo com ui_layout e categorias
+    sheetView._activeCardPack = {
+        id: 't20_pack',
+        system_name: 'Tormenta 20',
+        ui_layout: {
+            default_tab: 'overview',
+            editor_tabs: [
+                { id: 'overview', name: 'Visão Geral', icon: '📜' },
+                {
+                    id: 'abilities',
+                    name: 'Habilidades',
+                    icon: '⚡',
+                    categories: [
+                        { id: 'class', name: 'Habilidades de Classe', category: 'class_ability', icon: '⚔️' },
+                        { id: 'race', name: 'Habilidades & Traços de Raça', category: 'race_trait', icon: '🧬' },
+                        { id: 'origin', name: 'Poderes de Origem', category: 'origin_power', icon: '📜' },
+                        { id: 'deity', name: 'Poderes Concedidos / Divindade', category: 'deity_power', icon: '🕊️' }
+                    ]
+                },
+                { id: 'equipment', name: 'Equipamento', icon: '🎒' },
+                { id: 'spells', name: 'Magias', icon: '✨' },
+                { id: 'skills', name: 'Perícias', icon: '🎯' }
+            ]
+        },
+        cards: [
+            { key: 'guerreiro_ataque_esp', name: 'Ataque Especial', category: 'class_ability', is_mandatory: 1 },
+            { key: 'humano_versatil', name: 'Versatilidade Humana', category: 'race_trait', is_mandatory: 1 }
+        ]
+    };
+
+    // Adiciona uma habilidade obrigatória (ex: Ataque Especial do Guerreiro) e uma traço racial obrigatório
+    engine.addCard({
+        key: 'guerreiro_ataque_esp',
+        name: 'Ataque Especial',
+        type: CARD_TYPES.ABILITY,
+        desc: 'Gasta 1 PM para +4 no ataque ou dano.',
+        category: 'class_ability',
+        is_mandatory: 1,
+        equipped: true
+    });
+    engine.addCard({
+        key: 'humano_versatil',
+        name: 'Versatilidade Humana',
+        type: CARD_TYPES.TRAIT,
+        desc: 'Treinado em perícias extras.',
+        category: 'race_trait',
+        is_mandatory: 1,
+        equipped: true
+    });
+
+    sheetView.setMode('edit');
+    assert(sheetView.container.innerHTML.includes('sheet-editor-tabs-bar'), 'Barra de abas dinâmicas do editor deve estar presente');
+    assert(sheetView.container.innerHTML.includes('data-editor-tab="abilities"'), 'Aba de Habilidades deve ser renderizada a partir do layout');
+
+    // Troca para a aba de Habilidades
+    sheetView.activeEditorTab = 'abilities';
+    sheetView.render();
+    assert(sheetView.container.innerHTML.includes('sheet-abilities-tab-view'), 'Container da aba de habilidades deve estar renderizado');
+    assert(sheetView.container.innerHTML.includes('Habilidades de Classe'), 'Seção de Classe deve estar presente');
+    assert(sheetView.container.innerHTML.includes('Ataque Especial'), 'Ataque Especial obrigatório deve ser listado');
+    assert(sheetView.container.innerHTML.includes('Versatilidade Humana'), 'Versatilidade Humana deve ser listada');
+    assert(sheetView.container.innerHTML.includes('🔒 Obrigatória'), 'Badge de habilidade obrigatória deve estar visível');
+
+    // Testa abertura do picker no modo habilidades
+    sheetView.openCardPicker('abilities');
+    assert.strictEqual(sheetView.pickerTargetMode, 'abilities');
+    sheetView.getAvailableCompendiumCards = () => [
+        { key: 'guerreiro_golpe_pessoal', name: 'Golpe Pessoal', type: CARD_TYPES.ABILITY, category: 'class_ability', desc: 'Golpe customizado.' },
+        { key: 'origem_vitalidade', name: 'Vitalidade das Fadas', type: CARD_TYPES.ABILITY, category: 'origin_power', desc: '+1 PV por nível.' },
+        { key: 'arma_machado', name: 'Machado', type: CARD_TYPES.EQUIPMENT, desc: 'Arma.' }
+    ];
+
+    // No modo abilities, armas não devem aparecer
+    let pickerAbilities = sheetView.getAvailablePickerCards();
+    assert(pickerAbilities.some(c => c.key === 'guerreiro_golpe_pessoal'), 'Golpe Pessoal deve aparecer no picker');
+    assert(pickerAbilities.some(c => c.key === 'origem_vitalidade'), 'Vitalidade deve aparecer no picker');
+    assert(!pickerAbilities.some(c => c.key === 'arma_machado'), 'Equipamentos não devem aparecer no picker de habilidades');
+
+    // Filtro de categoria no picker
+    sheetView.pickerCategoryFilter = 'origin_power';
+    pickerAbilities = sheetView.getAvailablePickerCards();
+    assert.strictEqual(pickerAbilities.length, 1);
+    assert.strictEqual(pickerAbilities[0].key, 'origem_vitalidade');
+
+    // Adiciona poder opcional via picker
+    sheetView.addCardFromPicker(pickerAbilities[0]);
+    const addedPower = engine.getCardByKey('origem_vitalidade');
+    assert(addedPower, 'Poder de origem deve ter sido adicionado');
+    assert.strictEqual(addedPower.equipped, true, 'Habilidade adicionada pelo picker deve estar equipada');
+
+    sheetView.closeCardPicker();
+    console.log('  [OK] Validação da Aba de Habilidades, layout dinâmico e habilidades obrigatórias concluída com 100% de sucesso!');
+
     console.log('\n=== Todos os testes do SheetView passaram com 100% de sucesso! ===');
 }
 

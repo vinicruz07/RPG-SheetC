@@ -1932,3 +1932,81 @@
     font-weight: 700;
 }
 
+/* =========================================================================
+   Abas do Modo Editor e Seções de Habilidades Configuradas por CardPack
+   ========================================================================= */
+.sheet-editor-tabs-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: var(--space-md);
+    border-bottom: 1px solid var(--color-border-subtle);
+    padding-bottom: 10px;
+    flex-wrap: wrap;
+    background: rgba(0, 0, 0, 0.15);
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+}
+
+.btn-editor-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-inset);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn-editor-tab:hover {
+    color: var(--color-parchment-light);
+    border-color: var(--color-gold-primary);
+    background: rgba(212, 163, 115, 0.08);
+}
+
+.btn-editor-tab.active {
+    background: var(--color-gold-primary);
+    color: #11141a;
+    border-color: var(--color-gold-light);
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(212, 163, 115, 0.35);
+}
+
+.badge-mandatory {
+    font-size: 0.68rem;
+    background: rgba(234, 179, 8, 0.16) !important;
+    color: #facc15 !important;
+    border: 1px solid rgba(234, 179, 8, 0.4) !important;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sheet-ability-section-card {
+    transition: border-color var(--transition-fast);
+}
+
+.sheet-ability-section-card:hover {
+    border-color: rgba(212, 163, 115, 0.3);
+}
+
+.sheet-ability-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+

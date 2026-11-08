@@ -60,12 +60,74 @@ class WizardView {
     /**
      * Inicializa a view do Criador no container DOM
      */
-    init(containerId = 'wizard-container') {
+    async init(containerId = 'wizard-container') {
         this.container = document.getElementById(containerId);
         if (!this.container) return;
 
+        await this.autoDetectLocalPacks();
         this.reset();
         this.render();
+    }
+
+    /**
+     * Tenta detectar pacotes locais presentes em web/data/local/ se em ambiente HTTP
+     */
+    async autoDetectLocalPacks() {
+        if (typeof window === 'undefined' || typeof fetch === 'undefined') return;
+        try {
+            const localPaths = [
+                './data/local/t20_completo.cardpack',
+                './data/srd_basic_pack.json'
+            ];
+            for (const path of localPaths) {
+                try {
+                    const res = await fetch(path);
+                    if (res.ok) {
+                        const parsed = await res.json();
+                        const packId = parsed.id || 'pack_' + (parsed.system_name || parsed.pack_name || 'local').toLowerCase().replace(/[^a-z0-9]/g, '_');
+                        const packs = this.getAvailablePacks();
+                        if (!packs.some(p => p.id === packId || p.name === (parsed.pack_name || parsed.sheet_name))) {
+                            const newPack = {
+                                id: packId,
+                                name: parsed.pack_name || parsed.sheet_name || 'CardPack Local',
+                                system: parsed.system_name || parsed.system || 'Sistema Aberto',
+                                author: parsed.author || 'Local',
+                                version: parsed.version || '1.0.0',
+                                desc: parsed.description || parsed.desc || 'Pacote de regras detectado localmente.',
+                                cards: Array.isArray(parsed.cards) ? parsed.cards : [],
+                                wizard_schema: parsed.wizard_schema || null,
+                                creation_config: parsed.creation_config || null,
+                                createdAt: Date.now()
+                            };
+                            this.savePack(newPack);
+                        }
+                    }
+                } catch (e) {
+                    // ignora silenciosamente se o arquivo não existir localmente
+                }
+            }
+        } catch (err) {
+            // continua normalmente
+        }
+    }
+
+    /**
+     * Salva ou atualiza um CardPack no Compêndio / LocalStorage
+     */
+    savePack(pack) {
+        if (typeof window !== 'undefined' && window.compendiumView && typeof window.compendiumView.addOrUpdatePack === 'function') {
+            window.compendiumView.addOrUpdatePack(pack);
+        } else if (typeof window !== 'undefined' && window.localStorage) {
+            try {
+                const packs = this.getAvailablePacks();
+                const idx = packs.findIndex(p => p.id === pack.id);
+                if (idx >= 0) packs[idx] = pack;
+                else packs.push(pack);
+                window.localStorage.setItem('rpg_sheetc_cardpacks_v1', JSON.stringify(packs));
+            } catch (e) {
+                // continua
+            }
+        }
     }
 
     /**
@@ -340,16 +402,16 @@ class WizardView {
         return `
             <div class="guided-stepper" style="margin-bottom: var(--space-lg); display: flex; flex-wrap: wrap; gap: 8px;">
                 ${steps.map((s, idx) => {
-                    const num = idx + 1;
-                    const isActive = num === this.guidedStep;
-                    const isDone = num < this.guidedStep;
-                    const label = s.title || `Etapa ${num}`;
-                    return `
+            const num = idx + 1;
+            const isActive = num === this.guidedStep;
+            const isDone = num < this.guidedStep;
+            const label = s.title || `Etapa ${num}`;
+            return `
                         <div class="guided-pill ${isActive ? 'is-active' : ''} ${isDone ? 'is-done' : ''}" data-guided-step="${num}" style="cursor: pointer;">
                             ${isDone ? '✓ ' : ''}${label}
                         </div>
                     `;
-                }).join('')}
+        }).join('')}
             </div>
         `;
     }
@@ -402,13 +464,13 @@ class WizardView {
                     </div>
 
                     ${packs.map(p => {
-                        const isSelected = p.id === this.selectedPackId;
-                        const count = Array.isArray(p.cards) ? p.cards.length : 0;
-                        const config = this.getPackCreationConfig(p);
-                        const hasWizard = config.wizards.length > 0;
-                        const hasTemplates = config.templates.length > 0;
+            const isSelected = p.id === this.selectedPackId;
+            const count = Array.isArray(p.cards) ? p.cards.length : 0;
+            const config = this.getPackCreationConfig(p);
+            const hasWizard = config.wizards.length > 0;
+            const hasTemplates = config.templates.length > 0;
 
-                        return `
+            return `
                             <div class="card creator-pack-card ${isSelected ? 'is-selected' : ''}" data-pack-id="${p.id}" style="cursor: pointer; padding: 16px; border: 2px solid ${isSelected ? 'var(--color-gold-primary)' : 'var(--color-border-subtle)'}; background: ${isSelected ? 'rgba(212, 163, 115, 0.08)' : 'var(--color-surface-inset)'}; border-radius: var(--radius-md); transition: all 0.15s ease;">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
                                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -428,7 +490,7 @@ class WizardView {
                                 </p>
                             </div>
                         `;
-                    }).join('')}
+        }).join('')}
                 </div>
 
                 <div class="wizard-footer" style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px;">
@@ -499,9 +561,9 @@ class WizardView {
                                 <div style="font-size: 2.2rem; margin-bottom: 8px;">⚙️</div>
                                 <h3 style="color: var(--color-parchment-light); margin: 0 0 6px 0;">Configuração Manual Direta</h3>
                                 <p style="color: var(--color-text-muted); font-size: 0.85rem; max-width: 520px; margin: 0 auto 16px auto; line-height: 1.4;">
-                                    ${!selectedPack 
-                                        ? 'Esta ficha será criada em branco sem regras de CardPack vinculadas. Você terá controle manual total para adicionar cards, recursos e fórmulas.'
-                                        : 'Este CardPack não possui assistentes nem fichas modelo pré-configurados. A ficha será inicializada imediatamente para você equipar e configurar manualmente os cards do compêndio.'}
+                                    ${!selectedPack
+                    ? 'Esta ficha será criada em branco sem regras de CardPack vinculadas. Você terá controle manual total para adicionar cards, recursos e fórmulas.'
+                    : 'Este CardPack não possui assistentes nem fichas modelo pré-configurados. A ficha será inicializada imediatamente para você equipar e configurar manualmente os cards do compêndio.'}
                                 </p>
                                 <span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #4ade80;">Modo Manual Padrão Ativo</span>
                             </div>
@@ -509,9 +571,9 @@ class WizardView {
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-md);">
                                 <!-- 1. Assistente(s) Guiado(s) se configurado(s) no pacote -->
                                 ${hasWizards ? config.wizards.map(w => {
-                                    const isThisWizard = this.creationMode === 'guided' && (this.selectedWizardId === w.id);
-                                    const stepCount = Array.isArray(w.steps) ? w.steps.length : 0;
-                                    return `
+                        const isThisWizard = this.creationMode === 'guided' && (this.selectedWizardId === w.id);
+                        const stepCount = Array.isArray(w.steps) ? w.steps.length : 0;
+                        return `
                                         <div class="card creator-mode-option ${isThisWizard ? 'is-selected' : ''}" data-mode="guided" data-wizard-id="${w.id}" style="cursor: pointer; padding: 18px; border: 2px solid ${isThisWizard ? 'var(--color-gold-primary)' : 'var(--color-border-subtle)'}; background: ${isThisWizard ? 'rgba(212, 163, 115, 0.08)' : 'var(--color-surface-inset)'}; border-radius: var(--radius-md); transition: all 0.15s ease;">
                                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -525,7 +587,7 @@ class WizardView {
                                             </p>
                                         </div>
                                     `;
-                                }).join('') : ''}
+                    }).join('') : ''}
                                 }).join('') : ''}
 
                                 <!-- 2. Ficha(s) Modelo se configurada(s) no pacote -->
@@ -551,8 +613,8 @@ class WizardView {
 
                                 <!-- 3. Modos Customizados adicionais se houver -->
                                 ${hasCustomModes ? config.customModes.map(cm => {
-                                    const isSelected = this.creationMode === cm.id;
-                                    return `
+                        const isSelected = this.creationMode === cm.id;
+                        return `
                                         <div class="card creator-mode-option ${isSelected ? 'is-selected' : ''}" data-mode="${cm.id}" style="cursor: pointer; padding: 18px; border: 2px solid ${isSelected ? 'var(--color-gold-primary)' : 'var(--color-border-subtle)'}; background: ${isSelected ? 'rgba(212, 163, 115, 0.08)' : 'var(--color-surface-inset)'}; border-radius: var(--radius-md); transition: all 0.15s ease;">
                                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -565,7 +627,7 @@ class WizardView {
                                             </p>
                                         </div>
                                     `;
-                                }).join('') : ''}
+                    }).join('') : ''}
 
                                 <!-- 4. Opção Manual Livre (Sempre permitida para controle total) -->
                                 ${config.allowManual ? `
@@ -593,11 +655,11 @@ class WizardView {
                         ⬅️ Voltar ao Passo 1
                     </button>
                     <button type="button" id="btn-creator-finish" class="btn btn-primary" style="padding: 10px 28px; font-weight: 800; font-size: 1rem;">
-                        ${this.creationMode === 'guided' 
-                            ? `🧙 Iniciar ${this.getActiveWizard()?.name || 'Assistente'} ➔`
-                            : (this.creationMode === 'template' 
-                                ? '📋 Criar Ficha do Modelo & Jogar'
-                                : '🚀 Criar Ficha e Começar Edição Manual')}
+                        ${this.creationMode === 'guided'
+                ? `🧙 Iniciar ${this.getActiveWizard()?.name || 'Assistente'} ➔`
+                : (this.creationMode === 'template'
+                    ? '📋 Criar Ficha do Modelo & Jogar'
+                    : '🚀 Criar Ficha e Começar Edição Manual')}
                     </button>
                 </div>
             </div>
@@ -762,9 +824,9 @@ class WizardView {
                 <!-- Grade de Atributos -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-md); margin-bottom: var(--space-xl);">
                     ${attrList.map(attr => {
-                        const val = this.characterData.attributes[attr.key] !== undefined ? this.characterData.attributes[attr.key] : 0;
-                        const cost = this.costTable[String(val)] !== undefined ? this.costTable[String(val)] : val;
-                        return `
+            const val = this.characterData.attributes[attr.key] !== undefined ? this.characterData.attributes[attr.key] : 0;
+            const cost = this.costTable[String(val)] !== undefined ? this.costTable[String(val)] : val;
+            return `
                             <div class="card" style="padding: 16px; background: var(--color-surface-inset); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between;">
                                 <div>
                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -784,7 +846,7 @@ class WizardView {
                                 </div>
                             </div>
                         `;
-                    }).join('')}
+        }).join('')}
                 </div>
 
                 ${this.renderGuidedFooter(num, total)}
@@ -812,8 +874,8 @@ class WizardView {
                 <!-- Grade de Seleção de Classes -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-md); margin-bottom: var(--space-xl);">
                     ${classOptions.map(cls => {
-                        const isSelected = cls.key === this.characterData.classKey;
-                        return `
+            const isSelected = cls.key === this.characterData.classKey;
+            return `
                             <div class="card guided-card ${isSelected ? 'is-selected' : ''}" data-class="${cls.key}" style="cursor: pointer; padding: 16px; border: 2px solid ${isSelected ? 'var(--color-gold-primary)' : 'var(--color-border-subtle)'}; background: ${isSelected ? 'rgba(212, 163, 115, 0.08)' : 'var(--color-surface-inset)'}; border-radius: var(--radius-md); transition: all 0.15s ease;">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
                                     <strong style="color: var(--color-parchment-light); font-size: 1.05rem;">${cls.name}</strong>
@@ -828,7 +890,7 @@ class WizardView {
                                 </p>
                             </div>
                         `;
-                    }).join('')}
+        }).join('')}
                 </div>
 
                 ${selectedClass?.fixed_skills?.length ? `
@@ -870,8 +932,8 @@ class WizardView {
                 <!-- Opções Dinâmicas do Pacote -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-md); margin-bottom: var(--space-xl);">
                     ${options.map(opt => {
-                        const isSelected = opt.key === currentVal;
-                        return `
+            const isSelected = opt.key === currentVal;
+            return `
                             <div class="card guided-card ${isSelected ? 'is-selected' : ''}" data-step-key="${step.key}" data-option-key="${opt.key}" style="cursor: pointer; padding: 16px; border: 2px solid ${isSelected ? 'var(--color-gold-primary)' : 'var(--color-border-subtle)'}; background: ${isSelected ? 'rgba(212, 163, 115, 0.08)' : 'var(--color-surface-inset)'}; border-radius: var(--radius-md); transition: all 0.15s ease;">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
                                     <strong style="color: var(--color-parchment-light); font-size: 1.05rem;">${opt.name}</strong>
@@ -882,7 +944,7 @@ class WizardView {
                                 </p>
                             </div>
                         `;
-                    }).join('')}
+        }).join('')}
                 </div>
 
                 ${this.renderGuidedFooter(num, total)}
@@ -1104,8 +1166,8 @@ class WizardView {
     formatKey(key) {
         if (!key) return '';
         return key.replace(/^(raca_|deus_|origem_|armadura_|escudo_)/, '')
-                  .replace(/_/g, ' ')
-                  .replace(/\b\w/g, l => l.toUpperCase());
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, l => l.toUpperCase());
     }
 
     /* =========================================================================
@@ -1251,59 +1313,100 @@ class WizardView {
             });
         }
 
-        // 5. Raça
+        // 5. Raça (Traço de Raça Obrigatório)
         if (this.characterData.raceKey) {
             const raceCard = packCards.find(c => c.key === this.characterData.raceKey);
             customCards.push({
                 id: cardId++,
-                type: 7,
+                type: raceCard ? raceCard.type : 7,
                 key: this.characterData.raceKey,
                 name: raceCard ? raceCard.name : this.formatKey(this.characterData.raceKey),
                 desc: raceCard ? raceCard.desc : 'Traços raciais.',
+                category: 'race_trait',
+                is_mandatory: 1,
                 equipped: 1,
-                fav: 0
+                fav: 0,
+                mods: raceCard?.mods || []
             });
         }
 
-        // 6. Classe
+        // 6. Classe e Habilidade Obrigatória de Classe
         if (this.characterData.classKey) {
-            const classCard = packCards.find(c => c.key === this.characterData.classKey);
-            customCards.push({
-                id: cardId++,
-                type: 7,
-                key: this.characterData.classKey,
-                name: classCard ? classCard.name : this.formatKey(this.characterData.classKey),
-                desc: classCard ? classCard.desc : 'Habilidades de classe.',
-                equipped: 1,
-                fav: 0
-            });
+            const classStep = this.getActiveSteps().find(s => s.type === 'class_select');
+            const classOptions = classStep?.options || [];
+            const classOpt = classOptions.find(c => c.key === this.characterData.classKey);
+
+            // Injeta a habilidade fundamental obrigatória de 1º nível da classe
+            const abilityKey = classOpt?.ability;
+            if (abilityKey) {
+                const abilityCard = packCards.find(c => c.key === abilityKey);
+                if (abilityCard) {
+                    customCards.push({
+                        id: cardId++,
+                        type: abilityCard.type || 4,
+                        key: abilityCard.key,
+                        name: abilityCard.name,
+                        desc: abilityCard.desc,
+                        cost_res: abilityCard.cost_res || '',
+                        cost_val: abilityCard.cost_val || 0,
+                        formula: abilityCard.formula || '',
+                        category: 'class_ability',
+                        is_mandatory: 1,
+                        equipped: 1,
+                        fav: 1,
+                        mods: abilityCard.mods || []
+                    });
+                }
+            } else {
+                const classCard = packCards.find(c => c.key === this.characterData.classKey);
+                customCards.push({
+                    id: cardId++,
+                    type: 4,
+                    key: this.characterData.classKey,
+                    name: classCard ? classCard.name : this.formatKey(this.characterData.classKey),
+                    desc: classCard ? classCard.desc : 'Habilidades de classe.',
+                    category: 'class_ability',
+                    is_mandatory: 1,
+                    equipped: 1,
+                    fav: 1
+                });
+            }
         }
 
-        // 7. Origem
+        // 7. Origem (Poder de Origem Selecionado)
         if (this.characterData.originKey) {
             const originCard = packCards.find(c => c.key === this.characterData.originKey);
             customCards.push({
                 id: cardId++,
-                type: 7,
+                type: originCard ? originCard.type : 7,
                 key: this.characterData.originKey,
                 name: originCard ? originCard.name : this.formatKey(this.characterData.originKey),
                 desc: originCard ? originCard.desc : 'Benefícios de origem.',
+                category: 'origin_power',
+                is_mandatory: 0,
                 equipped: 1,
-                fav: 0
+                fav: 0,
+                mods: originCard?.mods || []
             });
         }
 
-        // 8. Divindade
+        // 8. Divindade (Poder Concedido Selecionado)
         if (this.characterData.deityKey && this.characterData.deityKey !== 'deus_nenhum') {
             const deityCard = packCards.find(c => c.key === this.characterData.deityKey);
             customCards.push({
                 id: cardId++,
-                type: 4,
+                type: deityCard ? deityCard.type : 4,
                 key: this.characterData.deityKey,
                 name: deityCard ? deityCard.name : this.formatKey(this.characterData.deityKey),
                 desc: deityCard ? deityCard.desc : 'Poder divino concedido.',
+                cost_res: deityCard?.cost_res || '',
+                cost_val: deityCard?.cost_val || 0,
+                formula: deityCard?.formula || '',
+                category: 'deity_power',
+                is_mandatory: 0,
                 equipped: 1,
-                fav: 0
+                fav: 0,
+                mods: deityCard?.mods || []
             });
         }
 
@@ -1401,6 +1504,41 @@ class WizardView {
      * ========================================================================= */
     setupEventListeners() {
         if (!this.container) return;
+
+        // Upload de CardPack no Passo 1
+        const btnUpload = document.getElementById('btn-creator-upload-pack');
+        const fileInput = document.getElementById('creator-file-input');
+        if (btnUpload && fileInput) {
+            btnUpload.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try {
+                    const text = await file.text();
+                    const parsed = JSON.parse(text);
+                    const pack = {
+                        id: parsed.id || 'pack_' + Date.now(),
+                        name: parsed.pack_name || parsed.sheet_name || parsed.name || file.name.replace(/\.[^/.]+$/, ''),
+                        system: parsed.system_name || parsed.system || 'Sistema Aberto',
+                        author: parsed.author || 'Importado',
+                        version: parsed.version || '1.0.0',
+                        desc: parsed.description || parsed.desc || `Importado de "${file.name}".`,
+                        cards: Array.isArray(parsed.cards) ? parsed.cards : [],
+                        wizard_schema: parsed.wizard_schema || null,
+                        creation_config: parsed.creation_config || null,
+                        createdAt: Date.now()
+                    };
+                    this.savePack(pack);
+                    this.selectedPackId = pack.id;
+                    this.syncPackDefaults();
+                    this.render();
+                } catch (err) {
+                    alert('Erro ao importar CardPack: ' + err.message);
+                } finally {
+                    e.target.value = '';
+                }
+            });
+        }
 
         // Seleção de CardPack no Passo 1
         this.container.querySelectorAll('.creator-pack-card').forEach(card => {
