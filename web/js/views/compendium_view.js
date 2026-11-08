@@ -727,12 +727,13 @@ class CompendiumView {
 
             const pack = {
                 id: 'pack_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-                name: parsed.sheet_name || parsed.name || file.name.replace(/\.[^/.]+$/, ''),
+                name: parsed.pack_name || parsed.sheet_name || parsed.name || file.name.replace(/\.[^/.]+$/, ''),
                 system: parsed.system_name || parsed.system || 'Sistema Aberto',
                 author: parsed.author || 'Importado',
                 version: parsed.version || '1.0.0',
-                desc: parsed.desc || `Importado a partir do arquivo "${file.name}".`,
+                desc: parsed.description || parsed.desc || `Importado a partir do arquivo "${file.name}".`,
                 cards: Array.isArray(parsed.cards) ? parsed.cards : [],
+                wizard_schema: parsed.wizard_schema || null,
                 createdAt: Date.now()
             };
 

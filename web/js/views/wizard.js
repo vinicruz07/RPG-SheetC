@@ -75,6 +75,14 @@ class WizardView {
     }
 
     /**
+     * Retorna o CardPack atualmente selecionado no Criador
+     */
+    getSelectedPack() {
+        const packs = this.getAvailablePacks();
+        return packs.find(p => p.id === this.selectedPackId) || null;
+    }
+
+    /**
      * Renderiza o fluxo de criação
      */
     render() {
@@ -303,12 +311,13 @@ class WizardView {
                         const parsed = JSON.parse(text);
                         const newPack = {
                             id: 'pack_' + Date.now(),
-                            name: parsed.sheet_name || parsed.name || file.name.replace(/\.[^/.]+$/, ''),
+                            name: parsed.pack_name || parsed.sheet_name || parsed.name || file.name.replace(/\.[^/.]+$/, ''),
                             system: parsed.system_name || parsed.system || 'Sistema Aberto',
                             author: parsed.author || 'Importado',
                             version: parsed.version || '1.0.0',
-                            desc: parsed.desc || `Importado de "${file.name}".`,
-                            cards: Array.isArray(parsed.cards) ? parsed.cards : []
+                            desc: parsed.description || parsed.desc || `Importado de "${file.name}".`,
+                            cards: Array.isArray(parsed.cards) ? parsed.cards : [],
+                            wizard_schema: parsed.wizard_schema || null
                         };
 
                         if (window.compendiumView && typeof window.compendiumView.addOrUpdatePack === 'function') {

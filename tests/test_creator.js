@@ -112,6 +112,47 @@ async function runTests() {
     assert(createdHeroData !== null, 'Callback de criação deve ser acionado');
     console.log('  [OK] Ficha criada com sucesso no motor C e redirecionada para a aba Ficha');
 
+    // 5. Suporte a getSelectedPack() e wizard_schema com 8 etapas
+    samplePack.wizard_schema = {
+        system: 'Tormenta 20',
+        version: '2.0.0',
+        steps: [
+            { step: 1, key: 'concept', title: '1. Conceito do Personagem' },
+            { step: 2, key: 'attributes', title: '2. Atributos Básicos' },
+            { step: 3, key: 'race', title: '3. Raça' },
+            { step: 4, key: 'class', title: '4. Classe' },
+            { step: 5, key: 'origin', title: '5. Origem' },
+            { step: 6, key: 'deity', title: '6. Divindade' },
+            { step: 7, key: 'equipment', title: '7. Equipamento Inicial' },
+            { step: 8, key: 'finishing', title: '8. Toques Finais' }
+        ]
+    };
+    const currentPack = creator.getSelectedPack();
+    assert(currentPack !== null, 'getSelectedPack deve retornar o pacote selecionado');
+    assert(currentPack.wizard_schema !== null, 'Pacote deve conter wizard_schema');
+    assert.strictEqual(currentPack.wizard_schema.steps.length, 8, 'wizard_schema deve conter exatamente as 8 etapas oficiais');
+    console.log('  [OK] getSelectedPack() e wizard_schema com 8 etapas oficiais validados');
+
+    // 6. Se t20_completo.cardpack estiver presente localmente, valida ecossistema completo e motor C
+    const t20PackPath = './local_packs/t20_completo.cardpack';
+    if (fs.existsSync(t20PackPath)) {
+        const rawT20 = fs.readFileSync(t20PackPath, 'utf-8');
+        const t20Pack = JSON.parse(rawT20);
+        assert(t20Pack.pack_name.includes('Tormenta 20'), 'Nome do pacote T20 deve ser Tormenta 20');
+        assert(t20Pack.cards.length >= 200, `Pacote T20 deve conter mais de 200 cards (encontrados: ${t20Pack.cards.length})`);
+        assert(t20Pack.wizard_schema && t20Pack.wizard_schema.steps.length === 8, 'T20 deve conter wizard_schema de 8 etapas');
+
+        // Testa importação no motor C
+        engine.initDeck('Sir Kaelen', 'Tormenta 20');
+        const importedCount = engine.importCardPack(t20Pack, false);
+        assert.strictEqual(importedCount, t20Pack.cards.length, 'Todos os cards de T20 devem ser importados no C');
+        engine.recalculate();
+        const defCard = engine.getCardByKey('defesa');
+        assert(defCard !== null, 'Card de Defesa deve existir');
+        assert.strictEqual(defCard.effective, 10, 'Defesa base sem modificadores deve ser 10');
+        console.log(`  [OK] Validação local do CardPack T20 Completo (${t20Pack.cards.length} cards, 8 etapas oficiais) concluída com sucesso!`);
+    }
+
     console.log('=== Todos os testes do Creator passaram com 100% de sucesso! ===\n');
 }
 
