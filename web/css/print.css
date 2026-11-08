@@ -359,7 +359,7 @@
 
     /* Rodapé da Página Impressa */
     body::after {
-        content: "RPG-SheetC — Ficha de Personagem &bull; Motor de Regras C99 WebAssembly &bull; Tormenta 20 Oficial";
+        content: "RPG-SheetC — Ficha de Personagem &bull; Motor de Regras C99 WebAssembly";
         display: block;
         text-align: center;
         font-size: 7pt;

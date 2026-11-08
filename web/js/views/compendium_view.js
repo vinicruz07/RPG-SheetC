@@ -172,7 +172,7 @@ class CompendiumView {
                             Nenhum CardPack Carregado
                         </h3>
                         <p style="color: var(--color-text-muted); max-width: 600px; margin: 0 auto 24px auto; line-height: 1.6;">
-                            O Compêndio está completamente limpo. Importe um arquivo <code>.cardpack</code> (como o Tormenta 20 ou SRD Fantasia), crie seu próprio pacote de regras personalizado ou explore os Data Packs abertos.
+                            O Compêndio está completamente limpo. Importe um arquivo <code>.cardpack</code> (como um pacote de regras ou SRD Fantasia), crie seu próprio pacote de regras personalizado ou explore os Data Packs abertos.
                         </p>
                         <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
                             <button type="button" id="btn-empty-import" class="btn btn-primary" style="padding: 10px 22px; font-weight: 700;">
@@ -201,12 +201,12 @@ class CompendiumView {
                         <div style="display: flex; flex-direction: column; gap: 12px;">
                             <div>
                                 <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted); margin-bottom: 4px;">Nome do Pacote *</label>
-                                <input type="text" id="input-new-pack-name" class="sheet-number-field" style="width: 100%; text-align: left; padding: 8px;" placeholder="Ex: Tormenta 20 - Magias & Poderes">
+                                <input type="text" id="input-new-pack-name" class="sheet-number-field" style="width: 100%; text-align: left; padding: 8px;" placeholder="Ex: Fantasia Medieval - Magias & Poderes">
                             </div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                                 <div>
                                     <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted); margin-bottom: 4px;">Sistema de Regras *</label>
-                                    <input type="text" id="input-new-pack-system" class="sheet-number-field" style="width: 100%; text-align: left; padding: 8px;" placeholder="Ex: Tormenta 20, D&D 5e...">
+                                    <input type="text" id="input-new-pack-system" class="sheet-number-field" style="width: 100%; text-align: left; padding: 8px;" placeholder="Ex: d20 Aberto, Sistema Autoral...">
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted); margin-bottom: 4px;">Versão</label>
