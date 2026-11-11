@@ -501,6 +501,50 @@ async function runTests() {
     sheetView.closeCardPicker();
     console.log('  [OK] Validação da Aba de Habilidades, layout dinâmico e habilidades obrigatórias concluída com 100% de sucesso!');
 
+    // 20. Validação da Organização baseada na Ficha XLSX (Aba Histórico/Parceiros, Tesouro e Separação de Moedas)
+    engine.addCard({
+        key: 'tibares',
+        name: 'T$ (Tibares)',
+        type: CARD_TYPES.RESOURCE,
+        base: 24,
+        current: 50,
+        max: 999999,
+        category: 'currency',
+        equipped: true
+    });
+    engine.addCard({
+        key: 'carga_max',
+        name: 'Carga Máxima (Espaços)',
+        type: CARD_TYPES.STAT,
+        base: 10,
+        formula: '10 + 2 * @for',
+        equipped: true
+    });
+
+    sheetView._activeCardPack.ui_layout.editor_tabs.push({
+        id: 'biography',
+        name: 'Histórico & Parceiros',
+        icon: '👤'
+    });
+
+    sheetView.activeEditorTab = 'overview';
+    sheetView.render();
+    assert(!sheetView.container.innerHTML.includes('resource-block pv-block" data-res-key="tibares"'), 'Moedas (tibares) não devem aparecer como barra de vida/mana no combate');
+
+    sheetView.activeEditorTab = 'equipment';
+    sheetView.render();
+    assert(sheetView.container.innerHTML.includes('sheet-equipment-currency-banner'), 'Banner de carga e moedas deve estar visível na aba Equipamentos');
+    assert(sheetView.container.innerHTML.includes('T$ (Tibares)'), 'Pílula de Tibares deve estar visível');
+    assert(sheetView.container.innerHTML.includes('input-currency-field'), 'Campo editável de moedas deve estar disponível no Modo Editar');
+
+    sheetView.activeEditorTab = 'biography';
+    sheetView.render();
+    assert(sheetView.container.innerHTML.includes('sheet-biography-tab-container'), 'Container da aba Histórico & Parceiros deve ser renderizado');
+    assert(sheetView.container.innerHTML.includes('Dados Pessoais do Viajante'), 'Seção Dados Pessoais do Viajante deve estar presente');
+    assert(sheetView.container.innerHTML.includes('Parceiro Extra'), 'Campo Parceiro Extra deve estar presente');
+    assert(sheetView.container.innerHTML.includes('Pertences Importantes'), 'Campo Pertences Importantes deve estar presente');
+    console.log('  [OK] Organização baseada na Ficha XLSX (Tesouro, Carga, Moedas e Histórico/Parceiros) validada com 100% de sucesso!');
+
     console.log('\n=== Todos os testes do SheetView passaram com 100% de sucesso! ===');
 }
 

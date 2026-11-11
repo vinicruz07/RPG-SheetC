@@ -1283,7 +1283,7 @@ class WizardView {
             fav: 1
         });
 
-        // 3. Defesa Dinâmica
+        // 3. Defesa Dinâmica e Estatísticas / Moedas Extras configuradas no CardPack
         const defCard = packCards.find(c => c.key === 'defesa');
         customCards.push({
             id: cardId++,
@@ -1295,6 +1295,18 @@ class WizardView {
             equipped: 1,
             fav: 1
         });
+
+        for (const extraCard of packCards) {
+            const isExtraStat = extraCard.type === 2 && extraCard.key !== 'defesa';
+            const isCurrency = extraCard.type === 1 && (extraCard.category === 'currency' || extraCard.key.startsWith('tibares'));
+            if (isExtraStat || isCurrency) {
+                customCards.push({
+                    ...extraCard,
+                    id: cardId++,
+                    equipped: 1
+                });
+            }
+        }
 
         // 4. Perícias do CardPack
         const packSkills = packCards.filter(c => c.type === 3);
@@ -1322,7 +1334,7 @@ class WizardView {
                 key: this.characterData.raceKey,
                 name: raceCard ? raceCard.name : this.formatKey(this.characterData.raceKey),
                 desc: raceCard ? raceCard.desc : 'Traços raciais.',
-                category: 'race_trait',
+                category: raceCard?.category || 'race_origin',
                 is_mandatory: 1,
                 equipped: 1,
                 fav: 0,
@@ -1350,7 +1362,7 @@ class WizardView {
                         cost_res: abilityCard.cost_res || '',
                         cost_val: abilityCard.cost_val || 0,
                         formula: abilityCard.formula || '',
-                        category: 'class_ability',
+                        category: abilityCard.category || 'class_ability',
                         is_mandatory: 1,
                         equipped: 1,
                         fav: 1,
@@ -1382,7 +1394,7 @@ class WizardView {
                 key: this.characterData.originKey,
                 name: originCard ? originCard.name : this.formatKey(this.characterData.originKey),
                 desc: originCard ? originCard.desc : 'Benefícios de origem.',
-                category: 'origin_power',
+                category: originCard?.category || 'race_origin',
                 is_mandatory: 0,
                 equipped: 1,
                 fav: 0,

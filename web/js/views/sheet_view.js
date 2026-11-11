@@ -408,6 +408,8 @@ class SheetView {
             return this.renderSpellsSection(activeSpellsAbilities, availableSpellsAbilities, false);
         } else if (tab === 'skills') {
             return this.renderSkillsSection(skillCards, false);
+        } else if (tab === 'biography' || tab === 'history') {
+            return this.renderBiographyTab(pack);
         } else {
             // 'overview' ou padrão: Visão geral completa para construção
             return `
@@ -421,6 +423,7 @@ class SheetView {
     }
 
     renderResourcesSection(resourceCards, statCards) {
+        const combatResources = (resourceCards || []).filter(rc => !rc.key.startsWith('tibares') && rc.category !== 'currency');
         return `
             <section class="card sheet-resources-card">
                 <div class="card-header" style="margin-bottom: var(--space-md);">
@@ -430,9 +433,9 @@ class SheetView {
                     </div>
                 </div>
 
-                ${resourceCards.length > 0 ? `
+                ${combatResources.length > 0 ? `
                     <div class="sheet-combat-meters" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-md); margin-bottom: var(--space-lg);">
-                        ${resourceCards.map(rc => {
+                        ${combatResources.map(rc => {
                             const cur = rc.current;
                             const max = rc.max > 0 ? rc.max : 1;
                             const pct = Math.min(100, Math.max(0, (cur / max) * 100));
@@ -502,6 +505,8 @@ class SheetView {
 
     renderAttributesSection(attributeCards, isPlayMode) {
         if (!attributeCards || attributeCards.length === 0) return '';
+        const pack = this.getActiveCardPack();
+        const isDirectAttr = pack?.ui_layout?.attribute_mode === 'direct';
         return `
             <section class="card sheet-attributes-card">
                 <div class="card-header">
@@ -512,7 +517,7 @@ class SheetView {
                 <div class="sheet-attributes-grid ${isPlayMode ? 'sheet-attributes-play' : ''}">
                     ${attributeCards.map(attr => {
                         const eff = attr.effective;
-                        const mod = Math.floor((eff - 10) / 2);
+                        const mod = isDirectAttr ? eff : Math.floor((eff - 10) / 2);
                         const hasBonus = eff !== attr.base;
                         return `
                             <div class="sheet-attr-card ${isPlayMode ? 'sheet-attr-play-card' : ''}" data-attr-key="${attr.key}">
@@ -531,7 +536,7 @@ class SheetView {
                                 ${!isPlayMode ? `
                                     <div class="sheet-attr-input-row">
                                         <button type="button" class="btn-attr-stepper btn-attr-minus" data-attr-key="${attr.key}">-</button>
-                                        <input type="number" class="sheet-attr-val-input" data-attr-key="${attr.key}" value="${attr.base}" min="1" max="40">
+                                        <input type="number" class="sheet-attr-val-input" data-attr-key="${attr.key}" value="${attr.base}" min="${isDirectAttr ? -5 : 1}" max="40">
                                         <button type="button" class="btn-attr-stepper btn-attr-plus" data-attr-key="${attr.key}">+</button>
                                     </div>
                                 ` : `
@@ -551,6 +556,15 @@ class SheetView {
     }
 
     renderEquipmentSection(equippedEquipment, inventoryEquipment, isPlayMode) {
+        const tibaresCard = this.engine ? this.engine.getCardByKey('tibares') : null;
+        const tcCard = this.engine ? this.engine.getCardByKey('tibares_cobre') : null;
+        const toCard = this.engine ? this.engine.getCardByKey('tibares_ouro') : null;
+        const plCard = this.engine ? this.engine.getCardByKey('tibares_platina') : null;
+        const cargaCard = this.engine ? this.engine.getCardByKey('carga_max') : null;
+
+        const totalItemsCount = equippedEquipment.length + inventoryEquipment.length;
+        const maxCarga = cargaCard ? cargaCard.effective : 10;
+
         return `
             <section class="card sheet-equipment-card">
                 <div class="card-header">
@@ -563,6 +577,45 @@ class SheetView {
                             ➕ Adicionar Item / Equipamento
                         </button>
                     ` : ''}
+                </div>
+
+                <!-- Painel de Carga & Moedas (Conforme Ficha XLSX) -->
+                <div class="sheet-equipment-currency-banner" style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid var(--color-border-subtle); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.25rem;">🎒</span>
+                        <div>
+                            <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700;">Carga / Espaços de Inventário</div>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: ${totalItemsCount > maxCarga ? '#f87171' : 'var(--color-gold-light)'};">
+                                ${totalItemsCount} <span style="font-size: 0.8rem; color: var(--color-text-dim); font-weight: 400;">de</span> ${maxCarga} espaços
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <div class="currency-pill" style="background: rgba(234, 179, 8, 0.12); border: 1px solid rgba(234, 179, 8, 0.3); padding: 4px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.72rem; color: #facc15; font-weight: 800;">T$ (Tibares)</span>
+                            ${!isPlayMode && tibaresCard ? `
+                                <input type="number" class="input-currency-field" data-res-key="tibares" value="${tibaresCard.current}" min="0" style="width: 68px; padding: 2px 6px; background: rgba(0,0,0,0.35); border: 1px solid rgba(234, 179, 8, 0.35); border-radius: 4px; color: #fef08a; font-size: 0.85rem; font-weight: 700; text-align: right;">
+                            ` : `<span style="font-size: 0.9rem; font-weight: 700; color: #fef08a;">${tibaresCard ? tibaresCard.current : 24}</span>`}
+                        </div>
+                        <div class="currency-pill" style="background: rgba(180, 83, 9, 0.12); border: 1px solid rgba(180, 83, 9, 0.3); padding: 4px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.72rem; color: #fb923c; font-weight: 800;">TC</span>
+                            ${!isPlayMode && tcCard ? `
+                                <input type="number" class="input-currency-field" data-res-key="tibares_cobre" value="${tcCard.current}" min="0" style="width: 60px; padding: 2px 6px; background: rgba(0,0,0,0.35); border: 1px solid rgba(180, 83, 9, 0.35); border-radius: 4px; color: #fed7aa; font-size: 0.85rem; font-weight: 700; text-align: right;">
+                            ` : `<span style="font-size: 0.9rem; font-weight: 700; color: #fed7aa;">${tcCard ? tcCard.current : 0}</span>`}
+                        </div>
+                        <div class="currency-pill" style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); padding: 4px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.72rem; color: #fbbf24; font-weight: 800;">TO</span>
+                            ${!isPlayMode && toCard ? `
+                                <input type="number" class="input-currency-field" data-res-key="tibares_ouro" value="${toCard.current}" min="0" style="width: 60px; padding: 2px 6px; background: rgba(0,0,0,0.35); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 4px; color: #fde68a; font-size: 0.85rem; font-weight: 700; text-align: right;">
+                            ` : `<span style="font-size: 0.9rem; font-weight: 700; color: #fde68a;">${toCard ? toCard.current : 0}</span>`}
+                        </div>
+                        <div class="currency-pill" style="background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.3); padding: 4px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.72rem; color: #cbd5e1; font-weight: 800;">PL</span>
+                            ${!isPlayMode && plCard ? `
+                                <input type="number" class="input-currency-field" data-res-key="tibares_platina" value="${plCard.current}" min="0" style="width: 60px; padding: 2px 6px; background: rgba(0,0,0,0.35); border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 4px; color: #f1f5f9; font-size: 0.85rem; font-weight: 700; text-align: right;">
+                            ` : `<span style="font-size: 0.9rem; font-weight: 700; color: #f1f5f9;">${plCard ? plCard.current : 0}</span>`}
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Equipamentos Atualmente Equipados -->
@@ -620,18 +673,43 @@ class SheetView {
     }
 
     renderSpellsSection(activeSpellsAbilities, availableSpellsAbilities, isPlayMode) {
+        const pack = this.getActiveCardPack();
+        const isDirectAttr = pack?.ui_layout?.attribute_mode === 'direct';
+        const cdCard = this.engine ? this.engine.getCardByKey('cd_magia') : null;
+        const limitePmCard = this.engine ? this.engine.getCardByKey('limite_pm') : null;
+        const intCard = this.engine ? this.engine.getCardByKey('int') : null;
+        const intMod = intCard ? (isDirectAttr ? intCard.effective : Math.floor((intCard.effective - 10) / 2)) : 0;
+
         return `
             <section class="card sheet-spells-abilities-card">
                 <div class="card-header">
                     <div>
-                        <span class="card-title">Habilidades & Magias</span>
-                        <span class="card-subtitle-small">${isPlayMode ? 'Poderes ativos em combate (custo debitado automaticamente)' : 'Cards ativos aplicam bônus ou executam rolagens com custo'}</span>
+                        <span class="card-title">Magias & Grimório</span>
+                        <span class="card-subtitle-small">${isPlayMode ? 'Magias preparadas em combate (custo debitado automaticamente)' : 'Grimório de magias arcanas e divinas com cálculo dinâmico de CD e limite'}</span>
                     </div>
                     ${!isPlayMode ? `
                         <button type="button" id="btn-add-spell-modal" class="btn btn-sm btn-accent" title="Buscar e adicionar magia ou poder do CardPack ao grimório" style="font-size: 0.8rem; font-weight: 700;">
                             ➕ Adicionar Magia / Poder
                         </button>
                     ` : ''}
+                </div>
+
+                <!-- Painel do Conjurador (Conforme Ficha XLSX) -->
+                <div class="sheet-spells-header-banner" style="display: flex; justify-content: space-between; align-items: center; background: rgba(167, 139, 250, 0.08); border: 1px solid rgba(167, 139, 250, 0.25); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                        <div>
+                            <span style="font-size: 0.72rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700;">Atributo Chave</span>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: #c4b5fd;">INT (${this.formatMod(intMod)})</div>
+                        </div>
+                        <div style="border-left: 1px solid rgba(255,255,255,0.1); padding-left: 16px;">
+                            <span style="font-size: 0.72rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700;">Teste de Resistência (CD)</span>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: #a78bfa;">CD ${cdCard ? cdCard.effective : (10 + intMod)}</div>
+                        </div>
+                        <div style="border-left: 1px solid rgba(255,255,255,0.1); padding-left: 16px;">
+                            <span style="font-size: 0.72rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700;">Limite de PM / Turno</span>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: #67e8f9;">${limitePmCard ? limitePmCard.effective : 1} PM</div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Cards de Habilidade / Magia Ativos / Sustentados -->
@@ -734,10 +812,11 @@ class SheetView {
 
         const abilitiesTabConfig = pack?.ui_layout?.editor_tabs?.find(t => t.id === 'abilities');
         const categories = abilitiesTabConfig?.categories || [
-            { id: 'class', name: 'Habilidades de Classe', category: 'class_ability', icon: '⚔️', description: 'Habilidades fundamentais e poderes especiais da sua classe de combate.' },
-            { id: 'race', name: 'Habilidades & Traços de Raça', category: 'race_trait', icon: '🧬', description: 'Herança física, características fisiológicas e bônus ancestrais da sua espécie.' },
-            { id: 'origin', name: 'Poderes de Origem', category: 'origin_power', icon: '📜', description: 'Habilidades, contatos e vantagens herdadas do seu passado pré-aventura.' },
-            { id: 'deity', name: 'Poderes Concedidos / Divindade', category: 'deity_power', icon: '🕊️', description: 'Bênçãos divinas outorgadas pelos Deuses Maiores de Arton aos seus devotos.' }
+            { id: 'race_origin', name: 'Habilidades de Raça e Origem', category: 'race_origin', icon: '🧬📜', description: 'Herança física da sua espécie e benefícios adquiridos no passado da sua origem.' },
+            { id: 'class_ability', name: 'Habilidades de Classe', category: 'class_ability', icon: '⚔️', description: 'Habilidades fundamentais e características intrínsecas da sua classe.' },
+            { id: 'class_power', name: 'Poderes de Classe', category: 'class_power', icon: '🌟', description: 'Poderes e talentos especiais escolhidos para sua progressão de classe.' },
+            { id: 'deity', name: 'Divindade', category: 'deity_power', icon: '🕊️', description: 'Crenças, objetivos e poderes concedidos pelos Deuses Maiores de Arton.' },
+            { id: 'general_power', name: 'Outras Notas & Poderes Gerais', category: 'general_power', icon: '📜', description: 'Poderes gerais de combate, destino, magia e concessões diversas.' }
         ];
 
         // Coleta todos os cards de habilidade/traço do deck C
@@ -755,14 +834,26 @@ class SheetView {
             const meta = this._cardMetaMap?.get(c.key);
             let cat = c.category || meta?.category || packCard?.category || '';
             if (!cat) {
-                if (c.key.startsWith('raca_') || c.key.startsWith('humano_') || c.key.startsWith('anao_') || c.key.startsWith('elfo_') || c.key.startsWith('dahllan_') || c.key.startsWith('goblin_') || c.key.startsWith('lefou_') || c.key.startsWith('minotauro_') || c.key.startsWith('qareen_')) cat = 'race_trait';
-                else if (c.key.startsWith('origem_')) cat = 'origin_power';
+                if (c.key.startsWith('raca_') || c.key.startsWith('humano_') || c.key.startsWith('anao_') || c.key.startsWith('elfo_') || c.key.startsWith('dahllan_') || c.key.startsWith('goblin_') || c.key.startsWith('lefou_') || c.key.startsWith('minotauro_') || c.key.startsWith('qareen_')) cat = 'race_origin';
+                else if (c.key.startsWith('origem_')) cat = 'race_origin';
                 else if (c.key.startsWith('deus_')) cat = 'deity_power';
+                else if (c.key.startsWith('poder_')) cat = 'general_power';
+                else if (c.key.includes('_golpe_') || c.key.includes('_frenesi') || c.key.includes('_sombra') || c.key.includes('_raio_') || c.key.includes('_emboscada')) cat = 'class_power';
                 else cat = 'class_ability';
             }
+
+            // Normalização com as categorias configuradas no CardPack
+            if ((cat === 'race_trait' || cat === 'origin_power') && categories.some(k => k.category === 'race_origin')) {
+                cat = 'race_origin';
+            }
+            if (cat === 'race_origin' && !categories.some(k => k.category === 'race_origin')) {
+                cat = c.type === CARD_TYPES.TRAIT ? 'race_trait' : 'origin_power';
+            }
+
             const isMandatory = (c.is_mandatory === 1 || c.is_mandatory === true || 
                                  meta?.is_mandatory === 1 || meta?.is_mandatory === true || 
-                                 packCard?.is_mandatory === 1 || packCard?.is_mandatory === true);
+                                 packCard?.is_mandatory === 1 || packCard?.is_mandatory === true ||
+                                 c.key.includes('_ataque_esp') || c.key.includes('_furia') || c.key.includes('_caminho'));
             return {
                 ...c,
                 resolvedCategory: cat,
@@ -890,6 +981,126 @@ class SheetView {
                         `}
                     </div>
                 </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Renderiza a Aba de Histórico, Dados Pessoais do Viajante e Parceiros (Conforme Ficha XLSX)
+     */
+    renderBiographyTab(pack) {
+        const charName = this.engine ? this.engine.getCharacterName() : '';
+        const bioKey = `sheet_bio_${charName || 'default'}`;
+        let bioData = {};
+        if (typeof localStorage !== 'undefined') {
+            try {
+                const raw = localStorage.getItem(bioKey);
+                if (raw) bioData = JSON.parse(raw);
+            } catch (e) {}
+        }
+
+        return `
+            <div class="sheet-biography-tab-container" style="display: flex; flex-direction: column; gap: var(--space-lg);">
+                <!-- 1. Dados Pessoais do Viajante (Conforme Ficha XLSX) -->
+                <section class="card" style="padding: 18px 20px; background: var(--color-surface-card); border-radius: var(--radius-md); border: 1px solid var(--color-border-subtle);">
+                    <div class="card-header" style="margin-bottom: var(--space-md); border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;">
+                        <div>
+                            <h3 style="font-family: var(--font-heading); font-size: 1.15rem; color: var(--color-gold-light); margin: 0; display: flex; align-items: center; gap: 8px;">
+                                👤 Dados Pessoais do Viajante & Histórico
+                            </h3>
+                            <span style="font-size: 0.78rem; color: var(--color-text-muted);">
+                                Conceito, identidade, vínculos e características do herói artoniano.
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+                        <div>
+                            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; margin-bottom: 4px;">Nome & Filiação</label>
+                            <input type="text" class="input-bio-field" data-bio-field="filiacao" value="${bioData.filiacao || ''}" placeholder="Nome dos pais, clã ou casa de origem..." style="width: 100%; padding: 8px 12px; background: rgba(0,0,0,0.25); border: 1px solid var(--color-border-subtle); border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; margin-bottom: 4px;">Alinhamento / Crenças</label>
+                            <input type="text" class="input-bio-field" data-bio-field="alinhamento" value="${bioData.alinhamento || ''}" placeholder="Leal, Neutro, Caótico, Devoção moral..." style="width: 100%; padding: 8px 12px; background: rgba(0,0,0,0.25); border: 1px solid var(--color-border-subtle); border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; margin-bottom: 4px;">Traços de Personalidade</label>
+                            <input type="text" class="input-bio-field" data-bio-field="personalidade" value="${bioData.personalidade || ''}" placeholder="Postura, modos de fala, temperamento..." style="width: 100%; padding: 8px 12px; background: rgba(0,0,0,0.25); border: 1px solid var(--color-border-subtle); border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; margin-bottom: 4px;">Descrição Física</label>
+                            <input type="text" class="input-bio-field" data-bio-field="aparencia" value="${bioData.aparencia || ''}" placeholder="Altura, peso, cor dos olhos, cabelo, roupas..." style="width: 100%; padding: 8px 12px; background: rgba(0,0,0,0.25); border: 1px solid var(--color-border-subtle); border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; margin-bottom: 4px;">Cicatrizes, Ferimentos & Doenças</label>
+                            <input type="text" class="input-bio-field" data-bio-field="cicatrizes" value="${bioData.cicatrizes || ''}" placeholder="Marcas de batalha, deformidades, enfermidades..." style="width: 100%; padding: 8px 12px; background: rgba(0,0,0,0.25); border: 1px solid var(--color-border-subtle); border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; margin-bottom: 4px;">Pessoas & Locais Importantes</label>
+                            <input type="text" class="input-bio-field" data-bio-field="vinculos" value="${bioData.vinculos || ''}" placeholder="Mentores, familiares, rivais, cidades de afeto..." style="width: 100%; padding: 8px 12px; background: rgba(0,0,0,0.25); border: 1px solid var(--color-border-subtle); border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; margin-bottom: 4px;">Pertences Importantes</label>
+                            <input type="text" class="input-bio-field" data-bio-field="pertences" value="${bioData.pertences || ''}" placeholder="Relíquias, heranças, cartas, recordações especiais..." style="width: 100%; padding: 8px 12px; background: rgba(0,0,0,0.25); border: 1px solid var(--color-border-subtle); border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; margin-bottom: 4px;">Manias, Fobias & Traumas</label>
+                            <input type="text" class="input-bio-field" data-bio-field="fobias" value="${bioData.fobias || ''}" placeholder="Peculiaridades, medos irracionais, pesadelos do passado..." style="width: 100%; padding: 8px 12px; background: rgba(0,0,0,0.25); border: 1px solid var(--color-border-subtle); border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem;">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Parceiros & Aliados (Conforme Ficha XLSX) -->
+                <section class="card" style="padding: 18px 20px; background: var(--color-surface-card); border-radius: var(--radius-md); border: 1px solid var(--color-border-subtle);">
+                    <div class="card-header" style="margin-bottom: var(--space-md); border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;">
+                        <div>
+                            <h3 style="font-family: var(--font-heading); font-size: 1.15rem; color: var(--color-gold-light); margin: 0; display: flex; align-items: center; gap: 8px;">
+                                🤝 Parceiros, Aliados & Familiares
+                            </h3>
+                            <span style="font-size: 0.78rem; color: var(--color-text-muted);">
+                                Aliados de combate conforme as regras de Parceiros de Tormenta 20 (Níveis 1, 5 e 17).
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+                        <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px;">
+                            <span style="font-size: 0.75rem; text-transform: uppercase; color: #a78bfa; font-weight: 800;">1º Parceiro (Iniciante)</span>
+                            <input type="text" class="input-bio-field" data-bio-field="parceiro1" value="${bioData.parceiro1 || ''}" placeholder="Nome, tipo (Ajudante, Atirador, Guardião...) e benefício" style="width: 100%; margin-top: 6px; padding: 8px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--color-border-subtle); border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem;">
+                        </div>
+                        <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px;">
+                            <span style="font-size: 0.75rem; text-transform: uppercase; color: #60a5fa; font-weight: 800;">2º Parceiro (Nível 5-16 - Veterano)</span>
+                            <input type="text" class="input-bio-field" data-bio-field="parceiro2" value="${bioData.parceiro2 || ''}" placeholder="Nome, tipo e benefício do 2º parceiro..." style="width: 100%; margin-top: 6px; padding: 8px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--color-border-subtle); border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem;">
+                        </div>
+                        <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px;">
+                            <span style="font-size: 0.75rem; text-transform: uppercase; color: #34d399; font-weight: 800;">3º Parceiro (Nível 17+ - Mestre)</span>
+                            <input type="text" class="input-bio-field" data-bio-field="parceiro3" value="${bioData.parceiro3 || ''}" placeholder="Nome, tipo e benefício do 3º parceiro..." style="width: 100%; margin-top: 6px; padding: 8px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--color-border-subtle); border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem;">
+                        </div>
+                        <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px;">
+                            <span style="font-size: 0.75rem; text-transform: uppercase; color: #f472b6; font-weight: 800;">Familiar (Arcanistas)</span>
+                            <input type="text" class="input-bio-field" data-bio-field="familiar" value="${bioData.familiar || ''}" placeholder="Familiar mágico de arcanista ou montaria especial..." style="width: 100%; margin-top: 6px; padding: 8px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--color-border-subtle); border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem;">
+                        </div>
+                        <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px;">
+                            <span style="font-size: 0.75rem; text-transform: uppercase; color: #fbbf24; font-weight: 800;">Parceiro Extra</span>
+                            <input type="text" class="input-bio-field" data-bio-field="parceiro_extra" value="${bioData.parceiro_extra || ''}" placeholder="Parceiros adicionais de origens, poderes ou campanha..." style="width: 100%; margin-top: 6px; padding: 8px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--color-border-subtle); border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem;">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Anotações da Campanha -->
+                <section class="card" style="padding: 18px 20px; background: var(--color-surface-card); border-radius: var(--radius-md); border: 1px solid var(--color-border-subtle);">
+                    <div class="card-header" style="margin-bottom: var(--space-md); border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;">
+                        <div>
+                            <h3 style="font-family: var(--font-heading); font-size: 1.15rem; color: var(--color-gold-light); margin: 0; display: flex; align-items: center; gap: 8px;">
+                                📜 Anotações da Campanha & Diário
+                            </h3>
+                            <span style="font-size: 0.78rem; color: var(--color-text-muted);">
+                                Aliados encontrados, patrimônio conquistado, mistérios e pistas de missões.
+                            </span>
+                        </div>
+                    </div>
+                    <textarea class="input-bio-field" data-bio-field="anotacoes" rows="6" placeholder="Escreva aqui eventos importantes da campanha, dívidas, itens de missão e acordos..." style="width: 100%; padding: 12px; background: rgba(0,0,0,0.25); border: 1px solid var(--color-border-subtle); border-radius: 8px; color: var(--color-text-main); font-size: 0.85rem; line-height: 1.5; resize: vertical;">${bioData.anotacoes || ''}</textarea>
+                </section>
             </div>
         `;
     }
@@ -1428,11 +1639,14 @@ class SheetView {
         });
 
         // 2. Atributos Básicos (Steppers [-] [+], Input direto, Clique no mod para rolar)
+        const isDirectAttr = this.getActiveCardPack()?.ui_layout?.attribute_mode === 'direct';
+        const minAttrVal = isDirectAttr ? -5 : 1;
+
         this.container.querySelectorAll('.btn-attr-minus').forEach(btn => {
             btn.addEventListener('click', () => {
                 const key = btn.dataset.attrKey;
                 const card = this.engine.getCardByKey(key);
-                if (card && card.base > 1) {
+                if (card && card.base > minAttrVal) {
                     this.engine.setBaseValue(key, card.base - 1);
                     this.logger(`[C Atributo] ${key.toUpperCase()} alterado para ${card.base - 1}. Recalculando...`);
                     this.render();
@@ -1456,8 +1670,8 @@ class SheetView {
             inp.addEventListener('change', (e) => {
                 const key = inp.dataset.attrKey;
                 let val = parseInt(e.target.value, 10);
-                if (isNaN(val)) val = 10;
-                if (val < 1) val = 1;
+                if (isNaN(val)) val = isDirectAttr ? 0 : 10;
+                if (val < minAttrVal) val = minAttrVal;
                 if (val > 40) val = 40;
                 if (key) {
                     this.engine.setBaseValue(key, val);
@@ -1551,6 +1765,36 @@ class SheetView {
                 this.openCardPicker('abilities');
             });
         }
+
+        // 3.3. Auto-save para campos de Histórico & Dados Pessoais do Viajante
+        this.container.querySelectorAll('.input-bio-field').forEach(input => {
+            input.addEventListener('change', () => {
+                const charName = this.engine ? this.engine.getCharacterName() : '';
+                const bioKey = `sheet_bio_${charName || 'default'}`;
+                let bioData = {};
+                try {
+                    const raw = localStorage.getItem(bioKey);
+                    if (raw) bioData = JSON.parse(raw);
+                } catch (e) {}
+                bioData[input.dataset.bioField] = input.value;
+                try {
+                    localStorage.setItem(bioKey, JSON.stringify(bioData));
+                } catch (e) {}
+            });
+        });
+
+        // 3.4. Edição de Moedas / Tesouro sincronizada no C
+        this.container.querySelectorAll('.input-currency-field').forEach(input => {
+            input.addEventListener('change', () => {
+                const key = input.dataset.resKey;
+                const val = Math.max(0, parseInt(input.value, 10) || 0);
+                if (key) {
+                    this.engine.setCurrentValue(key, val);
+                    this.logger(`[C Tesouro] ${key.toUpperCase()} atualizado para ${val}.`);
+                    this.render();
+                }
+            });
+        });
 
         // 4. Rolar / Ativar Card
         this.container.querySelectorAll('.btn-roll-card').forEach(btn => {
@@ -2045,10 +2289,11 @@ class SheetView {
         if (this.pickerTargetMode === 'abilities') {
             categories = [
                 { id: null, label: 'Todas as Habilidades' },
-                { id: 'class_ability', label: '⚔️ Habilidades de Classe' },
-                { id: 'race_trait', label: '🧬 Traços de Raça' },
-                { id: 'origin_power', label: '📜 Poderes de Origem' },
-                { id: 'deity_power', label: '🕊️ Poderes Concedidos' }
+                { id: 'race_origin', label: '🧬📜 Raça & Origem' },
+                { id: 'class_ability', label: '⚔️ Hab. de Classe' },
+                { id: 'class_power', label: '🌟 Poderes de Classe' },
+                { id: 'deity_power', label: '🕊️ Divindade' },
+                { id: 'general_power', label: '📜 Poderes Gerais' }
             ];
         } else if (this.pickerTargetMode === 'equipment') {
             categories = [
@@ -2059,10 +2304,8 @@ class SheetView {
             ];
         } else {
             categories = [
-                { id: null, label: 'Todos os Poderes' },
-                { id: 6, label: '✨ Magias' },
-                { id: 4, label: '⚡ Habilidades & Ações' },
-                { id: 7, label: '🌟 Talentos & Passivas' }
+                { id: null, label: 'Todas as Magias' },
+                { id: 6, label: '✨ Magias' }
             ];
         }
 
@@ -2164,7 +2407,7 @@ class SheetView {
 
             // Filtro por Target Mode (abilities vs equipment vs spells)
             if (this.pickerTargetMode === 'abilities') {
-                const hasAbilityCategory = card.category && ['class_ability', 'race_trait', 'origin_power', 'deity_power'].includes(card.category);
+                const hasAbilityCategory = card.category && ['race_origin', 'race_trait', 'origin_power', 'class_ability', 'class_power', 'deity_power', 'general_power'].includes(card.category);
                 const isAbilityType = card.type === CARD_TYPES.ABILITY || card.type === CARD_TYPES.TRAIT;
                 const isNotOther = card.type !== CARD_TYPES.ATTRIBUTE && card.type !== CARD_TYPES.RESOURCE && 
                                    card.type !== CARD_TYPES.STAT && card.type !== CARD_TYPES.SKILL && 
@@ -2173,7 +2416,10 @@ class SheetView {
                 if (!((hasAbilityCategory || isAbilityType) && isNotOther)) return false;
 
                 if (this.pickerCategoryFilter) {
-                    const cat = card.category || (card.type === CARD_TYPES.TRAIT ? 'race_trait' : 'class_ability');
+                    let cat = card.category || (card.type === CARD_TYPES.TRAIT ? 'race_origin' : 'class_ability');
+                    if ((cat === 'race_trait' || cat === 'origin_power') && this.pickerCategoryFilter === 'race_origin') {
+                        cat = 'race_origin';
+                    }
                     if (cat !== this.pickerCategoryFilter) return false;
                 }
             } else if (this.pickerTargetMode === 'equipment') {
@@ -2263,14 +2509,16 @@ class SheetView {
 
             // Badges de categoria e obrigatoriedade
             let categoryBadgeHtml = '';
-            if (card.category === 'class_ability') {
-                categoryBadgeHtml = `<span style="font-size: 0.7rem; color: #f59e0b; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 6px; border-radius: 4px; font-weight: 600;">⚔️ Classe</span>`;
-            } else if (card.category === 'race_trait') {
-                categoryBadgeHtml = `<span style="font-size: 0.7rem; color: #10b981; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 6px; border-radius: 4px; font-weight: 600;">🧬 Raça</span>`;
-            } else if (card.category === 'origin_power') {
-                categoryBadgeHtml = `<span style="font-size: 0.7rem; color: #3b82f6; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); padding: 2px 6px; border-radius: 4px; font-weight: 600;">📜 Origem</span>`;
+            if (card.category === 'race_origin' || card.category === 'race_trait' || card.category === 'origin_power') {
+                categoryBadgeHtml = `<span style="font-size: 0.7rem; color: #10b981; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 6px; border-radius: 4px; font-weight: 600;">🧬📜 Raça & Origem</span>`;
+            } else if (card.category === 'class_ability') {
+                categoryBadgeHtml = `<span style="font-size: 0.7rem; color: #f59e0b; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 6px; border-radius: 4px; font-weight: 600;">⚔️ Hab. Classe</span>`;
+            } else if (card.category === 'class_power') {
+                categoryBadgeHtml = `<span style="font-size: 0.7rem; color: #8b5cf6; background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3); padding: 2px 6px; border-radius: 4px; font-weight: 600;">🌟 Poder de Classe</span>`;
             } else if (card.category === 'deity_power') {
                 categoryBadgeHtml = `<span style="font-size: 0.7rem; color: #ec4899; background: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.3); padding: 2px 6px; border-radius: 4px; font-weight: 600;">🕊️ Divindade</span>`;
+            } else if (card.category === 'general_power') {
+                categoryBadgeHtml = `<span style="font-size: 0.7rem; color: #06b6d4; background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.3); padding: 2px 6px; border-radius: 4px; font-weight: 600;">📜 Poder Geral</span>`;
             }
 
             const mandatoryBadgeHtml = (card.is_mandatory || card.mandatory) ? `
