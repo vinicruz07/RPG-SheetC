@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG-SheetC — Ficha de RPG em C & WebAssembly</title>
+    <!-- Folhas de Estilo e Design System -->
+    <link rel="stylesheet" href="css/tokens.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/views.css">
+    <link rel="stylesheet" href="css/dice_roller.css">
+    <link rel="stylesheet" href="css/storage.css">
+    <link rel="stylesheet" href="css/virtual_cards.css">
+    <link rel="stylesheet" href="css/print.css" media="print">
+</head>
+<body>
+    <!-- Backdrop do Menu Lateral -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
+    <!-- Sidebar Drawer Deslizante -->
+    <aside id="sidebar-drawer" class="sidebar-drawer" aria-hidden="true">
+        <div class="sidebar-header">
+            <div class="sidebar-brand">
+                <span class="sidebar-brand-icon">⚔️</span>
+                <span class="sidebar-brand-title">RPG-SheetC</span>
+            </div>
+            <button type="button" id="btn-close-sidebar" class="btn-sidebar-close" title="Fechar Menu" aria-label="Fechar Menu">✕</button>
+        </div>
+        
+        <div class="sidebar-content">
+            <div class="sidebar-section-label">Navegação Principal</div>
+            <nav class="sidebar-nav">
+                <button type="button" class="sidebar-nav-item active" data-view="home">
+                    <span class="sidebar-item-icon">🏠</span>
+                    <span class="sidebar-item-text">Início</span>
+                </button>
+                <button type="button" class="sidebar-nav-item" data-view="sheet">
+                    <span class="sidebar-item-icon">📜</span>
+                    <span class="sidebar-item-text">Ficha do Personagem</span>
+                </button>
+                <button type="button" class="sidebar-nav-item" data-view="creator">
+                    <span class="sidebar-item-icon">➕</span>
+                    <span class="sidebar-item-text">Criar Nova Ficha</span>
+                </button>
+                <button type="button" class="sidebar-nav-item" data-view="compendium">
+                    <span class="sidebar-item-icon">🎴</span>
+                    <span class="sidebar-item-text">Compêndio de CardPacks</span>
+                </button>
+                <button type="button" class="sidebar-nav-item" data-view="roller">
+                    <span class="sidebar-item-icon">🎲</span>
+                    <span class="sidebar-item-text">Rolador de Dados</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-version-badge">v2.0 • C99 Freestanding WASM</div>
+            </div>
+        </div>
+    </aside>
+
+    <div class="container">
+        <!-- Header Principal -->
+        <header class="app-header">
+            <div class="header-left">
+                <button type="button" id="btn-toggle-menu" class="btn-menu-hamburger" title="Abrir Menu de Navegação" aria-label="Abrir Menu">
+                    <span class="hamburger-bar"></span>
+                    <span class="hamburger-bar"></span>
+                    <span class="hamburger-bar"></span>
+                </button>
+                <div class="brand-wrapper">
+                    <h1 class="brand-title">
+                        ⚔️ RPG-SheetC
+                    </h1>
+                    <p class="brand-subtitle">Motor C99 Freestanding &bull; WebAssembly &bull; Cards Agnósticos</p>
+                </div>
+            </div>
+            <div class="header-right-group" style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
+                <button type="button" id="btn-header-manage-sheets" class="header-storage-btn" title="Gerenciar Fichas Salvas no Navegador">
+                    📜 Minhas Fichas <span id="header-sheets-count" class="header-storage-badge">0</span>
+                </button>
+                <div id="engine-status-badge" class="status-badge status-loading">
+                    <span class="status-dot"></span>
+                    <span id="engine-status-text">Conectando ao Motor C...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- ===================================================================
+             VIEW: Início & Visão Geral
+             =================================================================== -->
+        <div id="view-home" class="view-section active">
+            <div class="home-container">
+                <!-- Banner de Boas-Vindas -->
+                <section class="home-banner">
+                    <div class="home-banner-content">
+                        <div class="home-tagline">
+                            <span>🛡️</span> Pure C Engine (C99 Freestanding) + Modern Web Frontend
+                        </div>
+                        <h2 class="home-heading">Motor Agnóstico de Fichas de RPG de Alta Performance</h2>
+                        <p class="home-desc">
+                            O <strong>RPG-SheetC v2.0</strong> adota uma <strong>arquitetura baseada em cards (Card-Driven Data-Driven)</strong>, 
+                            100% agnóstica e livre de regras proprietárias. O motor compilado em WebAssembly gerencia todos os cálculos de atributos,
+                            modificadores dinâmicos, avaliação de fórmulas matemáticas recursivas e serialização JSON diretamente na memória linear do navegador.
+                        </p>
+                        <div class="home-actions-bar">
+                            <button id="btn-home-new-sheet" class="btn btn-primary">⚔️ Acessar Ficha Modular</button>
+                            <button id="btn-home-manage-sheets" class="btn">📜 Minhas Fichas Salvas</button>
+                            <button id="btn-home-load-sheet" class="btn">📂 Carregar Ficha (.sheetc / JSON)</button>
+                            <button id="btn-home-view-active" class="btn">🎴 Abrir Compêndio de Cards</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Seção de Galeria de Personagens -->
+                <section class="home-roster-section">
+                    <div class="systems-section-header">
+                        <div>
+                            <h2 class="systems-section-title">📜 Meus Personagens & Fichas</h2>
+                            <p class="systems-section-subtitle">Personagens salvos no seu dispositivo. Clique em um cartão para jogar ou crie um novo herói:</p>
+                        </div>
+                    </div>
+
+                    <!-- Container da Galeria Visual de Personagens -->
+                    <div id="home-characters-roster-container">
+                        <!-- Renderizado dinamicamente via CharacterStorage.renderRosterGallery() -->
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- ===================================================================
+             VIEW: Assistente de Criação de Personagem (Wizard)
+             =================================================================== -->
+        <div id="view-creator" class="view-section">
+            <div id="wizard-container"></div>
+        </div>
+
+        <!-- ===================================================================
+             VIEW: Ficha do Personagem (Painel Ativo)
+             =================================================================== -->
+        <div id="view-sheet" class="view-section">
+            <div id="sheet-container"></div>
+        </div>
+
+        <!-- ===================================================================
+             VIEW: Compêndio de Cards (Virtual Scrolling)
+             =================================================================== -->
+        <div id="view-compendium" class="view-section">
+            <div id="compendium-container"></div>
+        </div>
+
+        <!-- ===================================================================
+             VIEW: Editor e Criador de Cards
+             =================================================================== -->
+        <div id="view-editor" class="view-section">
+            <div id="editor-container"></div>
+        </div>
+
+        <!-- ===================================================================
+             VIEW: Rolador de Dados Poliédricos
+             =================================================================== -->
+        <div id="view-roller" class="view-section"></div>
+    </div>
+
+    <!-- Scripts da Aplicação -->
+    <script src="js/wasm_loader.js"></script>
+    <script src="js/services/storage.js"></script>
+    <script src="js/services/export.js"></script>
+    <script src="js/services/pack_manager.js"></script>
+    <script src="js/components/virtual_list.js"></script>
+    <script src="js/components/dice_roller.js"></script>
+    <script src="js/views/home.js"></script>
+    <script src="js/views/wizard.js"></script>
+    <script src="js/views/sheet_view.js"></script>
+    <script src="js/views/compendium_view.js"></script>
+    <script src="js/views/card_editor_view.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

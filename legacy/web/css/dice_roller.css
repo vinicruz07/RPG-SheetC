@@ -1,0 +1,528 @@
+/**
+ * dice_roller.css — Estilos do Componente Visual de Rolagem de Dados (RPG-SheetC)
+ */
+
+/* =========================================================================
+   Botão Flutuante de Abertura do Rolador
+   ========================================================================= */
+
+.dice-floating-trigger {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: linear-gradient(135deg, var(--color-gold-dark) 0%, var(--color-gold-primary) 100%);
+    color: var(--color-text-inverse);
+    border: 2px solid var(--color-gold-hover);
+    border-radius: 999px;
+    padding: 12px 20px;
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 16px var(--color-border-gold-glow);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 900;
+    transition: all var(--transition-normal);
+}
+
+.dice-floating-trigger:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 6px 24px rgba(212, 163, 115, 0.5);
+    background: linear-gradient(135deg, var(--color-gold-primary) 0%, var(--color-gold-hover) 100%);
+}
+
+.dice-floating-badge {
+    background: var(--color-bg-base);
+    color: var(--color-gold-primary);
+    font-size: 0.72rem;
+    font-weight: 900;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+/* =========================================================================
+   Drawer Retrátil Lateral (Gaveta)
+   ========================================================================= */
+
+.dice-drawer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-normal), visibility var(--transition-normal);
+}
+
+.dice-drawer-backdrop.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.dice-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 440px;
+    max-width: 90vw;
+    background: var(--color-surface-card);
+    border-left: 2px solid var(--color-border-subtle);
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.7);
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dice-drawer.open {
+    transform: translateX(0);
+}
+
+.dice-drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md) var(--space-lg);
+    background: var(--color-surface-inset);
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.dice-drawer-title {
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--color-gold-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-drawer-close {
+    background: transparent;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    transition: color var(--transition-fast);
+}
+
+.btn-drawer-close:hover {
+    color: var(--color-gold-primary);
+}
+
+.dice-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+/* =========================================================================
+   Controles de Rolagem de Dados
+   ========================================================================= */
+
+.dice-section-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--color-gold-primary);
+    margin-bottom: var(--space-xs);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Grade de Dados Poliédricos */
+.polyhedral-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+@media (max-width: 400px) {
+    .polyhedral-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.die-btn {
+    background: var(--color-surface-inset);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: 10px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.die-btn:hover {
+    border-color: var(--color-gold-primary);
+    transform: translateY(-2px);
+    background: var(--color-surface-card-hover);
+}
+
+.die-btn.selected {
+    border-color: var(--color-gold-primary);
+    background: rgba(212, 163, 115, 0.12);
+    box-shadow: 0 0 12px var(--color-border-gold-glow);
+}
+
+.die-btn-icon {
+    font-size: 1.4rem;
+    line-height: 1;
+}
+
+.die-btn-name {
+    font-family: var(--font-heading);
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: var(--color-text-main);
+}
+
+.die-btn.selected .die-btn-name {
+    color: var(--color-gold-primary);
+}
+
+/* Configurações de Quantidade e Modificador */
+.dice-config-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+    background: var(--color-surface-inset);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+}
+
+.dice-config-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dice-config-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+}
+
+.dice-stepper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dice-stepper-btn {
+    width: 32px;
+    height: 32px;
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-main);
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.dice-stepper-btn:hover {
+    border-color: var(--color-gold-primary);
+    color: var(--color-gold-primary);
+}
+
+.dice-stepper-input {
+    width: 52px;
+    height: 32px;
+    text-align: center;
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 800;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-main);
+}
+
+/* Botão de Rolagem Principal */
+.btn-main-roll {
+    width: 100%;
+    padding: 14px;
+    font-size: 1.05rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: linear-gradient(135deg, var(--color-gold-dark) 0%, var(--color-gold-primary) 100%);
+    color: var(--color-text-inverse);
+    border: 2px solid var(--color-gold-hover);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    transition: all var(--transition-fast);
+}
+
+.btn-main-roll:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(212, 163, 115, 0.4);
+    background: linear-gradient(135deg, var(--color-gold-primary) 0%, var(--color-gold-hover) 100%);
+}
+
+.btn-main-roll:active {
+    transform: translateY(0);
+}
+
+/* Quick Actions Preset */
+.dice-presets-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+}
+
+.btn-preset {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: var(--color-surface-inset);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    text-align: left;
+    transition: all var(--transition-fast);
+}
+
+.btn-preset:hover {
+    border-color: var(--color-gold-primary);
+    color: var(--color-gold-primary);
+}
+
+/* =========================================================================
+   Histórico Visual de Rolagens
+   ========================================================================= */
+
+.roll-history-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.roll-history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-clear-history {
+    background: transparent;
+    border: none;
+    color: var(--color-text-dim);
+    font-size: 0.75rem;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.btn-clear-history:hover {
+    color: var(--color-danger);
+}
+
+.roll-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    max-height: 480px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.roll-history-entry {
+    background: var(--color-surface-inset);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+    overflow: hidden;
+    animation: slideInEntry 0.25s ease-out forwards;
+}
+
+@keyframes slideInEntry {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.roll-history-entry.is-critical {
+    border-color: rgba(34, 197, 94, 0.5);
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, var(--color-surface-inset) 100%);
+    box-shadow: 0 0 16px rgba(34, 197, 94, 0.2);
+}
+
+.roll-history-entry.is-fumble {
+    border-color: rgba(239, 68, 68, 0.5);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, var(--color-surface-inset) 100%);
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.2);
+}
+
+.roll-entry-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.roll-entry-title {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--color-gold-primary);
+}
+
+.roll-entry-time {
+    font-size: 0.72rem;
+    color: var(--color-text-dim);
+}
+
+.roll-entry-breakdown {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+}
+
+.roll-dice-collection {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.history-die-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: var(--color-parchment-light);
+}
+
+.history-die-badge.crit {
+    border-color: var(--color-success);
+    color: #4ade80;
+    background: rgba(34, 197, 94, 0.2);
+}
+
+.history-die-badge.fumble {
+    border-color: var(--color-danger);
+    color: #f87171;
+    background: rgba(239, 68, 68, 0.2);
+}
+
+.roll-mod-tag {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+}
+
+.roll-total-box {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.roll-total-num {
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--color-text-main);
+}
+
+.is-critical .roll-total-num {
+    color: #86efac;
+    text-shadow: 0 0 12px rgba(34, 197, 94, 0.5);
+}
+
+.is-fumble .roll-total-num {
+    color: #fca5a5;
+    text-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+}
+
+.roll-badge-tag {
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    align-self: flex-start;
+}
+
+.badge-crit {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.badge-fumble {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.roll-history-empty {
+    text-align: center;
+    padding: var(--space-xl) var(--space-md);
+    color: var(--color-text-dim);
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+/* =========================================================================
+   Visualização Dedicada na Aba "Rolador de Dados" (#view-roller)
+   ========================================================================= */
+
+.roller-page-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: var(--space-lg);
+}
+
+@media (max-width: 860px) {
+    .roller-page-grid {
+        grid-template-columns: 1fr;
+    }
+}

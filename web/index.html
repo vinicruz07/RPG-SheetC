@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RPG-SheetC — Ficha de RPG em C & WebAssembly</title>
+    <title>RPG-SheetC — Motor Agnóstico de Fichas & CardPacks (Web TypeScript)</title>
     <!-- Folhas de Estilo e Design System -->
     <link rel="stylesheet" href="css/tokens.css">
     <link rel="stylesheet" href="css/style.css">
@@ -53,7 +53,7 @@
             </nav>
 
             <div class="sidebar-footer">
-                <div class="sidebar-version-badge">v2.0 • C99 Freestanding WASM</div>
+                <div class="sidebar-version-badge">v3.0 • TypeScript Agnostic Core</div>
             </div>
         </div>
     </aside>
@@ -71,16 +71,16 @@
                     <h1 class="brand-title">
                         ⚔️ RPG-SheetC
                     </h1>
-                    <p class="brand-subtitle">Motor C99 Freestanding &bull; WebAssembly &bull; Cards Agnósticos</p>
+                    <p class="brand-subtitle">Motor Agnóstico em TypeScript &bull; CardPacks Dinâmicos &bull; Multi-Target</p>
                 </div>
             </div>
             <div class="header-right-group" style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
                 <button type="button" id="btn-header-manage-sheets" class="header-storage-btn" title="Gerenciar Fichas Salvas no Navegador">
                     📜 Minhas Fichas <span id="header-sheets-count" class="header-storage-badge">0</span>
                 </button>
-                <div id="engine-status-badge" class="status-badge status-loading">
+                <div id="engine-status-badge" class="status-badge status-connected">
                     <span class="status-dot"></span>
-                    <span id="engine-status-text">Conectando ao Motor C...</span>
+                    <span id="engine-status-text">Motor TS Core Ativo</span>
                 </div>
             </div>
         </header>
@@ -94,19 +94,19 @@
                 <section class="home-banner">
                     <div class="home-banner-content">
                         <div class="home-tagline">
-                            <span>🛡️</span> Pure C Engine (C99 Freestanding) + Modern Web Frontend
+                            <span>🛡️</span> Pure TypeScript Agnostic Core + CardPack Driven UI
                         </div>
-                        <h2 class="home-heading">Motor Agnóstico de Fichas de RPG de Alta Performance</h2>
+                        <h2 class="home-heading">Motor Agnóstico Gerenciador de Fichas e CardPacks</h2>
                         <p class="home-desc">
-                            O <strong>RPG-SheetC v2.0</strong> adota uma <strong>arquitetura baseada em cards (Card-Driven Data-Driven)</strong>, 
-                            100% agnóstica e livre de regras proprietárias. O motor compilado em WebAssembly gerencia todos os cálculos de atributos,
-                            modificadores dinâmicos, avaliação de fórmulas matemáticas recursivas e serialização JSON diretamente na memória linear do navegador.
+                            O <strong>RPG-SheetC Web (TypeScript)</strong> opera como um motor universal orientado a <code>.cardpacks</code>.
+                            Qualquer sistema de RPG pode configurar seus próprios atributos, fórmulas recursivas, modificadores em cascata,
+                            abas customizadas da ficha, assistentes passo a passo e modelos prontos.
                         </p>
                         <div class="home-actions-bar">
                             <button id="btn-home-new-sheet" class="btn btn-primary">⚔️ Acessar Ficha Modular</button>
                             <button id="btn-home-manage-sheets" class="btn">📜 Minhas Fichas Salvas</button>
                             <button id="btn-home-load-sheet" class="btn">📂 Carregar Ficha (.sheetc / JSON)</button>
-                            <button id="btn-home-view-active" class="btn">🎴 Abrir Compêndio de Cards</button>
+                            <button id="btn-home-view-active" class="btn">🎴 Abrir Compêndio de CardPacks</button>
                         </div>
                     </div>
                 </section>
@@ -162,18 +162,18 @@
         <div id="view-roller" class="view-section"></div>
     </div>
 
-    <!-- Scripts da Aplicação -->
-    <script src="js/wasm_loader.js"></script>
-    <script src="js/services/storage.js"></script>
-    <script src="js/services/export.js"></script>
-    <script src="js/services/pack_manager.js"></script>
-    <script src="js/components/virtual_list.js"></script>
-    <script src="js/components/dice_roller.js"></script>
-    <script src="js/views/home.js"></script>
-    <script src="js/views/wizard.js"></script>
-    <script src="js/views/sheet_view.js"></script>
-    <script src="js/views/compendium_view.js"></script>
-    <script src="js/views/card_editor_view.js"></script>
-    <script src="js/app.js"></script>
+    <!-- Scripts Compilados a partir de TypeScript (web/src/ -> web/dist/) -->
+    <script src="dist/core_engine.js"></script>
+    <script src="dist/services/storage.js"></script>
+    <script src="dist/services/export.js"></script>
+    <script src="dist/services/pack_manager.js"></script>
+    <script src="dist/components/virtual_list.js"></script>
+    <script src="dist/components/dice_roller.js"></script>
+    <script src="dist/views/home.js"></script>
+    <script src="dist/views/wizard.js"></script>
+    <script src="dist/views/sheet_view.js"></script>
+    <script src="dist/views/compendium_view.js"></script>
+    <script src="dist/views/card_editor_view.js"></script>
+    <script src="dist/app.js"></script>
 </body>
 </html>

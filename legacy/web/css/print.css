@@ -1,0 +1,371 @@
+/**
+ * print.css — Folha de Estilos de Impressão e Exportação para PDF
+ * RPG-SheetC — Gera layout idêntico a uma ficha física de mesa de RPG
+ */
+
+@media print {
+    /* Configurações Globais da Página */
+    @page {
+        size: A4 portrait;
+        margin: 10mm 12mm 10mm 12mm;
+    }
+
+    *, *::before, *::after {
+        background: transparent !important;
+        color: #111827 !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+        filter: none !important;
+    }
+
+    body {
+        font-family: 'Cinzel', 'Times New Roman', Georgia, serif;
+        background: #ffffff !important;
+        color: #111827 !important;
+        font-size: 10pt;
+        line-height: 1.3;
+        margin: 0;
+        padding: 0;
+    }
+
+    .container {
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Oculta Elementos de Interface Web e Ferramentas */
+    header,
+    nav,
+    .nav-tabs,
+    .status-badge,
+    .header-right-group,
+    #view-home,
+    #view-creator,
+    #view-roller,
+    .sheet-column-aside,
+    .sheet-header-actions,
+    .skills-filter-bar,
+    .res-quick-buttons,
+    .btn-stepper,
+    .btn-attr-stepper,
+    .td-roll,
+    .th-roll,
+    .btn-roll-skill,
+    .storage-modal-overlay,
+    .dice-floating-btn,
+    .dice-drawer-overlay,
+    .console-container,
+    button {
+        display: none !important;
+    }
+
+    /* Garante Exibição Exclusiva da Ficha */
+    #view-sheet {
+        display: block !important;
+        opacity: 1 !important;
+    }
+
+    .view-section {
+        display: none !important;
+    }
+
+    .view-section.active,
+    #view-sheet.active,
+    #view-sheet {
+        display: block !important;
+    }
+
+    .dashboard-grid {
+        display: block !important;
+    }
+
+    .sheet-grid-columns {
+        display: block !important;
+    }
+
+    .sheet-column-main {
+        width: 100% !important;
+    }
+
+    /* Cabeçalho da Ficha Impressa */
+    .sheet-header-card {
+        border: 2px solid #1f2937 !important;
+        border-radius: 6px !important;
+        padding: 10px 14px !important;
+        margin-bottom: 12px !important;
+        page-break-inside: avoid;
+    }
+
+    .sheet-header-top {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        border-bottom: 1px solid #9ca3af !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 8px !important;
+    }
+
+    .sheet-identity-group {
+        flex: 1 !important;
+    }
+
+    .sheet-field-label {
+        font-size: 8pt !important;
+        text-transform: uppercase !important;
+        color: #4b5563 !important;
+        letter-spacing: 0.05em !important;
+        display: block !important;
+    }
+
+    .sheet-name-field {
+        font-family: 'Cinzel', serif !important;
+        font-size: 16pt !important;
+        font-weight: 700 !important;
+        border: none !important;
+        padding: 0 !important;
+        color: #000000 !important;
+        width: 100% !important;
+    }
+
+    .sheet-badges-group {
+        display: flex !important;
+        gap: 8px !important;
+    }
+
+    .sheet-meta-pill {
+        border: 1px solid #4b5563 !important;
+        border-radius: 4px !important;
+        padding: 3px 8px !important;
+        font-size: 9pt !important;
+        font-weight: 600 !important;
+    }
+
+    .sheet-level-xp-row {
+        display: flex !important;
+        gap: 20px !important;
+        align-items: center !important;
+    }
+
+    .stepper-box {
+        border: none !important;
+        font-size: 12pt !important;
+        font-weight: 700 !important;
+    }
+
+    .stepper-value {
+        font-size: 12pt !important;
+        font-weight: bold !important;
+    }
+
+    .sheet-xp-control input {
+        border: none !important;
+        font-size: 11pt !important;
+        font-weight: 600 !important;
+    }
+
+    /* Recursos de Combate (PV / PM / Defesa) */
+    .sheet-resources-card {
+        border: 2px solid #1f2937 !important;
+        border-radius: 6px !important;
+        padding: 10px 14px !important;
+        margin-bottom: 12px !important;
+        page-break-inside: avoid;
+    }
+
+    .sheet-resources-card .card-header {
+        border-bottom: 1px solid #d1d5db !important;
+        padding-bottom: 4px !important;
+        margin-bottom: 8px !important;
+    }
+
+    .sheet-combat-meters {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr 1fr !important;
+        gap: 12px !important;
+    }
+
+    .resource-block {
+        border: 1px solid #4b5563 !important;
+        border-radius: 6px !important;
+        padding: 8px !important;
+        text-align: center !important;
+    }
+
+    .res-label {
+        font-size: 9pt !important;
+        font-weight: 700 !important;
+        display: block !important;
+        margin-bottom: 4px !important;
+    }
+
+    .res-inputs {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 4px !important;
+        font-size: 14pt !important;
+        font-weight: 700 !important;
+    }
+
+    .res-num-input {
+        border: none !important;
+        font-size: 14pt !important;
+        font-weight: 700 !important;
+        text-align: right !important;
+        width: 45px !important;
+    }
+
+    .res-progress-track {
+        display: none !important;
+    }
+
+    /* Bloco de Defesa */
+    .defense-block {
+        border: 1px solid #4b5563 !important;
+        border-radius: 6px !important;
+        padding: 8px !important;
+    }
+
+    .defense-main-badge {
+        font-size: 16pt !important;
+        font-weight: 800 !important;
+        display: block !important;
+        text-align: center !important;
+    }
+
+    .defense-calc-breakdown {
+        font-size: 8pt !important;
+        text-align: center !important;
+        color: #4b5563 !important;
+        margin-top: 4px !important;
+    }
+
+    .defense-equipment-row {
+        font-size: 8pt !important;
+        margin-top: 6px !important;
+        display: flex !important;
+        justify-content: space-around !important;
+    }
+
+    .armor-input {
+        border: none !important;
+        font-weight: bold !important;
+        width: 25px !important;
+        text-align: center !important;
+    }
+
+    /* Grade de Atributos Básicos */
+    .sheet-attributes-card {
+        border: 2px solid #1f2937 !important;
+        border-radius: 6px !important;
+        padding: 10px 14px !important;
+        margin-bottom: 12px !important;
+        page-break-inside: avoid;
+    }
+
+    .sheet-attributes-grid {
+        display: grid !important;
+        grid-template-columns: repeat(6, 1fr) !important;
+        gap: 8px !important;
+    }
+
+    .sheet-attr-card {
+        border: 1.5px solid #374151 !important;
+        border-radius: 6px !important;
+        padding: 6px 4px !important;
+        text-align: center !important;
+    }
+
+    .attr-abbr-tag {
+        font-size: 10pt !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.05em !important;
+    }
+
+    .attr-title-text {
+        display: none !important;
+    }
+
+    .sheet-attr-mod {
+        font-size: 15pt !important;
+        font-weight: 900 !important;
+        margin: 4px 0 !important;
+    }
+
+    .sheet-attr-val-input {
+        border: none !important;
+        font-size: 9pt !important;
+        font-weight: 600 !important;
+        text-align: center !important;
+        width: 100% !important;
+    }
+
+    /* Tabela de Perícias */
+    .sheet-skills-card {
+        border: 2px solid #1f2937 !important;
+        border-radius: 6px !important;
+        padding: 10px 14px !important;
+    }
+
+    .skills-table-container {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .skills-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 8.5pt !important;
+    }
+
+    .skills-table th,
+    .skills-table td {
+        padding: 3px 6px !important;
+        border-bottom: 1px solid #e5e7eb !important;
+        text-align: left !important;
+    }
+
+    .skills-table th {
+        font-weight: 700 !important;
+        border-bottom: 1.5px solid #1f2937 !important;
+        text-transform: uppercase !important;
+        font-size: 7.5pt !important;
+    }
+
+    .skill-row.skill-trained {
+        background: #f9fafb !important;
+        font-weight: 600 !important;
+    }
+
+    .skill-trained-checkbox {
+        width: 12px !important;
+        height: 12px !important;
+        accent-color: #111827 !important;
+    }
+
+    .skill-attr-tag {
+        font-weight: 700 !important;
+        font-size: 7.5pt !important;
+        border: 1px solid #9ca3af !important;
+        padding: 1px 3px !important;
+        border-radius: 2px !important;
+    }
+
+    .skill-bonus-val {
+        font-weight: 800 !important;
+        font-size: 9pt !important;
+    }
+
+    /* Rodapé da Página Impressa */
+    body::after {
+        content: "RPG-SheetC — Ficha de Personagem &bull; Motor de Regras C99 WebAssembly";
+        display: block;
+        text-align: center;
+        font-size: 7pt;
+        color: #6b7280;
+        margin-top: 10px;
+        padding-top: 6px;
+        border-top: 1px solid #e5e7eb;
+    }
+}

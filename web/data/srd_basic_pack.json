@@ -1,229 +1,631 @@
 {
+  "id": "srd_basic",
+  "pack_name": "SRD Básico / Fantasia Aberta",
   "sheet_name": "SRD Básico / Fantasia Aberta",
   "system_name": "Fantasia Aberta d20",
+  "version": "2.0.0",
+  "author": "Comunidade RPG-SheetC (Aberto / CC0)",
+  "description": "Kit completo de fantasia d20 neutro livre de copyright com abas dinâmicas, assistente de criação passo a passo e fichas modelo.",
   "level": 1,
   "xp": 0,
+  "ui_layout": {
+    "attribute_mode": "d20",
+    "default_tab": "overview",
+    "editor_tabs": [
+      {
+        "id": "overview",
+        "name": "Visão Geral",
+        "icon": "📜"
+      },
+      {
+        "id": "skills",
+        "name": "Perícias",
+        "icon": "🎯"
+      },
+      {
+        "id": "abilities",
+        "name": "Habilidades & Poderes",
+        "icon": "⚡"
+      },
+      {
+        "id": "spells",
+        "name": "Magias & Grimório",
+        "icon": "✨"
+      },
+      {
+        "id": "equipment",
+        "name": "Equipamento & Mochila",
+        "icon": "🎒"
+      },
+      {
+        "id": "biography",
+        "name": "Biografia & Notas",
+        "icon": "📖"
+      }
+    ]
+  },
+  "creation_config": {
+    "allow_manual": true,
+    "wizards": [
+      {
+        "id": "srd_d20_wizard",
+        "name": "Assistente de Criação Fantasia d20",
+        "desc": "Passo a passo guiado para criar seu aventureiro escolhendo conceito, atributos, ancestralidade, classe e equipamento.",
+        "icon": "🧙‍♂️",
+        "steps": [
+          {
+            "key": "concept",
+            "type": "concept",
+            "title": "1. Conceito & Identidade"
+          },
+          {
+            "key": "attributes",
+            "type": "attributes",
+            "title": "2. Atributos Básicos"
+          },
+          {
+            "key": "race",
+            "type": "race_select",
+            "title": "3. Ancestralidade",
+            "options": [
+              {
+                "key": "visao_penumbra",
+                "name": "Meio-Élfico / Crepuscular",
+                "bonus": "+1 Destreza, Visão na Penumbra",
+                "desc": "Adaptável entre dois mundos, com sentidos aguçados na penumbra.",
+                "fixed": {
+                  "des": 1
+                },
+                "choiceCount": 1
+              },
+              {
+                "key": "vigor_anao",
+                "name": "Povo da Montanha",
+                "bonus": "+1 Constituição, Resiliência Pétrea",
+                "desc": "Robusto e inabalável como as rochas ancestrais.",
+                "fixed": {
+                  "con": 1
+                },
+                "choiceCount": 1
+              },
+              {
+                "key": "graca_elfica",
+                "name": "Povo Silvestre",
+                "bonus": "+1 Destreza, Graça Silvestre",
+                "desc": "Ágil e sintonizado com a magia natural das florestas.",
+                "fixed": {
+                  "des": 1
+                },
+                "choiceCount": 1
+              }
+            ]
+          },
+          {
+            "key": "class",
+            "type": "class_select",
+            "title": "4. Vocação Heroica",
+            "options": [
+              {
+                "key": "combatente",
+                "name": "Combatente Marcial",
+                "role": "Linha de Frente",
+                "pv_base": 24,
+                "pm_base": 8,
+                "desc": "Mestre das armas e armaduras pesadas.",
+                "ability": "segundo_folego",
+                "fixed_skills": [
+                  "atletismo",
+                  "percepcao"
+                ]
+              },
+              {
+                "key": "arcanista",
+                "name": "Conjurador Arcano",
+                "role": "Controle & Dano Mágico",
+                "pv_base": 14,
+                "pm_base": 18,
+                "desc": "Estudioso das artes místicas e feitiços elementais.",
+                "ability": "dardos_forca",
+                "fixed_skills": [
+                  "conhecimento",
+                  "investigacao"
+                ]
+              },
+              {
+                "key": "especialista",
+                "name": "Explorador Furtivo",
+                "role": "Infiltração & Perícias",
+                "pv_base": 18,
+                "pm_base": 12,
+                "desc": "Especialista em emboscadas, acrobacias e precisão.",
+                "ability": "ataque_furtivo",
+                "fixed_skills": [
+                  "furtividade",
+                  "acrobacia",
+                  "percepcao"
+                ]
+              }
+            ]
+          },
+          {
+            "key": "equipment",
+            "type": "equipment_select",
+            "title": "5. Equipamento Inicial",
+            "options": {
+              "weapons_simple": [
+                "adaga",
+                "arco_curto"
+              ],
+              "weapons_martial": [
+                "espada_longa",
+                "espada_curta",
+                "machado_batalha"
+              ],
+              "armors_light": [
+                "armadura_couro",
+                "cota_malha"
+              ],
+              "shields": [
+                "escudo_leves",
+                "escudo_pesado"
+              ]
+            }
+          },
+          {
+            "key": "summary",
+            "type": "summary",
+            "title": "6. Revisão & Conclusão"
+          }
+        ]
+      }
+    ],
+    "templates": [
+      {
+        "id": "tpl_guerreiro",
+        "name": "Guerreiro Campeão",
+        "desc": "Combatente de linha de frente equipado com Espada Longa, Armadura de Couro e Segundo Fôlego.",
+        "cards": [
+          {
+            "id": 1,
+            "type": 0,
+            "key": "for",
+            "name": "Força",
+            "base": 16,
+            "curr": 16,
+            "max": 16,
+            "equipped": 1
+          },
+          {
+            "id": 2,
+            "type": 0,
+            "key": "des",
+            "name": "Destreza",
+            "base": 14,
+            "curr": 14,
+            "max": 14,
+            "equipped": 1
+          },
+          {
+            "id": 3,
+            "type": 0,
+            "key": "con",
+            "name": "Constituição",
+            "base": 16,
+            "curr": 16,
+            "max": 16,
+            "equipped": 1
+          },
+          {
+            "id": 4,
+            "type": 0,
+            "key": "int",
+            "name": "Inteligência",
+            "base": 10,
+            "curr": 10,
+            "max": 10,
+            "equipped": 1
+          },
+          {
+            "id": 5,
+            "type": 0,
+            "key": "sab",
+            "name": "Sabedoria",
+            "base": 12,
+            "curr": 12,
+            "max": 12,
+            "equipped": 1
+          },
+          {
+            "id": 6,
+            "type": 0,
+            "key": "car",
+            "name": "Carisma",
+            "base": 10,
+            "curr": 10,
+            "max": 10,
+            "equipped": 1
+          },
+          {
+            "id": 7,
+            "type": 1,
+            "key": "pv",
+            "name": "Pontos de Vida",
+            "base": 30,
+            "curr": 30,
+            "max": 30,
+            "equipped": 1
+          },
+          {
+            "id": 8,
+            "type": 1,
+            "key": "pm",
+            "name": "Pontos de Mana",
+            "base": 10,
+            "curr": 10,
+            "max": 10,
+            "equipped": 1
+          },
+          {
+            "id": 9,
+            "type": 1,
+            "key": "fadiga",
+            "name": "Vigor / Estamina",
+            "base": 8,
+            "curr": 8,
+            "max": 8,
+            "equipped": 1
+          },
+          {
+            "id": 10,
+            "type": 2,
+            "key": "defesa",
+            "name": "Defesa",
+            "base": 10,
+            "formula": "10 + (@des - 10) / 2",
+            "equipped": 1
+          },
+          {
+            "id": 15,
+            "type": 5,
+            "key": "espada_longa",
+            "name": "Espada Longa Forjada",
+            "formula": "1d8 + (@for - 10) / 2",
+            "equipped": 1
+          },
+          {
+            "id": 18,
+            "type": 5,
+            "key": "armadura_couro",
+            "name": "Armadura de Couro Fervido",
+            "equipped": 1,
+            "mods": [
+              {
+                "target": "defesa",
+                "val": 2
+              }
+            ]
+          },
+          {
+            "id": 22,
+            "type": 5,
+            "key": "escudo_pesado",
+            "name": "Escudo de Infantaria Pesado",
+            "equipped": 1,
+            "mods": [
+              {
+                "target": "defesa",
+                "val": 2
+              }
+            ]
+          },
+          {
+            "id": 31,
+            "type": 4,
+            "key": "segundo_folego",
+            "name": "Segundo Fôlego",
+            "category": "class_ability",
+            "is_mandatory": 1,
+            "cost_res": "fadiga",
+            "cost_val": 1,
+            "formula": "1d10 + 2",
+            "equipped": 1
+          },
+          {
+            "id": 35,
+            "type": 3,
+            "key": "atletismo",
+            "name": "Atletismo",
+            "formula": "(@for - 10) / 2",
+            "trained": 1,
+            "equipped": 1
+          }
+        ]
+      },
+      {
+        "id": "tpl_mago",
+        "name": "Mago Elementalista",
+        "desc": "Arcanista estudioso com alto poder mágico, Esfera Incandescente, Dardos de Força e Barreira Translúcida.",
+        "cards": [
+          {
+            "id": 1,
+            "type": 0,
+            "key": "for",
+            "name": "Força",
+            "base": 8,
+            "curr": 8,
+            "max": 8,
+            "equipped": 1
+          },
+          {
+            "id": 2,
+            "type": 0,
+            "key": "des",
+            "name": "Destreza",
+            "base": 14,
+            "curr": 14,
+            "max": 14,
+            "equipped": 1
+          },
+          {
+            "id": 3,
+            "type": 0,
+            "key": "con",
+            "name": "Constituição",
+            "base": 12,
+            "curr": 12,
+            "max": 12,
+            "equipped": 1
+          },
+          {
+            "id": 4,
+            "type": 0,
+            "key": "int",
+            "name": "Inteligência",
+            "base": 18,
+            "curr": 18,
+            "max": 18,
+            "equipped": 1
+          },
+          {
+            "id": 5,
+            "type": 0,
+            "key": "sab",
+            "name": "Sabedoria",
+            "base": 14,
+            "curr": 14,
+            "max": 14,
+            "equipped": 1
+          },
+          {
+            "id": 6,
+            "type": 0,
+            "key": "car",
+            "name": "Carisma",
+            "base": 10,
+            "curr": 10,
+            "max": 10,
+            "equipped": 1
+          },
+          {
+            "id": 7,
+            "type": 1,
+            "key": "pv",
+            "name": "Pontos de Vida",
+            "base": 18,
+            "curr": 18,
+            "max": 18,
+            "equipped": 1
+          },
+          {
+            "id": 8,
+            "type": 1,
+            "key": "pm",
+            "name": "Pontos de Mana",
+            "base": 24,
+            "curr": 24,
+            "max": 24,
+            "equipped": 1
+          },
+          {
+            "id": 10,
+            "type": 2,
+            "key": "defesa",
+            "name": "Defesa",
+            "base": 10,
+            "formula": "10 + (@des - 10) / 2",
+            "equipped": 1
+          },
+          {
+            "id": 25,
+            "type": 6,
+            "key": "dardos_forca",
+            "name": "Dardos de Força Mística",
+            "cost_res": "pm",
+            "cost_val": 1,
+            "formula": "3d4 + 3",
+            "equipped": 1
+          },
+          {
+            "id": 27,
+            "type": 6,
+            "key": "esfera_fogo",
+            "name": "Esfera Incandescente",
+            "cost_res": "pm",
+            "cost_val": 2,
+            "formula": "3d6 + (@int - 10) / 2",
+            "equipped": 1
+          },
+          {
+            "id": 28,
+            "type": 6,
+            "key": "escudo_mistico",
+            "name": "Barreira Translúcida",
+            "cost_res": "pm",
+            "cost_val": 1,
+            "equipped": 1,
+            "mods": [
+              {
+                "target": "defesa",
+                "val": 3
+              }
+            ]
+          },
+          {
+            "id": 38,
+            "type": 3,
+            "key": "conhecimento",
+            "name": "Conhecimento & História",
+            "formula": "(@int - 10) / 2",
+            "trained": 1,
+            "equipped": 1
+          }
+        ]
+      }
+    ]
+  },
   "cards": [
     {
       "id": 1,
       "type": 0,
       "key": "for",
       "name": "Força",
-      "desc": "Poder muscular, capacidade de carga e impacto físico.",
+      "desc": "Poder muscular e capacidade de carga.",
       "base": 14,
       "curr": 14,
       "max": 14,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 1,
-      "mods": []
+      "equipped": 1
     },
     {
       "id": 2,
       "type": 0,
       "key": "des",
       "name": "Destreza",
-      "desc": "Agilidade motora, reflexos, pontaria e equilíbrio.",
+      "desc": "Agilidade motora e reflexos rápidos.",
       "base": 14,
       "curr": 14,
       "max": 14,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 1,
-      "mods": []
+      "equipped": 1
     },
     {
       "id": 3,
       "type": 0,
       "key": "con",
       "name": "Constituição",
-      "desc": "Vigor biológico, resistência a venenos e saúde.",
+      "desc": "Vigor biológico e saúde.",
       "base": 14,
       "curr": 14,
       "max": 14,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 1,
-      "mods": []
+      "equipped": 1
     },
     {
       "id": 4,
       "type": 0,
       "key": "int",
       "name": "Inteligência",
-      "desc": "Raciocínio lógico, erudição e conhecimento arcano.",
+      "desc": "Raciocínio lógico e erudição arcana.",
       "base": 12,
       "curr": 12,
       "max": 12,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "equipped": 1
     },
     {
       "id": 5,
       "type": 0,
       "key": "sab",
       "name": "Sabedoria",
-      "desc": "Percepção sensorial, intuição e força de vontade.",
+      "desc": "Percepção sensorial e força de vontade.",
       "base": 10,
       "curr": 10,
       "max": 10,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "equipped": 1
     },
     {
       "id": 6,
       "type": 0,
       "key": "car",
       "name": "Carisma",
-      "desc": "Presença social, liderança, magnetismo e persuasão.",
+      "desc": "Presença social e liderança.",
       "base": 10,
       "curr": 10,
       "max": 10,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "equipped": 1
     },
     {
       "id": 7,
       "type": 1,
       "key": "pv",
       "name": "Pontos de Vida",
-      "desc": "Capacidade de sustentar ferimentos antes de sucumbir.",
+      "desc": "Vitalidade antes de cair inconsciente.",
       "base": 28,
       "curr": 28,
       "max": 28,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 1,
-      "mods": []
+      "equipped": 1
     },
     {
       "id": 8,
       "type": 1,
       "key": "pm",
       "name": "Pontos de Mana",
-      "desc": "Reserva de energia mental e espiritual para magias e técnicas.",
+      "desc": "Energia mística para magias e técnicas.",
       "base": 12,
       "curr": 12,
       "max": 12,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 1,
-      "mods": []
+      "equipped": 1
     },
     {
       "id": 9,
       "type": 1,
       "key": "fadiga",
       "name": "Vigor / Estamina",
-      "desc": "Recurso de esforço físico para manobras de combate.",
+      "desc": "Recurso de esforço físico para manobras.",
       "base": 6,
       "curr": 6,
       "max": 6,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "equipped": 1
     },
     {
       "id": 10,
       "type": 2,
       "key": "defesa",
       "name": "Defesa",
-      "desc": "Dificuldade para acertar um golpe contra você.",
+      "desc": "Dificuldade para acertar um golpe.",
       "base": 10,
       "curr": 10,
       "max": 10,
-      "cost_res": "",
-      "cost_val": 0,
       "formula": "10 + (@des - 10) / 2",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 1,
-      "mods": []
+      "equipped": 1
     },
     {
       "id": 11,
       "type": 2,
       "key": "iniciativa",
       "name": "Iniciativa",
-      "desc": "Rapidez de reação ao início do conflito.",
+      "desc": "Reação rápida ao combate.",
       "base": 0,
       "curr": 0,
       "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
       "formula": "(@des - 10) / 2",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "equipped": 1
     },
     {
       "id": 12,
       "type": 2,
       "key": "deslocamento",
       "name": "Deslocamento",
-      "desc": "Velocidade de movimento tático em metros por rodada.",
+      "desc": "Velocidade em metros por rodada.",
       "base": 9,
       "curr": 9,
       "max": 9,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "equipped": 1
     },
     {
       "id": 13,
       "type": 5,
       "key": "adaga",
       "name": "Adaga de Aço",
-      "desc": "Arma leve e rápida para combate corpo a corpo ou arremesso.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
+      "desc": "Arma leve e rápida para corpo a corpo ou arremesso.",
       "formula": "1d4 + (@des - 10) / 2",
-      "equipped": 0,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "equipped": 0
     },
     {
       "id": 14,
@@ -231,85 +633,48 @@
       "key": "espada_curta",
       "name": "Espada Curta",
       "desc": "Lâmina de estocada ágil e equilibrada.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
       "formula": "1d6 + (@des - 10) / 2",
-      "equipped": 0,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "equipped": 0
     },
     {
       "id": 15,
       "type": 5,
       "key": "espada_longa",
       "name": "Espada Longa Forjada",
-      "desc": "Arma marcial versátil com excelente alcance e fio duplo.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
+      "desc": "Arma marcial versátil de aço.",
       "formula": "1d8 + (@for - 10) / 2",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 1,
-      "mods": []
+      "equipped": 1
     },
     {
       "id": 16,
       "type": 5,
       "key": "machado_batalha",
       "name": "Machado de Batalha",
-      "desc": "Lâmina curva pesada que desmembra defesas inimigas.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
+      "desc": "Lâmina curva pesada que desmembra defesas.",
       "formula": "1d10 + (@for - 10) / 2",
-      "equipped": 0,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "equipped": 0
     },
     {
       "id": 17,
       "type": 5,
       "key": "arco_curto",
       "name": "Arco Curto de Caça",
-      "desc": "Arco flexível de madeira recurva para disparos médios.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
+      "desc": "Arco flexível para disparos médios.",
       "formula": "1d6 + (@des - 10) / 2",
-      "equipped": 0,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "equipped": 0
     },
     {
       "id": 18,
       "type": 5,
       "key": "armadura_couro",
       "name": "Armadura de Couro Fervido",
-      "desc": "Couro endurecido com cravos de proteção leve (+2 Defesa).",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
+      "desc": "Couro endurecido (+2 Defesa).",
       "equipped": 1,
-      "trained": 0,
-      "fav": 1,
       "mods": [
-        { "target": "defesa", "val": 2 }
+        {
+          "target": "defesa",
+          "val": 2
+        }
       ]
     },
     {
@@ -317,18 +682,13 @@
       "type": 5,
       "key": "cota_malha",
       "name": "Cota de Malha Reforçada",
-      "desc": "Entrelaçado de anéis de ferro resistente (+5 Defesa).",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
+      "desc": "Entrelaçado de anéis de ferro (+5 Defesa).",
       "equipped": 0,
-      "trained": 0,
-      "fav": 0,
       "mods": [
-        { "target": "defesa", "val": 5 }
+        {
+          "target": "defesa",
+          "val": 5
+        }
       ]
     },
     {
@@ -336,18 +696,13 @@
       "type": 5,
       "key": "armadura_placas",
       "name": "Armadura Completa de Placas",
-      "desc": "Blindagem maciça articulada de aço polido (+8 Defesa).",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
+      "desc": "Blindagem de aço maciço (+8 Defesa).",
       "equipped": 0,
-      "trained": 0,
-      "fav": 0,
       "mods": [
-        { "target": "defesa", "val": 8 }
+        {
+          "target": "defesa",
+          "val": 8
+        }
       ]
     },
     {
@@ -355,18 +710,13 @@
       "type": 5,
       "key": "escudo_leves",
       "name": "Escudo Redondo de Carvalho",
-      "desc": "Escudo leve e prático para defesa rápida (+1 Defesa).",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
+      "desc": "Escudo leve para defesa ágil (+1 Defesa).",
       "equipped": 0,
-      "trained": 0,
-      "fav": 0,
       "mods": [
-        { "target": "defesa", "val": 1 }
+        {
+          "target": "defesa",
+          "val": 1
+        }
       ]
     },
     {
@@ -374,18 +724,13 @@
       "type": 5,
       "key": "escudo_pesado",
       "name": "Escudo de Infantaria Pesado",
-      "desc": "Broquel resistente de aço e madeira reforçada (+2 Defesa).",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
+      "desc": "Broquel de carvalho e aço (+2 Defesa).",
       "equipped": 0,
-      "trained": 0,
-      "fav": 1,
       "mods": [
-        { "target": "defesa", "val": 2 }
+        {
+          "target": "defesa",
+          "val": 2
+        }
       ]
     },
     {
@@ -393,18 +738,13 @@
       "type": 5,
       "key": "anel_tita",
       "name": "Anel do Titã",
-      "desc": "Anel de metal escuro gravado que concede força física extra (+2 Força).",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
+      "desc": "Relíquia com runa de força (+2 Força).",
       "equipped": 0,
-      "trained": 0,
-      "fav": 0,
       "mods": [
-        { "target": "for", "val": 2 }
+        {
+          "target": "for",
+          "val": 2
+        }
       ]
     },
     {
@@ -412,18 +752,13 @@
       "type": 5,
       "key": "amuleto_vida",
       "name": "Amuleto de Vitalidade",
-      "desc": "Pedra carmesim que revigora os pontos de vida (+10 PV).",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
+      "desc": "Pedra carmesim que revigora (+10 PV).",
       "equipped": 0,
-      "trained": 0,
-      "fav": 0,
       "mods": [
-        { "target": "pv", "val": 10 }
+        {
+          "target": "pv",
+          "val": 10
+        }
       ]
     },
     {
@@ -431,69 +766,45 @@
       "type": 6,
       "key": "dardos_forca",
       "name": "Dardos de Força Mística",
-      "desc": "Dispara três projéteis teleguiados de luz mágica pura.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
+      "desc": "Projéteis mágicos teleguiados.",
       "cost_res": "pm",
       "cost_val": 1,
-      "formula": "3d4 + 3",
-      "equipped": 0,
-      "trained": 0,
-      "fav": 1,
-      "mods": []
+      "formula": "3d4 + 3"
     },
     {
       "id": 26,
       "type": 6,
       "key": "cura_ferimentos",
       "name": "Canalizar Cura Vital",
-      "desc": "Energia restauradora que fecha cortes e regenera tecidos.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
+      "desc": "Restaura vitalidade de aliados.",
       "cost_res": "pm",
       "cost_val": 1,
-      "formula": "1d8 + (@sab - 10) / 2",
-      "equipped": 0,
-      "trained": 0,
-      "fav": 1,
-      "mods": []
+      "formula": "1d8 + (@sab - 10) / 2"
     },
     {
       "id": 27,
       "type": 6,
       "key": "esfera_fogo",
       "name": "Esfera Incandescente",
-      "desc": "Projétil de calor ardente que explode na área alvo.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
+      "desc": "Explosão de chamas ardentes.",
       "cost_res": "pm",
       "cost_val": 2,
-      "formula": "3d6 + (@int - 10) / 2",
-      "equipped": 0,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "formula": "3d6 + (@int - 10) / 2"
     },
     {
       "id": 28,
       "type": 6,
       "key": "escudo_mistico",
       "name": "Barreira Translúcida",
-      "desc": "Manto protetor que desvia flechas e golpes (+3 Defesa).",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
+      "desc": "Manto de força arcana (+3 Defesa).",
       "cost_res": "pm",
       "cost_val": 1,
-      "formula": "",
       "equipped": 0,
-      "trained": 0,
-      "fav": 1,
       "mods": [
-        { "target": "defesa", "val": 3 }
+        {
+          "target": "defesa",
+          "val": 3
+        }
       ]
     },
     {
@@ -501,69 +812,48 @@
       "type": 6,
       "key": "toque_eletrico",
       "name": "Descarga Fulminante",
-      "desc": "Choque de alta voltagem desferido pelo toque físico.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
+      "desc": "Choque elétrico pelo toque.",
       "cost_res": "pm",
       "cost_val": 1,
-      "formula": "2d8 + (@int - 10) / 2",
-      "equipped": 0,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "formula": "2d8 + (@int - 10) / 2"
     },
     {
       "id": 30,
       "type": 6,
       "key": "raio_glacial",
       "name": "Raio Glacial Congelante",
-      "desc": "Raio de frio extremo que perfura e retarda a criatura atingida.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
+      "desc": "Raio de frio extremo que perfura e retarda.",
       "cost_res": "pm",
       "cost_val": 1,
-      "formula": "1d10 + (@int - 10) / 2",
-      "equipped": 0,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "formula": "1d10 + (@int - 10) / 2"
     },
     {
       "id": 31,
       "type": 4,
       "key": "segundo_folego",
       "name": "Segundo Fôlego",
-      "desc": "Consome vigor para recuperar vitalidade em combate.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
+      "desc": "Recupera vigor no calor da batalha.",
+      "category": "class_ability",
+      "is_mandatory": 1,
       "cost_res": "fadiga",
       "cost_val": 1,
-      "formula": "1d10 + 2",
-      "equipped": 0,
-      "trained": 0,
-      "fav": 1,
-      "mods": []
+      "formula": "1d10 + 2"
     },
     {
       "id": 32,
       "type": 4,
       "key": "postura_furia",
       "name": "Postura de Fúria",
-      "desc": "Ira canalizada aumentando vigor e impacto físico (+2 Força).",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
+      "desc": "Ira que aumenta força bruta (+2 Força).",
+      "category": "class_power",
       "cost_res": "fadiga",
       "cost_val": 1,
-      "formula": "",
       "equipped": 0,
-      "trained": 0,
-      "fav": 0,
       "mods": [
-        { "target": "for", "val": 2 }
+        {
+          "target": "for",
+          "val": 2
+        }
       ]
     },
     {
@@ -571,18 +861,16 @@
       "type": 4,
       "key": "esquiva_agil",
       "name": "Reflexo Acrobático",
-      "desc": "Antecipa trajetórias para esquivar com facilidade (+2 Defesa).",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
+      "desc": "Antecipa trajetórias de golpes (+2 Defesa).",
+      "category": "general_power",
       "cost_res": "fadiga",
       "cost_val": 1,
-      "formula": "",
       "equipped": 0,
-      "trained": 0,
-      "fav": 0,
       "mods": [
-        { "target": "defesa", "val": 2 }
+        {
+          "target": "defesa",
+          "val": 2
+        }
       ]
     },
     {
@@ -590,205 +878,115 @@
       "type": 4,
       "key": "ataque_furtivo",
       "name": "Ataque Furtivo de Emboscada",
-      "desc": "Dano massivo ao atingir o alvo distraído ou pelas costas.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "2d6",
-      "equipped": 0,
-      "trained": 0,
-      "fav": 1,
-      "mods": []
+      "desc": "Dano massivo ao atingir alvo distraído.",
+      "category": "class_ability",
+      "is_mandatory": 1,
+      "formula": "2d6"
     },
     {
       "id": 35,
       "type": 3,
       "key": "atletismo",
       "name": "Atletismo",
-      "desc": "Correr, escalar, nadar e proezas físicas.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
+      "desc": "Correr, escalar e nadar.",
       "formula": "(@for - 10) / 2",
-      "equipped": 1,
-      "trained": 1,
-      "fav": 1,
-      "mods": []
+      "trained": 1
     },
     {
       "id": 36,
       "type": 3,
       "key": "acrobacia",
       "name": "Acrobacia",
-      "desc": "Equilíbrio em superfícies estreitas e amortecimento de quedas.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
+      "desc": "Equilíbrio em superfícies e amortecimento de quedas.",
       "formula": "(@des - 10) / 2",
-      "equipped": 1,
-      "trained": 1,
-      "fav": 0,
-      "mods": []
+      "trained": 1
     },
     {
       "id": 37,
       "type": 3,
       "key": "furtividade",
       "name": "Furtividade",
-      "desc": "Mover-se silenciosamente e esconder-se nas sombras.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
+      "desc": "Mover-se silenciosamente nas sombras.",
       "formula": "(@des - 10) / 2",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "trained": 0
     },
     {
       "id": 38,
       "type": 3,
       "key": "conhecimento",
       "name": "Conhecimento & História",
-      "desc": "Lembrança de lendas antigas, história e geografia.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
+      "desc": "Lembrança de lendas antigas e geografia.",
       "formula": "(@int - 10) / 2",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "trained": 0
     },
     {
       "id": 39,
       "type": 3,
       "key": "investigacao",
       "name": "Investigação",
-      "desc": "Procurar pistas ocultas e deduzir conexões lógicas.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
+      "desc": "Procurar pistas ocultas e deduzir conexões.",
       "formula": "(@int - 10) / 2",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "trained": 0
     },
     {
       "id": 40,
       "type": 3,
       "key": "natureza",
       "name": "Natureza & Sobrevivência",
-      "desc": "Rastrear pegadas, identificar fauna e sobreviver ermos.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
+      "desc": "Rastrear pegadas e fauna.",
       "formula": "(@sab - 10) / 2",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "trained": 0
     },
     {
       "id": 41,
       "type": 3,
       "key": "percepcao",
       "name": "Percepção",
-      "desc": "Notar emboscadas, ruídos sutis e detalhes visuais.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
+      "desc": "Notar perigos e detalhes visuais.",
       "formula": "(@sab - 10) / 2",
-      "equipped": 1,
-      "trained": 1,
-      "fav": 1,
-      "mods": []
+      "trained": 1
     },
     {
       "id": 42,
       "type": 3,
       "key": "persuasao",
       "name": "Persuasão & Diplomacia",
-      "desc": "Convencer e negociar de maneira cortês e empática.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
+      "desc": "Negociar de maneira cortês e empática.",
       "formula": "(@car - 10) / 2",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "trained": 0
     },
     {
       "id": 43,
       "type": 3,
       "key": "intimidacao",
       "name": "Intimidação",
-      "desc": "Coagir e impor autoridade por postura ou ameaça.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
+      "desc": "Coagir e impor autoridade por presença.",
       "formula": "(@car - 10) / 2",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "trained": 0
     },
     {
       "id": 44,
       "type": 7,
       "key": "visao_penumbra",
       "name": "Visão na Penumbra",
-      "desc": "Enxerga normalmente na penumbra e luz fraca.",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
-      "equipped": 1,
-      "trained": 0,
-      "fav": 0,
-      "mods": []
+      "desc": "Enxerga na penumbra e luz fraca.",
+      "category": "race_origin",
+      "is_mandatory": 1,
+      "equipped": 1
     },
     {
       "id": 45,
       "type": 7,
       "key": "vigor_anao",
       "name": "Resiliência Pétrea",
-      "desc": "Físico denso e resistente a toxinas e venenos (+1 Constituição).",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
+      "desc": "Resistência a toxinas e venenos (+1 Constituição).",
+      "category": "race_origin",
       "equipped": 0,
-      "trained": 0,
-      "fav": 0,
       "mods": [
-        { "target": "con", "val": 1 }
+        {
+          "target": "con",
+          "val": 1
+        }
       ]
     },
     {
@@ -796,18 +994,14 @@
       "type": 7,
       "key": "graca_elfica",
       "name": "Graça Silvestre",
-      "desc": "Reflexos apurados e leveza natural nos passos (+1 Destreza).",
-      "base": 0,
-      "curr": 0,
-      "max": 0,
-      "cost_res": "",
-      "cost_val": 0,
-      "formula": "",
+      "desc": "Reflexos apurados e leveza natural (+1 Destreza).",
+      "category": "race_origin",
       "equipped": 0,
-      "trained": 0,
-      "fav": 0,
       "mods": [
-        { "target": "des", "val": 1 }
+        {
+          "target": "des",
+          "val": 1
+        }
       ]
     }
   ]

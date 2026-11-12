@@ -83,5 +83,27 @@ packs_local/
 local_packs/
 web/data/local/
 *.cardpack
+*.sheetc
+
+# Rust (server)
+/server/target/
+
+# TypeScript / Node (web)
+node_modules/
+/web/dist/
+/web/build/
+
+# Dart / Flutter (android)
+/android/.dart_tool/
+/android/build/
+.packages
+
+# C# / .NET / CMake (windows / linux)
+/windows/bin/
+/windows/obj/
+/windows/build/
+/linux/bin/
+/linux/obj/
+/linux/build/
 
 

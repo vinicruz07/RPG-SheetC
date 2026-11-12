@@ -1,0 +1,14 @@
+{
+  "name": "rpg-sheetc-web",
+  "version": "3.0.0",
+  "description": "Cliente Web (TypeScript) com Motor Agnóstico de Fichas e CardPacks para o RPG-SheetC",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "serve": "node scripts/serve.mjs",
+    "start": "node scripts/build.mjs && node scripts/serve.mjs",
+    "test:core": "node --no-warnings tests/test_core_engine.ts",
+    "test:integration": "node --no-warnings tests/test_web_integration.ts",
+    "test": "node scripts/build.mjs && node --no-warnings tests/test_core_engine.ts && node --no-warnings tests/test_web_integration.ts"
+  }
+}
